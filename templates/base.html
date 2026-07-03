@@ -301,7 +301,7 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
     <a href="/" class="sb-a {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i> Boshqaruv paneli</a>
     <a href="/calendar" class="sb-a {% if request.path.startswith('/calendar') or request.path.startswith('/bookings') %}active{% endif %}"><i class="icon-calendar-days"></i> Kalendar / Bron</a>
     <div class="sb-sec">Mijozlar</div>
-    <a href="/teachers" class="sb-a {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i> Ustozlar</a>
+    <a href="/teachers" class="sb-a {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i> Mijozlar</a>
     <div class="sb-sec">Ishlab chiqarish</div>
     <a href="/montaj" class="sb-a {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i> Montaj oqimi</a>
     <a href="/studios" class="sb-a {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i> Studiyalar</a>
@@ -341,7 +341,7 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
 <nav class="bn">
   <a href="/" class="bn-item {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i>Panel</a>
   <a href="/calendar" class="bn-item {% if request.path.startswith('/calendar') %}active{% endif %}"><i class="icon-calendar-days"></i>Kalendar</a>
-  <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Ustozlar</a>
+  <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Mijozlar</a>
   <a href="/montaj" class="bn-item {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i>Montaj</a>
   <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}act{% endif %}"><i class="icon-wallet"></i>Moliya</a>
 </nav>

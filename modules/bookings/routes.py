@@ -40,6 +40,37 @@ def _human_date(ds):
         return ds, ""
 
 
+def _resolve_client(f, created_by):
+    """Bron formasidan mijozni aniqlaydi.
+
+    'mavjud' rejim → teacher_id bo'yicha; 'yangi' rejim → ism/telefon bilan
+    yaratadi (telefon oxirgi 9 raqami mos faol mijoz bo'lsa — o'shani qaytaradi,
+    dublikat yaratmaydi). Qaytaradi: (client|None, xato_matni|None)."""
+    mode = (f.get("client_mode") or "existing").strip()
+    if mode == "new":
+        name = (f.get("new_name") or "").strip()[:200]
+        if not name:
+            return None, "Yangi mijoz ismi kiritilmadi"
+        phone = (f.get("new_phone") or "").strip()[:50]
+        digits = "".join(c for c in phone if c.isdigit())[-9:]
+        if len(digits) == 9:  # telefon bo'yicha dublikat tekshiruvi
+            for ex in Teacher.query.filter_by(is_active=True).all():
+                if "".join(c for c in (ex.phone or "") if c.isdigit())[-9:] == digits:
+                    return ex, None
+        t = Teacher(name=name, phone=phone,
+                    telegram=(f.get("new_telegram") or "").strip().lstrip("@")[:64],
+                    created_by=created_by)
+        t.ensure_token()
+        db.session.add(t)
+        db.session.flush()
+        return t, None
+    try:
+        t = Teacher.query.get(int(f.get("teacher_id") or 0))
+    except (ValueError, TypeError):
+        t = None
+    return t, (None if t else "Mijoz tanlanmadi")
+
+
 @bp.route("/calendar")
 @login_required
 def calendar():
@@ -94,6 +125,7 @@ def calendar():
         bk[b.id] = {
             "id": b.id, "studio_id": b.studio_id,
             "studio": (st.name if st else "?"), "scolor": scolor,
+            "teacher_id": b.teacher_id,
             "teacher": tmap.get(b.teacher_id, "?"),
             "date": b.date, "date_human": dh, "weekday": wd,
             "start": b.start, "end": b.end, "hours": b.hours,
@@ -155,9 +187,8 @@ def save():
     f = request.form
     try:
         studio = Studio.query.get(int(f.get("studio_id") or 0))
-        teacher = Teacher.query.get(int(f.get("teacher_id") or 0))
     except (ValueError, TypeError):
-        studio = teacher = None
+        studio = None
     dates = []
     for d in f.getlist("date"):
         d = (d or "").strip()[:10]
@@ -168,8 +199,15 @@ def save():
     end = (f.get("end") or "").strip()
     pay_type = "package" if f.get("pay_type") == "package" else "hourly"
     first = dates[0] if dates else None
-    if not (studio and teacher and dates and start and end):
-        flash("⛔ Studiya, ustoz, sana va vaqt to'ldirilishi shart", "error")
+    if not (studio and dates and start and end):
+        flash("⛔ Studiya, sana va vaqt to'ldirilishi shart", "error")
+        return redirect(url_for("bookings.calendar", date=first))
+
+    # Mijoz: mavjudini tanlash yoki shu yerda yangisini qo'shish
+    teacher, cerr = _resolve_client(f, u.name)
+    was_new_client = teacher and (f.get("client_mode") == "new")
+    if not teacher:
+        flash(f"⛔ {cerr}", "error")
         return redirect(url_for("bookings.calendar", date=first))
 
     probe = Booking(studio_id=studio.id, teacher_id=teacher.id,
@@ -230,8 +268,13 @@ def save():
         extra = (f" · balansdan {per_hours * len(made):g} soat"
                  if pay_type == "package" else
                  f" · to'lov {round(per_hours * (studio.hourly_rate or 0)) * len(made):,.0f} so'm (kutilmoqda)")
+        newc = " · 🆕 yangi mijoz qo'shildi" if was_new_client else ""
         flash(f"✅ {teacher.name} — {studio.name} {start}–{end}: "
-              f"{len(made)} kun bron qilindi ({days_txt}){extra}", "success")
+              f"{len(made)} kun bron qilindi ({days_txt}){extra}{newc}", "success")
+    elif was_new_client:
+        # Bron bo'lmadi-yu, lekin mijoz yaratildi — foydali qoladi
+        flash(f"🆕 Yangi mijoz qo'shildi: {teacher.name} "
+              f"(karta: /teachers/{teacher.id})", "success")
     if errs:
         flash("⛔ Bron bo'lmadi: " + " · ".join(errs), "error")
     return redirect(url_for("bookings.calendar",

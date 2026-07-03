@@ -28,7 +28,7 @@
   <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Paketi tugayapti</div>
     <div class="kpi-val" style="color:{% if kpi.low_balance %}var(--red){% else %}var(--green){% endif %}">{{ kpi.low_balance }}</div>
-    <div class="kpi-label" style="text-transform:none;margin-top:4px">ustoz — qayta sotish imkoni</div>
+    <div class="kpi-label" style="text-transform:none;margin-top:4px">mijoz — qayta sotish imkoni</div>
   </div><div class="kpi-ico red"><i class="icon-hourglass"></i></div></div></div>
 </div>
 
@@ -52,7 +52,7 @@
   </div>
 
   <div class="card" style="margin:0">
-    <div class="card-hd"><div class="card-title"><i class="icon-hourglass"></i> Paketi tugayotgan ustozlar</div></div>
+    <div class="card-hd"><div class="card-title"><i class="icon-hourglass"></i> Paketi tugayotgan mijozlar</div></div>
     <div style="padding:0">
       {% for x in low_balance %}
       <a href="/teachers/{{ x.t.id }}" class="feed-item">

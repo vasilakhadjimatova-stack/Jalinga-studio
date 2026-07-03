@@ -28,7 +28,7 @@
            {% if j.overdue %}box-shadow:0 0 14px rgba(251,113,133,.15);{% endif %}">
         <div style="font-weight:700;font-size:12.5px">{{ j.title }}</div>
         <div style="font-size:11px;color:var(--txt3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
-          <span>👨‍🏫 {{ j.teacher_name }}</span>
+          <span>👤 {{ j.teacher_name }}</span>
           {% if j.assignee_name %}<span>✂️ {{ j.assignee_name }}</span>{% endif %}
           {% if j.due_date %}<span style="{% if j.overdue %}color:var(--red);font-weight:800{% endif %}">⏳ {{ j.due_date }}{% if j.overdue %} KECHIKDI{% endif %}</span>{% endif %}
         </div>

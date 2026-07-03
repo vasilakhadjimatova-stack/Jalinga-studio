@@ -67,6 +67,10 @@
 /* Ko'p kunlik sana qatorlari */
 .mbd-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
 .mbd-row .input{flex:1}
+/* Mijoz rejim segmenti */
+.seg-b{background:var(--surface2);color:var(--txt2);transition:.16s}
+.seg-b.on{background:var(--brand-bg);color:var(--brand)}
+.seg-b:not(.on):hover{color:var(--txt)}
 @media(max-width:860px){.cal td{height:74px;padding:4px}.cal-ev{font-size:9px;padding:2px 4px}}
 </style>
 {% endblock %}
@@ -183,6 +187,10 @@
       <button class="btn btn-ghost btn-sm" type="button" onclick="bkEdit()" style="flex:1">
         <i class="icon-pencil"></i> Ko'chirish</button>
     </div>
+    <div style="padding:0 18px 15px">
+      <a class="btn btn-out btn-sm" id="bkCard" href="#" style="width:100%;justify-content:center">
+        <i class="icon-id-card"></i> Mijoz kartasi — paket / balans</a>
+    </div>
   </div>
 </div>
 
@@ -197,13 +205,31 @@
         <option value="{{ s.id }}" {% if sel and sel.id == s.id %}selected{% endif %}>{{ s.name }} — {{ s.hourly_rate|som }}/soat</option>
         {% endfor %}
       </select>
-      <label>Ustoz</label>
-      <select class="select" name="teacher_id" required>
-        {% for t in teachers %}<option value="{{ t.id }}">{{ t.name }} (balans: {{ t.balance_hours }} soat)</option>{% endfor %}
-      </select>
-      {% if not teachers %}
-      <div style="font-size:12px;color:var(--amber);margin-top:6px">Avval <a href="/teachers" style="color:var(--brand)">ustoz qo'shing</a></div>
-      {% endif %}
+      <label>Mijoz</label>
+      <input type="hidden" name="client_mode" id="mb-cmode" value="existing">
+      <div class="seg" style="display:flex;gap:0;margin-bottom:9px;border:1px solid var(--line);border-radius:11px;overflow:hidden">
+        <button type="button" id="mb-seg-ex" class="seg-b on" onclick="mcClientMode('existing')"
+          style="flex:1;padding:9px;font-size:12.5px;font-weight:700;border:0;cursor:pointer">Mavjud mijoz</button>
+        <button type="button" id="mb-seg-new" class="seg-b" onclick="mcClientMode('new')"
+          style="flex:1;padding:9px;font-size:12.5px;font-weight:700;border:0;cursor:pointer">🆕 Yangi mijoz</button>
+      </div>
+      <div id="mb-existing">
+        <select class="select" name="teacher_id" id="mb-teacher" required>
+          <option value="">— mijozni tanlang —</option>
+          {% for t in teachers %}<option value="{{ t.id }}">{{ t.name }}{% if t.phone %} · {{ t.phone }}{% endif %} (balans: {{ t.balance_hours }} soat)</option>{% endfor %}
+        </select>
+        {% if not teachers %}
+        <div style="font-size:12px;color:var(--txt3);margin-top:6px">Baza bo'sh — «🆕 Yangi mijoz» orqali shu yerda qo'shing</div>
+        {% endif %}
+      </div>
+      <div id="mb-new" style="display:none">
+        <input class="input" name="new_name" id="mb-newname" placeholder="Yangi mijoz ismi *" disabled>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:9px">
+          <input class="input" name="new_phone" placeholder="Telefon" disabled>
+          <input class="input" name="new_telegram" placeholder="@telegram" disabled>
+        </div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:6px">Mijoz kartasi avtomatik ochiladi — keyin paket sotib olishingiz mumkin</div>
+      </div>
       <label>Kunlar</label>
       <div id="mb-dates">
         <div class="mbd-row">
@@ -274,6 +300,23 @@ function mcBook(iso, e){
   document.getElementById('m-book').classList.add('open');
 }
 
+/* Mijoz rejimi: mavjud (select) ↔ yangi (ism/telefon) */
+function mcClientMode(m){
+  var isNew = (m === 'new');
+  document.getElementById('mb-cmode').value = m;
+  document.getElementById('mb-existing').style.display = isNew ? 'none' : 'block';
+  document.getElementById('mb-new').style.display = isNew ? 'block' : 'none';
+  document.getElementById('mb-seg-ex').classList.toggle('on', !isNew);
+  document.getElementById('mb-seg-new').classList.toggle('on', isNew);
+  // Faqat faol rejim maydonlari submit/validatsiyaga tushsin
+  document.getElementById('mb-teacher').disabled = isNew;
+  var nn = document.getElementById('mb-newname');
+  document.querySelectorAll('#mb-new input').forEach(function(i){ i.disabled = !isNew; });
+  nn.required = isNew;
+  document.getElementById('mb-teacher').required = !isNew;
+  if(isNew) nn.focus();
+}
+
 /* + kun — yana bitta sana qatori */
 function mcAddDate(){
   var wrap = document.getElementById('mb-dates');
@@ -296,7 +339,8 @@ function mcShow(id){
   var b = BK[id] || BK[String(id)]; if(!b) return;
   bkCur = b;
   document.getElementById('bkStrip').className = 'cev-strip ce-' + (b.status_color||'gray');
-  document.getElementById('bkTtl').textContent = '👨‍🏫 ' + b.teacher;
+  document.getElementById('bkTtl').textContent = '👤 ' + b.teacher;
+  document.getElementById('bkCard').href = '/teachers/' + b.teacher_id;
   document.getElementById('bkWhen').innerHTML = '📅 <b>' + b.date_human + '</b>' +
     (b.weekday ? ', ' + b.weekday : '') + ' · ' + b.start + '–' + b.end;
   document.getElementById('bkTags').innerHTML =
@@ -332,7 +376,7 @@ function bkEdit(){
   if(!bkCur) return;
   bkClose();
   document.getElementById('be-form').action = '/bookings/' + bkCur.id + '/edit';
-  document.getElementById('be-who').textContent = '👨‍🏫 ' + bkCur.teacher +
+  document.getElementById('be-who').textContent = '👤 ' + bkCur.teacher +
     ' · ' + (bkCur.pay_type==='package' ? '📦 paket' : '💵 soatbay');
   document.getElementById('be-studio').value = bkCur.studio_id;
   document.getElementById('be-date').value = bkCur.date;
