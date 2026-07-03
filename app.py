@@ -32,6 +32,7 @@ def create_app():
     from modules.finance.routes import bp as finance_bp
     from modules.portal.routes import bp as portal_bp
     from modules.montaj.routes import bp as montaj_bp
+    from modules.analytics.routes import bp as analytics_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dash_bp)
     app.register_blueprint(studios_bp)
@@ -40,6 +41,7 @@ def create_app():
     app.register_blueprint(finance_bp)
     app.register_blueprint(portal_bp)
     app.register_blueprint(montaj_bp)
+    app.register_blueprint(analytics_bp)
 
     @app.context_processor
     def inject_globals():

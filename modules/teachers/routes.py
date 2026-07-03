@@ -45,6 +45,34 @@ def save():
     return redirect(url_for("teachers.detail", tid=t.id))
 
 
+@bp.route("/teachers/<int:tid>/bonus", methods=["POST"])
+@login_required
+def bonus_hours(tid):
+    """🎁 Bonus soat (referral/aksiya) — pulisiz paket, balansga qo'shiladi."""
+    from core.auth import current_user as _cu
+    u = _cu()
+    if not u.is_admin:
+        flash("Bonus berish faqat rahbar uchun", "error")
+        return redirect(url_for("teachers.detail", tid=tid))
+    t = Teacher.query.get_or_404(tid)
+    try:
+        hours = float(request.form.get("hours") or 0)
+    except (ValueError, TypeError):
+        hours = 0
+    if not (0 < hours <= 20):
+        flash("⛔ Bonus 0 dan katta, 20 soatdan oshmasin", "error")
+        return redirect(url_for("teachers.detail", tid=tid))
+    reason = (request.form.get("reason") or "Bonus").strip()[:200]
+    db.session.add(Payment(
+        teacher_id=tid, kind="package", hours=hours, amount=0,
+        method="bonus", date=today_iso(), is_paid=True,
+        note=f"🎁 {reason}", created_by=u.name))
+    db.session.commit()
+    flash(f"🎁 {t.name}: +{hours:g} bonus soat ({reason}). "
+          f"Balans: {t.balance_hours():g}", "success")
+    return redirect(url_for("teachers.detail", tid=tid))
+
+
 @bp.route("/teachers/<int:tid>/token", methods=["POST"])
 @login_required
 def regen_token(tid):

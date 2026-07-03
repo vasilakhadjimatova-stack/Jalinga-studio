@@ -59,6 +59,16 @@
         <label>Izoh</label><input class="input" name="note">
         <button class="btn btn-gold" type="submit" style="margin-top:14px">💰 Paketni saqlash</button>
       </form>
+      {% if current_user.is_admin %}
+      <form method="POST" action="/teachers/{{ t.id }}/bonus"
+            style="display:flex;gap:8px;align-items:flex-end;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)">
+        <div style="width:90px"><label>🎁 Bonus soat</label>
+          <input class="input" type="number" name="hours" min="0.5" max="20" step="0.5" value="1"></div>
+        <div style="flex:1"><label>Sabab</label>
+          <input class="input" name="reason" placeholder="Referral / aksiya"></div>
+        <button class="btn btn-out" type="submit">Berish</button>
+      </form>
+      {% endif %}
     </div>
   </div>
 

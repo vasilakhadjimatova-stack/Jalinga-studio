@@ -23,8 +23,14 @@ uchun: bron, kalendar, ustozlar bazasi, paket/soatbay to'lovlar, boshliq paneli.
 - **👥 Jamoa ish yuki** — montajchiga biriktirish + ochiq kartalar soni
 - **🎉 Topshirilganda** ustozga Telegram xabar (video havolasi bilan)
 
-## Keyingi bosqichlar
-4. Bandlik heatmap, churn radar, referral, onlayn to'lov (Payme/Click)
+## 4-bosqich (tayyor)
+- **🔥 Bandlik heatmap** — hafta kuni × soat (30 kun); bo'sh soatlarga chegirma strategiyasi uchun
+- **📡 Churn radar** — 30+ kun yozilmagan ustozlar ro'yxati (qayta faollashtirish)
+- **🏆 Top ustozlar** — 90 kunda eng ko'p soat yozganlar
+- **🎁 Bonus soatlar** — referral/aksiya uchun pulisiz paket (faqat rahbar)
+
+## Keyingi (ixtiyoriy)
+- Onlayn to'lov (Payme/Click) — merchant hisob ochilgach ulanadi
 
 ## Ishga tushirish
 ```bash
