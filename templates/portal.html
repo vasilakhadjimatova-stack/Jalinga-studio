@@ -11,7 +11,7 @@
     <div style="flex:1;min-width:0">
       <div style="font-weight:800;font-size:16.5px">{{ t.name }}</div>
       <div style="font-size:11px;color:var(--txt3);display:flex;align-items:center;gap:6px">
-        <span class="logo-dot" style="width:7px;height:7px"></span> JALINGA STUDIO · shaxsiy kabinet</div>
+        <span class="logo-mark" style="width:14px;height:14px">{% include "_logo.svg" %}</span> JALINGA STUDIO · shaxsiy kabinet</div>
     </div>
     <span class="tag tag-{% if t.balance_hours > 2 %}green{% elif t.balance_hours > 0 %}amber{% else %}gray{% endif %}"
           style="font-size:13px;padding:8px 14px">📦 {{ t.balance_hours }} soat</span>

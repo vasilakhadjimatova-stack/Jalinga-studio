@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block title %}Jalinga{% endblock %} — Jalinga Studio</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/font/lucide.css" rel="stylesheet">
@@ -17,9 +18,9 @@
   /* Premium DARK — Jalinga (oltin yozuv chirog'i qora studiyada) */
   --bg:#0B0C11; --surface:#15171F; --surface2:#1C1F2A; --line:rgba(255,255,255,.07);
   --txt:#F4F5F9; --txt2:#AEB6C8; --txt3:#8A93A8;
-  --brand:#F0B548; --brand-dk:#D99A25; --brand-bg:rgba(240,181,72,.16);
-  --gold:#F0B548; --gold-dk:#D99A25; --gold-bg:rgba(240,181,72,.16);
-  --green:#34D399; --green-bg:rgba(52,211,153,.15);
+  --brand:#F0A831; --brand-dk:#D98A1B; --brand-bg:rgba(240,168,49,.16);
+  --gold:#F0A831; --gold-dk:#D98A1B; --gold-bg:rgba(240,168,49,.16);
+  --green:#7CBFA0; --green-bg:rgba(124,191,160,.16);
   --red:#FB7185;   --red-bg:rgba(251,113,133,.15);
   --blue:#60A5FA;  --blue-bg:rgba(96,165,250,.15);
   --amber:#FBBF24; --amber-bg:rgba(251,191,36,.15);
@@ -77,8 +78,8 @@ a{color:inherit;text-decoration:none}
 
 /* ─── ORQA FON: ulkan JALINGA — REC nuqtasi bilan nafas oladi ─── */
 @keyframes breathe{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.85;transform:scale(1.02)}}
-@keyframes recBlink{0%,100%{opacity:.35;filter:drop-shadow(0 0 10px rgba(240,80,60,.35))}
-  50%{opacity:1;filter:drop-shadow(0 0 26px rgba(240,80,60,.9)) drop-shadow(0 0 60px rgba(240,80,60,.5))}}
+@keyframes recBlink{0%,100%{opacity:.5;filter:drop-shadow(0 0 12px rgba(240,168,49,.3))}
+  50%{opacity:1;filter:drop-shadow(0 0 30px rgba(240,168,49,.7)) drop-shadow(0 0 66px rgba(232,122,60,.4))}}
 .bg-stage{position:fixed;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;
   pointer-events:none;overflow:hidden;user-select:none}
 .bg-logo{display:flex;align-items:center;gap:.14em;white-space:nowrap;
@@ -86,8 +87,9 @@ a{color:inherit;text-decoration:none}
   color:rgba(255,255,255,.16);
   text-shadow:0 0 90px rgba(255,255,255,.12),0 0 36px rgba(255,255,255,.07);
   animation:breathe 6s ease-in-out infinite}
-.bg-rec{width:.34em;height:.34em;border-radius:50%;background:#F2544B;
-  animation:recBlink 3.4s ease-in-out infinite;flex:0 0 auto}
+.bg-mark{width:.72em;height:.72em;flex:0 0 auto;opacity:.9;
+  animation:recBlink 4.5s ease-in-out infinite}
+.bg-mark svg{width:100%;height:100%}
 
 /* ── SIDEBAR — dark frosted glass ── */
 .sb{width:250px;background:rgba(17,19,26,.72);
@@ -95,12 +97,14 @@ a{color:inherit;text-decoration:none}
   border-right:1px solid rgba(255,255,255,.06);
   position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:50;overflow-y:auto}
 .sb-brand{padding:24px 22px 18px;border-bottom:1px solid var(--line)}
-.logo-row{display:flex;align-items:center;height:32px;gap:8px}
+.logo-row{display:flex;align-items:center;height:36px;gap:9px}
+.logo-mark{width:36px;height:36px;flex:0 0 auto;display:flex}
+.logo-mark svg{width:100%;height:100%;filter:drop-shadow(0 2px 8px rgba(240,168,49,.35))}
 .logo-bar{width:5px;height:30px;background:var(--brand);border-radius:1px}
 .logo-t{font-size:24px;font-weight:800;letter-spacing:.5px;color:var(--txt);line-height:1}
 .logo-dot{width:11px;height:11px;border-radius:50%;background:#F2544B;
   box-shadow:0 0 10px rgba(242,84,75,.8);animation:recBlink 3.4s ease-in-out infinite}
-.logo-sub{font-size:9.5px;font-weight:700;letter-spacing:5px;color:var(--txt2);margin-top:6px;padding-left:13px}
+.logo-sub{font-size:9.5px;font-weight:700;letter-spacing:5px;color:var(--txt2);margin-top:5px;padding-left:45px}
 .sb-nav{padding:16px 14px;flex:1}
 .sb-sec{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);
   font-weight:800;padding:16px 12px 7px}
@@ -276,7 +280,7 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
 <body>
 
 <!-- Orqa fon: ulkan JALINGA + REC nuqta -->
-<div class="bg-stage"><div class="bg-logo"><span class="bg-rec"></span>JALINGA</div></div>
+<div class="bg-stage"><div class="bg-logo"><span class="bg-mark">{% include "_logo.svg" %}</span>JALINGA</div></div>
 
 {% with msgs = get_flashed_messages(with_categories=true) %}
 {% if msgs %}<div class="ntf">{% for cat, m in msgs %}<div class="{{ cat }}">{{ m }}</div>{% endfor %}</div>
@@ -287,9 +291,8 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
 <aside class="sb">
   <div class="sb-brand">
     <div class="logo-row">
-      <div class="logo-bar"></div>
+      <span class="logo-mark">{% include "_logo.svg" %}</span>
       <div class="logo-t">JALINGA</div>
-      <div class="logo-dot"></div>
     </div>
     <div class="logo-sub">VIDEO STUDIO</div>
   </div>
