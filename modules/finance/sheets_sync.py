@@ -278,9 +278,28 @@ def start_autosync(app, interval_minutes):
     logger.info("🔄 Moliya avto-sync ishga tushdi (har %d daqiqa)", interval)
 
 
+def seed_default_recurring():
+    """Kalendar bo'sh bo'lmasin: Jalinga'ning ma'lum oylik to'lovlari
+    (jadval tarixidan olingan tipik qiymatlar). Faqat hech qanday doimiy
+    to'lov bo'lmaganда bir marta seed qilinadi — admin keyin tahrirlaydi."""
+    from models.finance import FinRecurring
+    if FinRecurring.query.first() is not None:
+        return
+    defaults = [
+        ("Ofis ijarasi", 6100000, 2, "аренда"),
+        ("Abonent obunalar", 800000, 1, "Абонентские подписки"),
+    ]
+    for i, (name, amount, day, cat) in enumerate(defaults):
+        db.session.add(FinRecurring(name=name, amount=amount, pay_day=day,
+                                    category=cat, wallet="РС Jalinga", sort=i))
+    db.session.commit()
+    logger.info("Kalendar: %d ta doimiy to'lov seed qilindi", len(defaults))
+
+
 def import_snapshot_if_empty():
     """Birinchi ishga tushish: baza bo'sh bo'lsa repo'dagi snapshotni yuklaydi."""
     if FinTransaction.query.first() is not None:
+        seed_default_recurring()
         return None
     if not os.path.exists(SNAPSHOT_PATH):
         logger.warning("finance_snapshot.json topilmadi — moliya bo'sh boshlanadi")
@@ -291,5 +310,6 @@ def import_snapshot_if_empty():
     FinSetting.set("last_sync", data.get("meta", {}).get("generated_at", ""))
     FinSetting.set("sync_source", "snapshot")
     db.session.commit()
+    seed_default_recurring()
     logger.info(f"Moliya snapshot yuklandi: {stats}")
     return stats

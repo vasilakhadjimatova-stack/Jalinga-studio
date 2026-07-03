@@ -39,6 +39,15 @@ Google Sheets «Jalinga 2026» jadvali asosida to'liq moliya boshqaruvi
 - **📈 Pul oqimi (ДДС)** — yillik hisobot oyma-oy: operatsion /
   investitsion / moliyaviy bo'limlar, ochilish-yopilish qoldiqlari
   (Sheets'dagi ДДС_2026 bilan tiyingacha mos — testda qotirilgan)
+- **📅 To'lov kalendari** — oylik to'r + kunlik kassa bashorati:
+  doimiy oylik to'lovlar (ijara, obunalar) + rejali bir martalik
+  to'lov/tushumlar; qizil/sariq/yashil xavf darajalari va «likvidlik xavfi»
+  ogohlantirishi (`CASH_SAFETY_BUFFER` buferi). Reja/doimiy to'lov
+  «To'landi» bo'lganda jurnalga tushadi; o'sha oyда statya bo'yicha
+  haqiqiy chiqim bo'lsa ikki marta sanalmaydi (reconciliation).
+- **📊 Tahlil** — yillik statya kesimi (xarajat/tushum ulush foizi +
+  donut) va kontragentlar reytingi (kim bo'yicha kirim/chiqim/sof)
+- **📉 Yig'ma qoldiq grafigi** — panelда oy oxiri kassa qoldig'i chizig'i
 - **🤝 Qarzlar** — DOLG varag'i: kimga, qancha, qaytish foizi
 - **👑 Dividendlar** — ta'sischi to'lovlari tarixi
 - **🔄 Sync** — 1 tugma: jadval ochiq havola orqali (kredensialsiz) xlsx
@@ -72,6 +81,7 @@ ADMIN_CODE=123456 python app.py        # http://localhost:5060
 | `FINANCE_SPREADSHEET_ID` | Google Sheets ID (default: Jalinga 2026 jadvali) |
 | `USD_RATE` | $ kassa uchun so'm kursi (default: 12000) |
 | `FINANCE_SYNC_INTERVAL` | Avto-sync intervali, daqiqa (default: 0 = o'chiq) |
+| `CASH_SAFETY_BUFFER` | To'lov kalendari minimal kassa zaxirasi (default: 20 mln) |
 
 ## Test
 ```bash

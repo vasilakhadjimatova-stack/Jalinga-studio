@@ -48,10 +48,13 @@ class FinTransaction(db.Model):
     category = db.Column(db.String(200), nullable=False, index=True)
     direction = db.Column(db.String(8), nullable=False)   # in | out
     activity = db.Column(db.String(16), nullable=False)   # operating|investing|financing|technical
-    source = db.Column(db.String(16), default="manual")   # sheet | manual | studio
+    source = db.Column(db.String(16), default="manual")   # sheet|manual|studio|plan|recurring
     # source='studio' bo'lsa — bog'langan studiya to'lovi (Payment.id).
-    # Shu to'lov tasdiqlanганda avto-yaraladi, bekor/o'chirilganда yo'qoladi.
+    # Shu to'lov tasdiqlanганда avto-yaraladi, bekor/o'chirilganда yo'qoladi.
     payment_id = db.Column(db.Integer, index=True)
+    # To'lov kalendaridan yaratilgan yozuvlar uchun bog'lamalar
+    plan_id = db.Column(db.Integer, index=True)        # FinPlan.id
+    recurring_id = db.Column(db.Integer, index=True)   # FinRecurring.id
 
     @property
     def signed(self):
@@ -77,6 +80,32 @@ class FinDebt(db.Model):
     @property
     def remainder(self):
         return round((self.amount or 0) - (self.repaid or 0), 2)
+
+
+class FinRecurring(db.Model):
+    """Doimiy oylik to'lov (ijara, obunalar…) — to'lov kalendari uchun."""
+    __tablename__ = "fin_recurring"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    amount = db.Column(db.Float, default=0.0)          # so'm
+    pay_day = db.Column(db.Integer, default=1)         # oyning kuni (1–31)
+    category = db.Column(db.String(200), default="")   # ДДС statyasi
+    wallet = db.Column(db.String(120), default="")     # odatdagi hisob
+    is_active = db.Column(db.Boolean, default=True)
+    sort = db.Column(db.Integer, default=0)
+
+
+class FinPlan(db.Model):
+    """Rejalashtirilgan bir martalik to'lov/tushum — kalendarda ko'rinadi."""
+    __tablename__ = "fin_plans"
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.String(10), nullable=False, index=True)   # YYYY-MM-DD
+    description = db.Column(db.String(300), default="")
+    amount = db.Column(db.Float, default=0.0)
+    direction = db.Column(db.String(8), default="out")            # in | out
+    category = db.Column(db.String(200), default="")
+    wallet = db.Column(db.String(120), default="")
+    is_paid = db.Column(db.Boolean, default=False)
 
 
 class FinSetting(db.Model):

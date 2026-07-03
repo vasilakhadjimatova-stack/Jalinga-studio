@@ -192,7 +192,72 @@ def test_finance_pages_operator_blocked(app):
     c = app.test_client()
     c.post("/login", data={"code": u.code})
     for url in ("/finance", "/finance/transactions", "/finance/dds",
-                "/finance/debts", "/finance/dividends"):
+                "/finance/debts", "/finance/dividends",
+                "/finance/calendar", "/finance/analysis"):
         r = c.get(url)
         assert r.status_code in (302, 303), url
         assert "/finance" not in r.headers.get("Location", ""), url
+
+
+# ── To'lov kalendari ──
+
+def test_calendar_and_analysis_load(admin_client):
+    for url in ("/finance/calendar", "/finance/calendar?year=2026&month=7",
+                "/finance/analysis", "/finance/analysis?year=2026"):
+        r = admin_client.get(url)
+        assert r.status_code == 200, url
+
+
+def test_default_recurring_seeded(app):
+    """Kalendar bo'sh bo'lmasin — ijara/obuna seed qilinadi."""
+    from models.finance import FinRecurring
+    assert FinRecurring.query.count() >= 2
+
+
+def test_plan_add_pay_creates_txn(app, admin_client, post):
+    """Reja qo'shish → to'lash → jurnalda tranzaksiya paydo bo'ladi."""
+    from models.finance import FinPlan, FinTransaction
+    post(admin_client, "/finance/calendar/plan/add",
+         date="2026-07-15", direction="out", description="Test uskuna",
+         amount="1500000", category="прочие расходы", wallet="РС Jalinga")
+    f = FinPlan.query.filter_by(description="Test uskuna").first()
+    assert f is not None and f.is_paid is False
+    post(admin_client, "/finance/calendar/pay",
+         kind="plan", item_id=str(f.id), date="2026-07-15", wallet="РС Jalinga")
+    assert FinPlan.query.get(f.id).is_paid is True
+    ft = FinTransaction.query.filter_by(plan_id=f.id, source="plan").first()
+    assert ft is not None and ft.amount == pytest.approx(1500000)
+    assert ft.direction == "out"
+
+
+def test_recurring_pay_and_double_block(app, admin_client, post):
+    """Doimiy to'lov — to'lash jurnalga tushadi, ikkinchi marta bloklanadi."""
+    from models.finance import FinRecurring, FinTransaction
+    r = FinRecurring.query.first()
+    post(admin_client, "/finance/calendar/pay",
+         kind="recurring", item_id=str(r.id), date="2026-08-05",
+         wallet="РС Jalinga")
+    n = FinTransaction.query.filter_by(recurring_id=r.id, year=2026,
+                                       month=8).count()
+    assert n == 1
+    # ikkinchi urinish — yangi yozuv yaratmaydi
+    post(admin_client, "/finance/calendar/pay",
+         kind="recurring", item_id=str(r.id), date="2026-08-20",
+         wallet="РС Jalinga")
+    n2 = FinTransaction.query.filter_by(recurring_id=r.id, year=2026,
+                                        month=8).count()
+    assert n2 == 1
+
+
+def test_recurring_reconciled_by_category(app):
+    """Shu oyда shu statyada haqiqiy chiqim bo'lsa, recurring qoplangan
+    hisoblanadi (ikki marta sanamaslik)."""
+    from models.finance import FinRecurring, FinTransaction
+    from modules.finance.routes import _recurring_paid
+    r = FinRecurring.query.filter_by(category="аренда").first()
+    assert r is not None
+    # Sheets'да 2026 mart oyида «аренда» chiqimi bor → qoplangan
+    covered = _recurring_paid(r.id, 2026, 3, r.category)
+    assert covered is True
+    # Uzoq kelajak oyида hech narsa yo'q → qoplanmagan
+    assert _recurring_paid(r.id, 2026, 11, r.category) is False

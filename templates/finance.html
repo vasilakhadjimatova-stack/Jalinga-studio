@@ -116,6 +116,13 @@
   </div>
 </div>
 
+<!-- Yig'ma qoldiq dinamikasi -->
+<div class="card" style="margin-top:16px">
+  <div class="card-hd"><div class="card-title"><i class="icon-line-chart"></i> Kassa qoldig'i dinamikasi — {{ year }}</div>
+    <span class="tag tag-amber">joriy: {{ total_balance|som }}</span></div>
+  <div class="card-bd"><div class="chartbox" style="height:240px"><canvas id="balChart"></canvas></div></div>
+</div>
+
 <!-- So'nggi tranzaksiyalar -->
 <div class="card" style="margin-top:16px">
   <div class="card-hd"><div class="card-title"><i class="icon-history"></i> So'nggi harakatlar</div>
@@ -176,6 +183,28 @@
            ticks:{color:txt3, font:{family:'Inter',size:10.5}, callback:function(v){return mln(v);}}}
       }
     }
+  });
+
+  // Yig'ma kassa qoldig'i (faqat ma'lumot bor oygacha)
+  var lastM = {{ last_month or 0 }};
+  var balRaw = {{ bal_series|tojson }};
+  var balData = balRaw.map(function(v,i){ return (i < lastM) ? v : null; });
+  var gold = css.getPropertyValue('--gold').trim() || '#F0A831';
+  new Chart(document.getElementById('balChart'), {
+    type:'line',
+    data:{ labels:['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'],
+      datasets:[{ label:'Kassa qoldigi', data:balData, spanGaps:false,
+        borderColor:gold, backgroundColor:'rgba(240,168,49,.12)', fill:true,
+        tension:.32, borderWidth:2.5, pointRadius:3, pointBackgroundColor:gold,
+        pointHoverRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:function(c){return ' ' + fmt(c.raw) + " so'm";}}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:txt3, font:{family:'Inter',size:10.5}}},
+        y:{grid:{color:line}, border:{display:false},
+           ticks:{color:txt3, font:{family:'Inter',size:10.5}, callback:function(v){return mln(v);}}}
+      }}
   });
 })();
 </script>

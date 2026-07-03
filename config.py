@@ -31,3 +31,7 @@ class Config:
     # Avto-sync intervali (daqiqa). 0 → o'chiq (faqat qo'lda «Sync» tugmasi).
     # Railway'да masalan 120 (2 soat) qo'yish tavsiya etiladi.
     FINANCE_SYNC_INTERVAL = int(os.environ.get("FINANCE_SYNC_INTERVAL", "0"))
+    # To'lov kalendari — minimal kassa zaxirasi (xavfsizlik buferi, so'm).
+    # Kunlik bashorat qoldig'i bufer'dan past bo'lsa → sariq, manfiy → qizil.
+    # UI'да ?buffer=... bilan vaqtincha o'zgartirish mumkin.
+    CASH_SAFETY_BUFFER = float(os.environ.get("CASH_SAFETY_BUFFER", "20000000"))

@@ -16,6 +16,8 @@
   <a href="/finance" class="ftab {% if request.path=='/finance' %}on{% endif %}"><i class="icon-layout-dashboard"></i> Panel</a>
   <a href="/finance/transactions" class="ftab {% if request.path.startswith('/finance/transactions') %}on{% endif %}"><i class="icon-list"></i> Jurnal</a>
   <a href="/finance/dds" class="ftab {% if request.path.startswith('/finance/dds') %}on{% endif %}"><i class="icon-table-2"></i> Pul oqimi (ДДС)</a>
+  <a href="/finance/calendar" class="ftab {% if request.path.startswith('/finance/calendar') %}on{% endif %}"><i class="icon-calendar-clock"></i> To'lov kalendari</a>
+  <a href="/finance/analysis" class="ftab {% if request.path.startswith('/finance/analysis') %}on{% endif %}"><i class="icon-chart-pie"></i> Tahlil</a>
   <a href="/finance/debts" class="ftab {% if request.path.startswith('/finance/debts') %}on{% endif %}"><i class="icon-hand-coins"></i> Qarzlar</a>
   <a href="/finance/dividends" class="ftab {% if request.path.startswith('/finance/dividends') %}on{% endif %}"><i class="icon-crown"></i> Dividendlar</a>
   <a href="/finance/payments" class="ftab {% if request.path.startswith('/finance/payments') %}on{% endif %}"><i class="icon-receipt"></i> Studiya to'lovlari</a>
