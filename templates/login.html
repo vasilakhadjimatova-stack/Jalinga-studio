@@ -1,26 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Kirish{% endblock %}
 {% block anon %}
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);
-       border-radius:20px;padding:30px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-      <span style="width:44px;height:44px;border-radius:13px;background:linear-gradient(140deg,var(--brand),var(--brand-dk));
-        display:flex;align-items:center;justify-content:center;font-size:21px">🎬</span>
-      <div>
-        <div style="font-weight:800;font-size:19px">Jalinga Studio</div>
-        <div style="font-size:12px;color:var(--txt3)">Interaktiv video studiya boshqaruvi</div>
-      </div>
+<div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1">
+  <div style="width:100%;max-width:390px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+       border:1px solid var(--line);border-radius:24px;padding:36px 32px;box-shadow:var(--sh3);
+       backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:fadeUp .5s var(--ease)">
+    <div class="logo-row" style="justify-content:center">
+      <div class="logo-bar"></div>
+      <div class="logo-t" style="font-size:30px">JALINGA</div>
+      <div class="logo-dot"></div>
     </div>
-    <form method="POST" style="margin-top:18px">
+    <div class="logo-sub" style="text-align:center;padding-left:0;margin-bottom:26px">VIDEO STUDIO</div>
+
+    <form method="POST">
       <input type="hidden" name="next" value="{{ request.args.get('next','') }}">
-      <label>Shaxsiy kod</label>
+      <label style="text-align:center;margin-bottom:8px">Shaxsiy kodingizni kiriting</label>
       <input class="input" type="password" name="code" inputmode="numeric"
              placeholder="• • • • • •" autofocus autocomplete="off"
-             style="font-size:19px;letter-spacing:6px;text-align:center">
-      <button class="btn btn-gold" type="submit" style="width:100%;margin-top:16px;justify-content:center">
-        Kirish →</button>
+             style="font-size:21px;letter-spacing:8px;text-align:center;padding:14px">
+      <button class="btn btn-gold" type="submit" style="width:100%;margin-top:18px;justify-content:center;padding:13px">
+        Kirish <i class="icon-arrow-right"></i></button>
     </form>
+    <div style="text-align:center;font-size:11px;color:var(--txt3);margin-top:22px">
+      Interaktiv video studiya boshqaruvi</div>
   </div>
 </div>
 {% endblock %}

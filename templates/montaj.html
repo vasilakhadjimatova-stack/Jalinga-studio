@@ -1,41 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Montaj{% endblock %}
+{% block page_title %}Montaj oqimi{% endblock %}
+{% block page_crumb %}{{ open_n }} ta ochiq karta{% if overdue_n %} · {{ overdue_n }} ta kechikkan{% endif %}{% endblock %}
 {% block content %}
 <div class="ph"><div>
-  <div class="ph-title">✂️ Montaj oqimi</div>
-  <div class="ph-sub">{{ open_n }} ta ochiq karta{% if overdue_n %} · <span style="color:var(--red)">{{ overdue_n }} ta kechikkan</span>{% endif %}</div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Montaj oqimi</div>
+  <div class="ph-sub">{{ open_n }} ta ochiq karta{% if overdue_n %} · <span style="color:var(--red);font-weight:800">{{ overdue_n }} ta kechikkan</span>{% endif %}</div>
 </div>
 {% if workload %}
 <div style="display:flex;gap:7px;flex-wrap:wrap">
   {% for nm, n in workload.items() %}
-  <span class="tag tag-blue" style="font-size:11px">✂️ {{ nm }}: {{ n }}</span>
+  <span class="tag tag-blue">✂️ {{ nm }}: {{ n }}</span>
   {% endfor %}
 </div>
 {% endif %}</div>
 
-<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start">
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(255px,1fr));align-items:start">
   {% for s in statuses %}
   <div class="card" style="margin:0">
-    <div class="card-hd"><div class="card-title">{{ labels[s][0] }}</div>
+    <div class="card-hd"><div class="card-title" style="font-size:13px">{{ labels[s][0] }}</div>
       <span class="tag tag-gray">{{ cols[s]|length }}</span></div>
-    <div class="card-bd" style="padding:10px;min-height:120px">
+    <div style="padding:11px;min-height:130px">
       {% for j in cols[s] %}
-      <div style="background:var(--surface2);border-radius:11px;padding:11px 13px;margin-bottom:8px;
-           {% if j.overdue %}border:1px solid var(--red);{% else %}border:1px solid var(--line);{% endif %}">
+      <div style="background:var(--surface2);border-radius:13px;padding:12px 14px;margin-bottom:9px;
+           border:1px solid {% if j.overdue %}var(--red){% else %}var(--line){% endif %};
+           {% if j.overdue %}box-shadow:0 0 14px rgba(251,113,133,.15);{% endif %}">
         <div style="font-weight:700;font-size:12.5px">{{ j.title }}</div>
-        <div style="font-size:11px;color:var(--txt3);margin-top:3px">
-          👨‍🏫 {{ j.teacher_name }}
-          {% if j.assignee_name %} · ✂️ {{ j.assignee_name }}{% endif %}
-          {% if j.due_date %} · <span style="{% if j.overdue %}color:var(--red);font-weight:800{% endif %}">⏳ {{ j.due_date }}{% if j.overdue %} KECHIKDI{% endif %}</span>{% endif %}
+        <div style="font-size:11px;color:var(--txt3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
+          <span>👨‍🏫 {{ j.teacher_name }}</span>
+          {% if j.assignee_name %}<span>✂️ {{ j.assignee_name }}</span>{% endif %}
+          {% if j.due_date %}<span style="{% if j.overdue %}color:var(--red);font-weight:800{% endif %}">⏳ {{ j.due_date }}{% if j.overdue %} KECHIKDI{% endif %}</span>{% endif %}
         </div>
-        {% if j.link %}<a href="{{ j.link }}" target="_blank" style="font-size:11px">🔗 Tayyor video</a>{% endif %}
+        {% if j.link %}<a href="{{ j.link }}" target="_blank" style="font-size:11px;color:var(--brand)">🔗 Tayyor video</a>{% endif %}
 
-        <div style="display:flex;gap:5px;margin-top:9px;flex-wrap:wrap">
+        <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap">
           {% set idx = statuses.index(s) %}
           {% if idx > 0 %}
           <form method="POST" action="/montaj/{{ j.id }}/move" style="display:inline">
             <input type="hidden" name="status" value="{{ statuses[idx-1] }}">
-            <button class="btn btn-sm btn-out" type="submit" title="Orqaga">←</button>
+            <button class="btn btn-sm btn-ghost" type="submit" title="Orqaga"><i class="icon-arrow-left"></i></button>
           </form>
           {% endif %}
           {% if idx < statuses|length - 1 %}
@@ -43,13 +47,13 @@
             <form method="POST" action="/montaj/{{ j.id }}/move" style="display:flex;gap:5px;flex:1">
               <input type="hidden" name="status" value="delivered">
               <input class="input" name="link" placeholder="🔗 video havolasi"
-                     value="{{ j.link }}" style="padding:6px 9px;font-size:11px;flex:1">
-              <button class="btn btn-sm btn-gold" type="submit">✅ Topshirish</button>
+                     value="{{ j.link }}" style="padding:6px 10px;font-size:11px;flex:1">
+              <button class="btn btn-sm btn-gold" type="submit">✅</button>
             </form>
             {% else %}
             <form method="POST" action="/montaj/{{ j.id }}/move" style="display:inline">
               <input type="hidden" name="status" value="{{ statuses[idx+1] }}">
-              <button class="btn btn-sm btn-gold" type="submit">{{ labels[statuses[idx+1]][0] }} →</button>
+              <button class="btn btn-sm btn-gold" type="submit">{{ labels[statuses[idx+1]][0] }} <i class="icon-arrow-right"></i></button>
             </form>
             {% endif %}
           {% endif %}
@@ -57,7 +61,7 @@
 
         {% if s != 'delivered' %}
         <form method="POST" action="/montaj/{{ j.id }}/assign"
-              style="display:flex;gap:5px;margin-top:7px">
+              style="display:flex;gap:5px;margin-top:8px">
           <select class="select" name="assignee_id" style="padding:6px 9px;font-size:11px;flex:1">
             <option value="">— montajchi —</option>
             {% for u in team %}
@@ -65,13 +69,13 @@
             {% endfor %}
           </select>
           <input class="input" type="date" name="due_date" value="{{ j.due_date }}"
-                 style="padding:6px;font-size:11px;width:120px">
-          <button class="btn btn-sm btn-out" type="submit">✓</button>
+                 style="padding:6px;font-size:11px;width:122px">
+          <button class="btn btn-sm btn-out" type="submit"><i class="icon-check"></i></button>
         </form>
         {% endif %}
       </div>
       {% else %}
-      <div class="empty" style="padding:18px 8px">Bo'sh</div>
+      <div class="empty" style="padding:22px 8px"><i class="icon-inbox"></i>Bo'sh</div>
       {% endfor %}
     </div>
   </div>

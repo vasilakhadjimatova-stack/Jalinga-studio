@@ -1,123 +1,355 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" data-theme="jalinga">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>{% block title %}Jalinga Studio{% endblock %} — Jalinga</title>
+<title>{% block title %}Jalinga{% endblock %} — Jalinga Studio</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/font/lucide.css" rel="stylesheet">
+<script>
+/* Mavzu — localStorage'dan darhol (miltillashsiz) */
+(function(){try{var t=localStorage.getItem('jl_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
 <style>
 :root{
-  --bg:#0B0D12;--surface:#12151D;--surface2:#1A1E29;--line:rgba(255,255,255,.08);
-  --txt:#EAEDF3;--txt2:#B6BDCB;--txt3:#7C8496;
-  --brand:#F0B548;--brand-bg:rgba(240,181,72,.13);--brand-dk:#D99A25;
-  --blue:#6098F2;--blue-bg:rgba(96,152,242,.13);
-  --green:#34D399;--green-bg:rgba(52,211,153,.12);
-  --red:#F87171;--red-bg:rgba(248,113,113,.12);
-  --amber:#FBBF24;--amber-bg:rgba(251,191,36,.12);
-  --r:16px;--r2:11px;--ease:cubic-bezier(.22,1,.36,1);
+  /* Premium DARK — Jalinga (oltin yozuv chirog'i qora studiyada) */
+  --bg:#0B0C11; --surface:#15171F; --surface2:#1C1F2A; --line:rgba(255,255,255,.07);
+  --txt:#F4F5F9; --txt2:#AEB6C8; --txt3:#8A93A8;
+  --brand:#F0B548; --brand-dk:#D99A25; --brand-bg:rgba(240,181,72,.16);
+  --gold:#F0B548; --gold-dk:#D99A25; --gold-bg:rgba(240,181,72,.16);
+  --green:#34D399; --green-bg:rgba(52,211,153,.15);
+  --red:#FB7185;   --red-bg:rgba(251,113,133,.15);
+  --blue:#60A5FA;  --blue-bg:rgba(96,165,250,.15);
+  --amber:#FBBF24; --amber-bg:rgba(251,191,36,.15);
+  --r:18px; --r2:12px;
+  --sh1:0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.25);
+  --sh2:0 4px 14px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.35);
+  --sh3:0 10px 30px rgba(0,0,0,.5), 0 30px 60px rgba(0,0,0,.45);
+  --ring:0 0 0 4px rgba(240,181,72,.22);
+  --ease:cubic-bezier(.4,0,.2,1);
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,-apple-system,sans-serif;
-  font-size:14px;line-height:1.5;min-height:100vh}
-a{color:var(--brand)}
-.layout{display:flex;min-height:100vh}
-.sidebar{width:230px;flex:0 0 auto;background:var(--surface);border-right:1px solid var(--line);
-  padding:18px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
-.logo{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;font-weight:800;font-size:17px}
-.logo .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,var(--brand),var(--brand-dk));
-  display:flex;align-items:center;justify-content:center;font-size:17px}
-.nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
-  color:var(--txt2);text-decoration:none;font-weight:600;font-size:13.5px;margin-bottom:2px}
-.nav a:hover{background:var(--surface2);color:var(--txt)}
-.nav a.act{background:var(--brand-bg);color:var(--brand)}
-.main{flex:1;min-width:0;padding:22px 26px 60px}
-.ph{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;flex-wrap:wrap}
-.ph-title{font-size:21px;font-weight:800}
+/* ── YORUG' MAVZU — toza marmar ── */
+html[data-theme="marble"]{
+  --bg:#EFEDE7; --surface:#FFFFFF; --surface2:#F4F2EC; --line:rgba(38,32,20,.13);
+  --txt:#181510; --txt2:#544E40; --txt3:#7C7560;
+  --brand:#B8860B; --brand-dk:#96690A; --brand-bg:rgba(184,134,11,.14);
+  --gold:#B8860B; --gold-dk:#96690A; --gold-bg:rgba(184,134,11,.14);
+  --ring:0 0 0 4px rgba(184,134,11,.20);
+  --sh1:0 1px 2px rgba(50,40,22,.06),0 2px 8px rgba(50,40,22,.05);
+  --sh2:0 4px 14px rgba(50,40,22,.09),0 12px 30px rgba(50,40,22,.07);
+  --sh3:0 10px 30px rgba(50,40,22,.12),0 30px 60px rgba(50,40,22,.09);
+}
+html[data-theme="marble"] body{background:
+  radial-gradient(1200px 720px at 88% -12%, rgba(184,134,11,.10), transparent 56%),
+  radial-gradient(980px 600px at -10% 112%, rgba(96,165,250,.07), transparent 56%),
+  linear-gradient(165deg,#FAF9F5 0%,#EFEDE7 55%,#E8E5DC 100%);background-attachment:fixed}
+html[data-theme="marble"] .card,html[data-theme="marble"] .kpi,
+html[data-theme="marble"] .input,html[data-theme="marble"] textarea,
+html[data-theme="marble"] .select{background:var(--surface);
+  backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid var(--line);
+  box-shadow:0 1px 2px rgba(50,40,22,.05),0 6px 18px rgba(50,40,22,.06)}
+html[data-theme="marble"] .topbar{background:rgba(255,255,255,.80);
+  border-bottom:1px solid rgba(38,32,20,.09)}
+html[data-theme="marble"] .sb{background:rgba(255,255,255,.86);
+  border-right:1px solid rgba(38,32,20,.09)}
+html[data-theme="marble"] .bg-logo{color:rgba(38,30,16,.12);
+  text-shadow:0 0 80px rgba(38,30,16,.08)}
+html[data-theme="marble"] .bn{background:rgba(255,255,255,.92);border-top:1px solid rgba(38,32,20,.10)}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;color:var(--txt);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  display:flex;min-height:100vh;
+  background:
+    radial-gradient(1200px 700px at 88% -12%, rgba(240,181,72,.13), transparent 56%),
+    radial-gradient(1000px 620px at -10% 112%, rgba(96,165,250,.06), transparent 56%),
+    linear-gradient(165deg,#0E0F15 0%, #0B0C11 55%, #08090D 100%);
+  background-attachment:fixed}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:6px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+html[data-theme="marble"] ::-webkit-scrollbar-thumb{background:rgba(40,32,18,.22);background-clip:content-box}
+a{color:inherit;text-decoration:none}
+::selection{background:rgba(240,181,72,.32)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ─── ORQA FON: ulkan JALINGA — REC nuqtasi bilan nafas oladi ─── */
+@keyframes breathe{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.85;transform:scale(1.02)}}
+@keyframes recBlink{0%,100%{opacity:.35;filter:drop-shadow(0 0 10px rgba(240,80,60,.35))}
+  50%{opacity:1;filter:drop-shadow(0 0 26px rgba(240,80,60,.9)) drop-shadow(0 0 60px rgba(240,80,60,.5))}}
+.bg-stage{position:fixed;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;overflow:hidden;user-select:none}
+.bg-logo{display:flex;align-items:center;gap:.14em;white-space:nowrap;
+  font-family:'Inter',sans-serif;font-size:16vw;font-weight:800;letter-spacing:-.02em;
+  color:rgba(255,255,255,.16);
+  text-shadow:0 0 90px rgba(255,255,255,.12),0 0 36px rgba(255,255,255,.07);
+  animation:breathe 6s ease-in-out infinite}
+.bg-rec{width:.34em;height:.34em;border-radius:50%;background:#F2544B;
+  animation:recBlink 3.4s ease-in-out infinite;flex:0 0 auto}
+
+/* ── SIDEBAR — dark frosted glass ── */
+.sb{width:250px;background:rgba(17,19,26,.72);
+  backdrop-filter:saturate(160%) blur(22px);-webkit-backdrop-filter:saturate(160%) blur(22px);
+  border-right:1px solid rgba(255,255,255,.06);
+  position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:50;overflow-y:auto}
+.sb-brand{padding:24px 22px 18px;border-bottom:1px solid var(--line)}
+.logo-row{display:flex;align-items:center;height:32px;gap:8px}
+.logo-bar{width:5px;height:30px;background:var(--brand);border-radius:1px}
+.logo-t{font-size:24px;font-weight:800;letter-spacing:.5px;color:var(--txt);line-height:1}
+.logo-dot{width:11px;height:11px;border-radius:50%;background:#F2544B;
+  box-shadow:0 0 10px rgba(242,84,75,.8);animation:recBlink 3.4s ease-in-out infinite}
+.logo-sub{font-size:9.5px;font-weight:700;letter-spacing:5px;color:var(--txt2);margin-top:6px;padding-left:13px}
+.sb-nav{padding:16px 14px;flex:1}
+.sb-sec{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--txt3);
+  font-weight:800;padding:16px 12px 7px}
+.sb-a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:11px;
+  color:var(--txt2);font-size:13.5px;font-weight:500;transition:.16s;margin-bottom:3px;position:relative}
+.sb-a:hover{background:var(--surface2);color:var(--txt)}
+.sb-a.active{background:linear-gradient(90deg,var(--brand-bg),rgba(240,181,72,.05));
+  color:var(--brand);font-weight:700}
+.sb-a.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;
+  background:var(--brand);border-radius:0 4px 4px 0;box-shadow:0 0 8px rgba(240,181,72,.5)}
+.sb-a i{font-size:18px;width:21px;text-align:center}
+.sb-foot{padding:14px 18px;border-top:1px solid var(--line)}
+.sb-user{display:flex;align-items:center;gap:10px}
+.sb-av{width:36px;height:36px;border-radius:50%;flex:0 0 auto;
+  background:linear-gradient(150deg,var(--brand),var(--brand-dk));
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#151004;font-size:14px;
+  box-shadow:0 4px 12px rgba(240,181,72,.28)}
+.sb-uname{font-size:12.5px;font-weight:700;line-height:1.2}
+.sb-urole{font-size:10px;color:var(--txt3)}
+.sb-logout{margin-left:auto;color:var(--txt3);font-size:16px;padding:6px;border-radius:8px;transition:.15s}
+.sb-logout:hover{color:var(--red);background:var(--red-bg)}
+
+/* ── MAIN + TOPBAR ── */
+.main{margin-left:250px;flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:1}
+.topbar{height:64px;background:rgba(13,15,21,.62);backdrop-filter:saturate(160%) blur(18px);
+  -webkit-backdrop-filter:saturate(160%) blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:40}
+.tb-title{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.tb-crumb{font-size:11.5px;color:var(--txt3);margin-top:1px}
+.tb-right{display:flex;align-items:center;gap:12px}
+.tb-theme{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface2);color:var(--txt2);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;transition:all .25s var(--ease);font-size:17px}
+.tb-theme:hover{transform:translateY(-2px) rotate(-8deg);color:var(--amber);
+  border-color:rgba(251,191,36,.5);box-shadow:0 8px 22px rgba(251,191,36,.25)}
+.content{padding:26px 28px 90px;animation:fadeUp .35s var(--ease)}
+
+/* ── SAHIFA SARLAVHASI ── */
+.ph{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.gold-bar{width:44px;height:4px;border-radius:3px;margin-bottom:10px;
+  background:linear-gradient(90deg,var(--brand),transparent)}
+.ph-title{font-size:22px;font-weight:800;letter-spacing:-.3px}
 .ph-sub{font-size:12.5px;color:var(--txt3);margin-top:3px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
-.card-hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+
+/* ── KARTALAR ── */
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;
+  box-shadow:var(--sh1);animation:fadeUp .4s var(--ease)}
+.card-hd{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;
   justify-content:space-between;gap:10px;flex-wrap:wrap}
-.card-title{font-weight:800;font-size:14.5px}
-.card-bd{padding:16px 18px}
+.card-title{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:9px}
+.card-title i{color:var(--brand);font-size:17px}
+.card-bd{padding:18px 20px}
 .grid{display:grid;gap:14px}
-.g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;
-  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;text-decoration:none;color:inherit}
-.kpi-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)}
-.kpi-val{font-size:24px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums}
-.kpi-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
-.btn{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;font-family:inherit;
-  font-weight:700;font-size:13px;padding:10px 16px;border-radius:11px;text-decoration:none;transition:filter .15s}
-.btn:hover{filter:brightness(1.08)}
-.btn-gold{background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#151004}
+.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+
+/* ── KPI — yorqin premium ── */
+.kpi{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:var(--r);padding:17px 19px;position:relative;
+  box-shadow:var(--sh1);transition:transform .22s var(--ease),box-shadow .22s var(--ease);
+  text-decoration:none;color:inherit;display:block;animation:fadeUp .4s var(--ease);overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:19px;right:19px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--brand),transparent);opacity:0;transition:opacity .25s}
+.kpi:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.kpi:hover::after{opacity:.9}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.kpi-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--txt3)}
+.kpi-val{font-size:25px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.4px;
+  text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.kpi-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex:0 0 auto}
+.kpi-ico.gold{background:var(--gold-bg);color:var(--gold)}
+.kpi-ico.green{background:var(--green-bg);color:var(--green)}
+.kpi-ico.blue{background:var(--blue-bg);color:var(--blue)}
+.kpi-ico.red{background:var(--red-bg);color:var(--red)}
+.kpi-ico.amber{background:var(--amber-bg);color:var(--amber)}
+
+/* ── TUGMALAR ── */
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font-family:inherit;
+  font-weight:700;font-size:13px;padding:11px 18px;border-radius:12px;text-decoration:none;
+  transition:all .2s var(--ease);line-height:1}
+.btn i{font-size:15px}
+.btn-gold{background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#151004;
+  box-shadow:0 6px 18px rgba(240,181,72,.25),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(240,181,72,.35)}
 .btn-out{background:var(--surface2);color:var(--txt);border:1px solid var(--line)}
-.btn-sm{padding:6px 11px;font-size:12px;border-radius:9px}
-.input,.select,textarea{width:100%;padding:10px 13px;font-size:13.5px;font-family:inherit;
-  background:var(--surface2);border:1.5px solid var(--line);border-radius:var(--r2);color:var(--txt);outline:0}
-.input:focus,.select:focus,textarea:focus{border-color:var(--brand)}
-label{display:block;font-size:11.5px;font-weight:700;color:var(--txt2);margin:11px 0 5px}
-.tag{display:inline-flex;align-items:center;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px}
+.btn-out:hover{border-color:var(--brand);color:var(--brand);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--txt2)}
+.btn-ghost:hover{background:var(--surface2);color:var(--txt)}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:9px}
+
+/* ── FORMA ── */
+.input,.select,textarea{width:100%;padding:11px 14px;font-size:13.5px;font-family:inherit;
+  background:var(--surface2);border:1.5px solid var(--line);border-radius:var(--r2);
+  color:var(--txt);outline:0;transition:border .15s,box-shadow .15s}
+.input:focus,.select:focus,textarea:focus{border-color:var(--brand);box-shadow:var(--ring)}
+.input::placeholder,textarea::placeholder{color:var(--txt3)}
+label{display:block;font-size:11.5px;font-weight:700;color:var(--txt2);margin:12px 0 5px}
+.select{cursor:pointer}
+input[type="date"],input[type="time"],input[type="month"],input[type="datetime-local"]{color-scheme:dark}
+html[data-theme="marble"] input[type="date"],html[data-theme="marble"] input[type="time"],
+html[data-theme="marble"] input[type="month"]{color-scheme:light}
+
+/* ── TAG / JADVAL / EMPTY ── */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;
+  padding:3px 10px;border-radius:99px;white-space:nowrap}
 .tag-green{background:var(--green-bg);color:var(--green)}
 .tag-blue{background:var(--blue-bg);color:var(--blue)}
 .tag-red{background:var(--red-bg);color:var(--red)}
 .tag-gray{background:var(--surface2);color:var(--txt3)}
 .tag-amber{background:var(--amber-bg);color:var(--amber)}
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{text-align:left;padding:9px 12px;font-size:10.5px;text-transform:uppercase;
-  letter-spacing:.4px;color:var(--txt3);border-bottom:1px solid var(--line)}
-.tbl td{padding:10px 12px;border-bottom:1px solid var(--line)}
+.tbl th{text-align:left;padding:10px 14px;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--txt3);border-bottom:1px solid var(--line);font-weight:800}
+.tbl td{padding:12px 14px;border-bottom:1px solid var(--line)}
 .tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr{transition:background .14s}
+.tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+html[data-theme="marble"] .tbl tbody tr:hover{background:rgba(38,32,20,.03)}
 .tbl .r{text-align:right;font-variant-numeric:tabular-nums}
-.empty{text-align:center;padding:34px 14px;color:var(--txt3);font-size:13px}
-.ntf{position:fixed;top:16px;right:16px;z-index:900;display:flex;flex-direction:column;gap:8px}
+.empty{text-align:center;padding:38px 14px;color:var(--txt3);font-size:13px}
+.empty i{display:block;font-size:34px;opacity:.4;margin-bottom:8px}
+
+/* ── FEED (ro'yxat qatorlari) ── */
+.feed-item{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);
+  transition:background .15s;text-decoration:none;color:inherit}
+.feed-item:hover{background:rgba(255,255,255,.025)}
+html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
+.feed-item:last-child{border-bottom:0}
+
+/* ── TOAST ── */
+.ntf{position:fixed;top:18px;right:18px;z-index:900;display:flex;flex-direction:column;gap:8px;max-width:88vw}
 .ntf div{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--green);
-  border-radius:11px;padding:11px 16px;font-size:13px;box-shadow:0 14px 40px rgba(0,0,0,.4);
-  animation:slide .3s var(--ease)}
+  border-radius:12px;padding:12px 17px;font-size:13px;box-shadow:var(--sh3);
+  animation:slideIn .35s var(--ease)}
 .ntf div.error{border-left-color:var(--red)}
-@keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
-.modal-ov{position:fixed;inset:0;background:rgba(5,7,10,.65);z-index:500;display:none;
-  align-items:center;justify-content:center;padding:16px}
+@keyframes slideIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+
+/* ── MODAL ── */
+.modal-ov{position:fixed;inset:0;background:rgba(5,7,10,.62);z-index:500;display:none;
+  align-items:center;justify-content:center;padding:16px;
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
 .modal-ov.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--line);border-radius:18px;max-width:460px;
-  width:100%;padding:22px;max-height:92vh;overflow-y:auto}
-@media(max-width:760px){
-  .layout{flex-direction:column}
-  .sidebar{width:100%;height:auto;position:static;display:flex;gap:4px;overflow-x:auto;padding:10px}
-  .logo{display:none}.nav{display:flex;gap:4px}.nav a{white-space:nowrap}
-  .main{padding:14px 12px 40px}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:20px;max-width:470px;
+  width:100%;padding:24px;max-height:92vh;overflow-y:auto;box-shadow:var(--sh3);
+  animation:fadeUp .3s var(--ease)}
+.modal-title{font-weight:800;font-size:16.5px;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.modal-title i{color:var(--brand)}
+
+/* ── MOBIL ── */
+.bn{display:none}
+@media(max-width:820px){
+  .sb{display:none}
+  .main{margin-left:0}
+  .topbar{padding:0 16px;height:58px}
+  .content{padding:16px 13px 96px}
+  .bg-logo{font-size:26vw}
+  .bn{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;
+    background:rgba(15,17,23,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:1px solid rgba(255,255,255,.08);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;
+    color:var(--txt3);font-size:9.5px;font-weight:700;border-radius:10px;min-height:52px;justify-content:center}
+  .bn-item i{font-size:19px}
+  .bn-item.active{color:var(--brand)}
+  .ph-title{font-size:19px}
 }
 </style>
 {% block extra_css %}{% endblock %}
 </head>
 <body>
+
+<!-- Orqa fon: ulkan JALINGA + REC nuqta -->
+<div class="bg-stage"><div class="bg-logo"><span class="bg-rec"></span>JALINGA</div></div>
+
 {% with msgs = get_flashed_messages(with_categories=true) %}
 {% if msgs %}<div class="ntf">{% for cat, m in msgs %}<div class="{{ cat }}">{{ m }}</div>{% endfor %}</div>
-<script>setTimeout(function(){var n=document.querySelector('.ntf');if(n)n.remove();},6000);</script>
+<script>setTimeout(function(){var n=document.querySelector('.ntf');if(n)n.remove();},6500);</script>
 {% endif %}{% endwith %}
 
 {% if current_user %}
-<div class="layout">
-  <aside class="sidebar">
-    <div class="logo"><span class="mark">🎬</span> Jalinga</div>
-    <nav class="nav">
-      <a href="/" class="{% if request.path=='/' %}act{% endif %}">📊 Panel</a>
-      <a href="/calendar" class="{% if request.path.startswith('/calendar') or request.path.startswith('/bookings') %}act{% endif %}">📅 Kalendar</a>
-      <a href="/teachers" class="{% if request.path.startswith('/teachers') %}act{% endif %}">👨‍🏫 Ustozlar</a>
-      <a href="/studios" class="{% if request.path.startswith('/studios') %}act{% endif %}">🎬 Studiyalar</a>
-      <a href="/montaj" class="{% if request.path.startswith('/montaj') %}act{% endif %}">✂️ Montaj</a>
-      <a href="/finance" class="{% if request.path.startswith('/finance') %}act{% endif %}">💰 Moliya</a>
-      <a href="/analytics" class="{% if request.path.startswith('/analytics') %}act{% endif %}">📈 Analitika</a>
-      <a href="/logout" style="margin-top:14px;color:var(--txt3)">↩ Chiqish ({{ current_user.name }})</a>
-    </nav>
-  </aside>
-  <main class="main">{% block content %}{% endblock %}</main>
+<aside class="sb">
+  <div class="sb-brand">
+    <div class="logo-row">
+      <div class="logo-bar"></div>
+      <div class="logo-t">JALINGA</div>
+      <div class="logo-dot"></div>
+    </div>
+    <div class="logo-sub">VIDEO STUDIO</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Asosiy</div>
+    <a href="/" class="sb-a {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i> Boshqaruv paneli</a>
+    <a href="/calendar" class="sb-a {% if request.path.startswith('/calendar') or request.path.startswith('/bookings') %}active{% endif %}"><i class="icon-calendar-days"></i> Kalendar / Bron</a>
+    <div class="sb-sec">Mijozlar</div>
+    <a href="/teachers" class="sb-a {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i> Ustozlar</a>
+    <div class="sb-sec">Ishlab chiqarish</div>
+    <a href="/montaj" class="sb-a {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i> Montaj oqimi</a>
+    <a href="/studios" class="sb-a {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i> Studiyalar</a>
+    <div class="sb-sec">Boshqaruv</div>
+    <a href="/finance" class="sb-a {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i> Moliya</a>
+    <a href="/analytics" class="sb-a {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i> Analitika</a>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user">
+      <div class="sb-av">{{ current_user.name[0]|upper }}</div>
+      <div style="min-width:0">
+        <div class="sb-uname">{{ current_user.name }}</div>
+        <div class="sb-urole">{{ 'Rahbar' if current_user.is_admin else 'Operator' }}</div>
+      </div>
+      <a href="/logout" class="sb-logout" title="Chiqish"><i class="icon-log-out"></i></a>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="tb-title">{% block page_title %}Jalinga Studio{% endblock %}</div>
+      <div class="tb-crumb">{% block page_crumb %}Video studiya boshqaruvi{% endblock %}</div>
+    </div>
+    <div class="tb-right">
+      <button class="tb-theme" onclick="jlTheme()" title="Mavzu">🌗</button>
+    </div>
+  </div>
+  <div class="content">{% block content %}{% endblock %}</div>
 </div>
+
+<!-- Mobil pastki navigatsiya -->
+<nav class="bn">
+  <a href="/" class="bn-item {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i>Panel</a>
+  <a href="/calendar" class="bn-item {% if request.path.startswith('/calendar') %}active{% endif %}"><i class="icon-calendar-days"></i>Kalendar</a>
+  <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Ustozlar</a>
+  <a href="/montaj" class="bn-item {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i>Montaj</a>
+  <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}act{% endif %}"><i class="icon-wallet"></i>Moliya</a>
+</nav>
 {% else %}
 {% block anon %}{% endblock %}
 {% endif %}
 
 <script>
+function jlTheme(){
+  var h=document.documentElement;
+  var t=h.getAttribute('data-theme')==='marble'?'jalinga':'marble';
+  h.setAttribute('data-theme',t);
+  try{localStorage.setItem('jl_theme',t);}catch(e){}
+}
 // Har POST formaga CSRF token avto-qo'shiladi
 document.addEventListener('submit', function(e){
   var f = e.target;

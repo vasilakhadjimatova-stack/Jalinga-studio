@@ -1,41 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Panel{% endblock %}
+{% block page_title %}Boshqaruv paneli{% endblock %}
+{% block page_crumb %}{{ today }} · biznes bir ekranda{% endblock %}
 {% block content %}
 <div class="ph"><div>
+  <div class="gold-bar"></div>
   <div class="ph-title">Boshqaruv paneli</div>
-  <div class="ph-sub">{{ today }} · biznes bir ekranda</div>
+  <div class="ph-sub">Bugungi yozuvlar, tushum, bandlik — jonli holat</div>
 </div>
-<a href="/calendar" class="btn btn-gold">📅 Bugungi kalendar</a></div>
+<a href="/calendar" class="btn btn-gold"><i class="icon-calendar-plus"></i> Yangi bron</a></div>
 
 <div class="grid g4" style="margin-bottom:16px">
-  <div class="kpi"><div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Bugungi yozuvlar</div>
     <div class="kpi-val">{{ kpi.today_count }}</div>
-  </div><div class="kpi-ico" style="background:var(--blue-bg)">📅</div></div>
-  <div class="kpi"><div>
+  </div><div class="kpi-ico blue"><i class="icon-calendar-days"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Shu oy tushum</div>
-    <div class="kpi-val" style="font-size:19px;color:var(--green)">{{ kpi.month_revenue|som }}</div>
-    {% if kpi.month_pending %}<div class="kpi-label" style="text-transform:none;margin-top:3px;color:var(--amber)">+{{ kpi.month_pending|som }} kutilmoqda</div>{% endif %}
-  </div><div class="kpi-ico" style="background:var(--green-bg)">💰</div></div>
-  <div class="kpi"><div>
+    <div class="kpi-val" style="font-size:20px;color:var(--green)">{{ kpi.month_revenue|som }}</div>
+    {% if kpi.month_pending %}<div class="kpi-label" style="text-transform:none;margin-top:4px;color:var(--amber)">+{{ kpi.month_pending|som }} kutilmoqda</div>{% endif %}
+  </div><div class="kpi-ico green"><i class="icon-banknote"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Haftalik bandlik</div>
     <div class="kpi-val" style="color:{% if kpi.occupancy>=60 %}var(--green){% elif kpi.occupancy>=30 %}var(--amber){% else %}var(--txt){% endif %}">{{ kpi.occupancy }}%</div>
-    <div class="kpi-label" style="text-transform:none;margin-top:3px">{{ kpi.booked_hours }} soat / {{ kpi.studios }} studiya</div>
-  </div><div class="kpi-ico" style="background:var(--amber-bg)">📈</div></div>
-  <div class="kpi"><div>
+    <div class="kpi-label" style="text-transform:none;margin-top:4px">{{ kpi.booked_hours }} soat · {{ kpi.studios }} studiya</div>
+  </div><div class="kpi-ico amber"><i class="icon-gauge"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Paketi tugayapti</div>
     <div class="kpi-val" style="color:{% if kpi.low_balance %}var(--red){% else %}var(--green){% endif %}">{{ kpi.low_balance }}</div>
-    <div class="kpi-label" style="text-transform:none;margin-top:3px">ustoz — qayta sotish imkoni</div>
-  </div><div class="kpi-ico" style="background:var(--red-bg)">⏳</div></div>
+    <div class="kpi-label" style="text-transform:none;margin-top:4px">ustoz — qayta sotish imkoni</div>
+  </div><div class="kpi-ico red"><i class="icon-hourglass"></i></div></div></div>
 </div>
 
 <div class="grid g2">
-  <div class="card">
-    <div class="card-hd"><div class="card-title">📅 Bugungi yozuvlar</div></div>
-    <div class="card-bd" style="padding:0">
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-calendar-clock"></i> Bugungi yozuvlar</div></div>
+    <div style="padding:0">
       {% for r in todays %}
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)">
-        <b style="font-variant-numeric:tabular-nums;flex:0 0 auto">{{ r.b.start }}–{{ r.b.end }}</b>
+      <div class="feed-item">
+        <b style="font-variant-numeric:tabular-nums;flex:0 0 auto;font-size:13.5px">{{ r.b.start }}–{{ r.b.end }}</b>
         <div style="flex:1;min-width:0">
           <div style="font-weight:700">{{ r.teacher }}</div>
           <div style="font-size:11.5px;color:var(--txt3)">{{ r.studio }}{% if r.b.operator %} · 🎥 {{ r.b.operator }}{% endif %}</div>
@@ -43,23 +46,23 @@
         <span class="tag tag-{{ r.b.status_color }}">{{ r.b.status_label }}</span>
       </div>
       {% else %}
-      <div class="empty">Bugun yozuv yo'q ☕</div>
+      <div class="empty"><i class="icon-coffee"></i>Bugun yozuv yo'q</div>
       {% endfor %}
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-hd"><div class="card-title">⏳ Paketi tugayotgan ustozlar</div></div>
-    <div class="card-bd" style="padding:0">
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-hourglass"></i> Paketi tugayotgan ustozlar</div></div>
+    <div style="padding:0">
       {% for x in low_balance %}
-      <a href="/teachers/{{ x.t.id }}" style="display:flex;align-items:center;gap:12px;padding:12px 18px;
-         border-bottom:1px solid var(--line);text-decoration:none;color:inherit">
-        <div style="flex:1"><b>{{ x.t.name }}</b>
+      <a href="/teachers/{{ x.t.id }}" class="feed-item">
+        <div class="sb-av" style="width:34px;height:34px;font-size:13px">{{ x.t.name[0]|upper }}</div>
+        <div style="flex:1;min-width:0"><b>{{ x.t.name }}</b>
           <div style="font-size:11.5px;color:var(--txt3)">{{ x.t.subject or '—' }}</div></div>
         <span class="tag tag-{% if x.balance <= 0 %}red{% else %}amber{% endif %}">{{ x.balance }} soat qoldi</span>
       </a>
       {% else %}
-      <div class="empty">Hamma balanslar joyida ✅</div>
+      <div class="empty"><i class="icon-check-circle"></i>Hamma balanslar joyida</div>
       {% endfor %}
     </div>
   </div>

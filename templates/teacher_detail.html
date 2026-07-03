@@ -1,40 +1,45 @@
 {% extends "base.html" %}
 {% block title %}{{ t.name }}{% endblock %}
+{% block page_title %}{{ t.name }}{% endblock %}
+{% block page_crumb %}Ustoz kartasi · {{ t.subject or '—' }}{% endblock %}
 {% block content %}
-<div class="ph"><div>
-  <div class="ph-title">👨‍🏫 {{ t.name }}</div>
-  <div class="ph-sub">{{ t.subject or '—' }} · {{ t.phone or '' }}{% if t.telegram %} · @{{ t.telegram }}{% endif %}</div>
+<div class="ph"><div style="display:flex;align-items:center;gap:14px">
+  <div class="sb-av" style="width:52px;height:52px;font-size:21px;border-radius:16px">{{ t.name[0]|upper }}</div>
+  <div>
+    <div class="ph-title">{{ t.name }}</div>
+    <div class="ph-sub">{{ t.subject or '—' }}{% if t.phone %} · {{ t.phone }}{% endif %}{% if t.telegram %} · <span style="color:var(--blue)">@{{ t.telegram }}</span>{% endif %}</div>
+  </div>
 </div>
-<a href="/teachers" class="btn btn-out">← Ustozlar</a></div>
+<a href="/teachers" class="btn btn-out"><i class="icon-arrow-left"></i> Ustozlar</a></div>
 
 <div class="grid g4" style="margin-bottom:16px">
-  <div class="kpi"><div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Balans</div>
     <div class="kpi-val" style="color:{% if t.balance_hours > 2 %}var(--green){% elif t.balance_hours > 0 %}var(--amber){% else %}var(--txt3){% endif %}">{{ t.balance_hours }} <span style="font-size:13px;color:var(--txt3)">soat</span></div>
-  </div><div class="kpi-ico" style="background:var(--brand-bg)">📦</div></div>
-  <div class="kpi"><div>
+  </div><div class="kpi-ico gold"><i class="icon-package"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Sotib olingan</div>
     <div class="kpi-val">{{ purchased|round(1) }}</div>
-  </div><div class="kpi-ico" style="background:var(--green-bg)">🛒</div></div>
-  <div class="kpi"><div>
+  </div><div class="kpi-ico green"><i class="icon-shopping-cart"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Ishlatilgan</div>
     <div class="kpi-val">{{ used|round(1) }}</div>
-  </div><div class="kpi-ico" style="background:var(--blue-bg)">🎬</div></div>
+  </div><div class="kpi-ico blue"><i class="icon-clapperboard"></i></div></div></div>
 </div>
 
-<!-- Shaxsiy portal havolasi — ustozga yuboriladi -->
+<!-- Shaxsiy portal havolasi -->
 <div class="card">
-  <div class="card-hd"><div class="card-title">🔗 Shaxsiy kabinet havolasi</div>
+  <div class="card-hd"><div class="card-title"><i class="icon-link"></i> Shaxsiy kabinet havolasi</div>
     {% if tg_linked %}<span class="tag tag-green">✈️ Telegram ulangan</span>{% endif %}</div>
   <div class="card-bd" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
     <input class="input" id="portal-url" value="{{ portal_url }}" readonly
            style="flex:1;min-width:220px;font-size:12px" onclick="this.select()">
     <button class="btn btn-out" type="button"
-      onclick="navigator.clipboard.writeText(document.getElementById('portal-url').value).then(()=>{this.textContent='✓ Nusxalandi'});">
-      📋 Nusxalash</button>
+      onclick="navigator.clipboard.writeText(document.getElementById('portal-url').value).then(()=>{this.innerHTML='<i class=\'icon-check\'></i> Nusxalandi'});">
+      <i class="icon-copy"></i> Nusxalash</button>
     <form method="POST" action="/teachers/{{ t.id }}/token" style="display:inline"
           onsubmit="return confirm('Yangi havola yaratilsinmi? Eskisi ISHLAMAY qoladi.')">
-      <button class="btn btn-sm btn-out" type="submit">♻️ Yangilash</button>
+      <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-refresh-cw"></i> Yangilash</button>
     </form>
     <div style="width:100%;font-size:11.5px;color:var(--txt3)">
       Ustozga yuboring — u shu havola orqali balansini ko'radi, o'zi bron qiladi
@@ -43,8 +48,8 @@
 </div>
 
 <div class="grid g2">
-  <div class="card">
-    <div class="card-hd"><div class="card-title">📦 Paket sotish</div></div>
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-package-plus"></i> Paket sotish</div></div>
     <div class="card-bd">
       <form method="POST" action="/teachers/{{ t.id }}/package">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -57,12 +62,12 @@
           <div><label>Sana</label><input class="input" type="date" name="date" value="{{ today }}"></div>
         </div>
         <label>Izoh</label><input class="input" name="note">
-        <button class="btn btn-gold" type="submit" style="margin-top:14px">💰 Paketni saqlash</button>
+        <button class="btn btn-gold" type="submit" style="margin-top:14px"><i class="icon-banknote"></i> Paketni saqlash</button>
       </form>
       {% if current_user.is_admin %}
       <form method="POST" action="/teachers/{{ t.id }}/bonus"
-            style="display:flex;gap:8px;align-items:flex-end;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)">
-        <div style="width:90px"><label>🎁 Bonus soat</label>
+            style="display:flex;gap:8px;align-items:flex-end;margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)">
+        <div style="width:92px"><label>🎁 Bonus soat</label>
           <input class="input" type="number" name="hours" min="0.5" max="20" step="0.5" value="1"></div>
         <div style="flex:1"><label>Sabab</label>
           <input class="input" name="reason" placeholder="Referral / aksiya"></div>
@@ -72,8 +77,8 @@
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-hd"><div class="card-title">✏️ Profil</div></div>
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-user-cog"></i> Profil</div></div>
     <div class="card-bd">
       <form method="POST" action="/teachers/save">
         <input type="hidden" name="id" value="{{ t.id }}">
@@ -88,37 +93,38 @@
           <input type="checkbox" name="is_active" value="1" {% if t.is_active %}checked{% endif %}
                  style="width:17px;height:17px"> Faol
         </label>
-        <button class="btn btn-out" type="submit" style="margin-top:14px">Saqlash</button>
+        <button class="btn btn-out" type="submit" style="margin-top:14px"><i class="icon-save"></i> Saqlash</button>
       </form>
     </div>
   </div>
 </div>
 
-<div class="grid g2">
-  <div class="card">
-    <div class="card-hd"><div class="card-title">🎬 Yozuvlar tarixi</div></div>
-    <div class="card-bd" style="padding:0;max-height:400px;overflow-y:auto">
+<div class="grid g2" style="margin-top:16px">
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-clapperboard"></i> Yozuvlar tarixi</div></div>
+    <div style="padding:0;max-height:420px;overflow-y:auto">
       {% for b in bookings %}
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px">
+      <div class="feed-item" style="font-size:13px">
         <span style="font-variant-numeric:tabular-nums;color:var(--txt3)">{{ b.date }}</span>
         <b>{{ b.start }}–{{ b.end }}</b>
         <span style="flex:1;color:var(--txt3)">{{ b.studio_name }} · {{ '📦' if b.pay_type=='package' else '💵' }}</span>
         <span class="tag tag-{{ b.status_color }}">{{ b.status_label }}</span>
       </div>
-      {% else %}<div class="empty">Hali yozuv yo'q</div>{% endfor %}
+      {% else %}<div class="empty"><i class="icon-video-off"></i>Hali yozuv yo'q</div>{% endfor %}
     </div>
   </div>
-  <div class="card">
-    <div class="card-hd"><div class="card-title">💰 To'lovlar</div></div>
-    <div class="card-bd" style="padding:0;max-height:400px;overflow-y:auto">
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-receipt"></i> To'lovlar</div></div>
+    <div style="padding:0;max-height:420px;overflow-y:auto">
       {% for p in payments %}
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px">
+      <div class="feed-item" style="font-size:13px">
         <span style="font-variant-numeric:tabular-nums;color:var(--txt3)">{{ p.date }}</span>
-        <span style="flex:1">{{ p.kind_label }}{% if p.hours %} · {{ p.hours|round(1) }} soat{% endif %}</span>
-        <b>{{ p.amount|som }} so'm</b>
+        <span style="flex:1">{{ p.kind_label }}{% if p.hours %} · {{ p.hours|round(1) }} soat{% endif %}
+          {% if p.note %}<div style="font-size:10.5px;color:var(--txt3)">{{ p.note }}</div>{% endif %}</span>
+        <b>{{ p.amount|som }}</b>
         <span class="tag tag-{{ 'green' if p.is_paid else 'amber' }}">{{ "To'landi" if p.is_paid else 'Kutilmoqda' }}</span>
       </div>
-      {% else %}<div class="empty">Hali to'lov yo'q</div>{% endfor %}
+      {% else %}<div class="empty"><i class="icon-receipt"></i>Hali to'lov yo'q</div>{% endfor %}
     </div>
   </div>
 </div>

@@ -1,28 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Ustozlar{% endblock %}
+{% block page_title %}Ustozlar{% endblock %}
+{% block page_crumb %}Mijozlar bazasi — balans va aloqa{% endblock %}
 {% block content %}
 <div class="ph"><div>
-  <div class="ph-title">👨‍🏫 Ustozlar</div>
-  <div class="ph-sub">Mijozlar bazasi — balans va aloqa</div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Ustozlar</div>
+  <div class="ph-sub">Mijozlar bazasi — balans, portal, aloqa</div>
 </div>
-<button class="btn btn-gold" onclick="document.getElementById('m-teacher').classList.add('open')">➕ Yangi ustoz</button></div>
+<button class="btn btn-gold" onclick="document.getElementById('m-teacher').classList.add('open')">
+  <i class="icon-user-plus"></i> Yangi ustoz</button></div>
 
 <div class="card">
   <div style="overflow-x:auto">
   <table class="tbl">
-    <thead><tr><th>Ustoz</th><th>Fan</th><th>Telefon</th><th class="r">Balans (soat)</th><th></th></tr></thead>
+    <thead><tr><th>Ustoz</th><th>Fan</th><th>Aloqa</th><th class="r">Balans (soat)</th><th></th></tr></thead>
     <tbody>
       {% for t in teachers %}
       <tr>
-        <td><a href="/teachers/{{ t.id }}" style="color:inherit;font-weight:700;text-decoration:none">{{ t.name }}</a>
-          {% if not t.is_active %}<span class="tag tag-gray" style="margin-left:6px">arxiv</span>{% endif %}</td>
+        <td>
+          <a href="/teachers/{{ t.id }}" style="display:flex;align-items:center;gap:10px">
+            <span class="sb-av" style="width:32px;height:32px;font-size:12.5px">{{ t.name[0]|upper }}</span>
+            <b>{{ t.name }}</b>
+            {% if not t.is_active %}<span class="tag tag-gray">arxiv</span>{% endif %}
+          </a>
+        </td>
         <td style="color:var(--txt3)">{{ t.subject or '—' }}</td>
-        <td>{{ t.phone or '—' }}{% if t.telegram %} · @{{ t.telegram }}{% endif %}</td>
+        <td style="font-size:12.5px">{{ t.phone or '—' }}{% if t.telegram %} · <span style="color:var(--blue)">@{{ t.telegram }}</span>{% endif %}</td>
         <td class="r"><span class="tag tag-{% if t.balance_hours > 2 %}green{% elif t.balance_hours > 0 %}amber{% else %}gray{% endif %}">{{ t.balance_hours }}</span></td>
-        <td class="r"><a href="/teachers/{{ t.id }}" class="btn btn-sm btn-out">Ochish →</a></td>
+        <td class="r"><a href="/teachers/{{ t.id }}" class="btn btn-sm btn-out">Ochish <i class="icon-arrow-right"></i></a></td>
       </tr>
       {% else %}
-      <tr><td colspan="5"><div class="empty">Hali ustoz yo'q — birinchisini qo'shing</div></td></tr>
+      <tr><td colspan="5"><div class="empty"><i class="icon-users"></i>Hali ustoz yo'q — birinchisini qo'shing</div></td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -31,7 +40,7 @@
 
 <div class="modal-ov" id="m-teacher" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
-    <div style="font-weight:800;font-size:16px">➕ Yangi ustoz</div>
+    <div class="modal-title"><i class="icon-user-plus"></i> Yangi ustoz</div>
     <form method="POST" action="/teachers/save">
       <label>Ism *</label><input class="input" name="name" required placeholder="Akmal Karimov">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -40,10 +49,10 @@
       </div>
       <label>Fan / yo'nalish</label><input class="input" name="subject" placeholder="Matematika, IELTS...">
       <label>Izoh</label><input class="input" name="note">
-      <div style="display:flex;gap:9px;margin-top:16px">
+      <div style="display:flex;gap:9px;margin-top:18px">
         <button type="button" class="btn btn-out" style="flex:1"
                 onclick="document.getElementById('m-teacher').classList.remove('open')">Bekor</button>
-        <button type="submit" class="btn btn-gold" style="flex:2">Saqlash</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Saqlash</button>
       </div>
     </form>
   </div>
