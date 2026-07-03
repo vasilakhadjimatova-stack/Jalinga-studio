@@ -110,6 +110,13 @@ def book(token):
         return redirect(url_for("portal.home", token=token, date=day))
     end = (st + timedelta(hours=dur)).strftime("%H:%M")
 
+    # Ish vaqti chegarasi (studiya jadvali)
+    from config import Config
+    if not Booking.within_work_hours(start, end):
+        flash(f"⛔ Studiya ish vaqti: {Config.WORK_START:02d}:00–"
+              f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.", "error")
+        return redirect(url_for("portal.home", token=token, date=day))
+
     if Booking.conflict(studio.id, day, start, end):
         flash(f"⛔ {start}–{end} band. Boshqa vaqt tanlang "
               f"(bandlik ro'yxati pastda).", "error")

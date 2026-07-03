@@ -17,13 +17,37 @@ def current_user():
     return User.query.get(uid) if uid else None
 
 
+# Brute-force himoyasi: bitta IP'dan 10 daqiqada 5 ta noto'g'ri urinish
+_FAILED = {}          # ip -> [timestamp, ...]
+_MAX_TRIES = 5
+_WINDOW = 600         # 10 daqiqa
+
+
+def _rate_limited(ip):
+    import time
+    now = time.time()
+    tries = [t for t in _FAILED.get(ip, []) if now - t < _WINDOW]
+    _FAILED[ip] = tries
+    return len(tries) >= _MAX_TRIES
+
+
+def _note_failure(ip):
+    import time
+    _FAILED.setdefault(ip, []).append(time.time())
+
+
 def login_by_code(code):
+    ip = request.remote_addr or "?"
+    if _rate_limited(ip):
+        return None, "Juda ko'p urinish — 10 daqiqadan keyin qayta urining"
     code = (code or "").strip()
     if not code:
         return None, "Kod kiritilmadi"
     u = User.query.filter_by(code=code, is_active=True).first()
     if not u:
+        _note_failure(ip)
         return None, "Kod noto'g'ri"
+    _FAILED.pop(ip, None)   # muvaffaqiyat — hisob tozalanadi
     session["user_id"] = u.id
     session.permanent = True
     return u, None

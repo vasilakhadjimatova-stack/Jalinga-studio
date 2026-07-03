@@ -55,6 +55,8 @@ def move(jid):
         flash("Holat noto'g'ri", "error")
         return redirect(url_for("montaj.index"))
     j.status = new
+    if new != "delivered":
+        j.delivered_at = None   # orqaga qaytarildi — topshiruv vaqti tozalanadi
     if new == "delivered":
         j.delivered_at = datetime.utcnow()
         j.link = (request.form.get("link") or j.link or "").strip()[:400]
@@ -71,6 +73,21 @@ def move(jid):
             pass
     db.session.commit()
     flash(f"→ {EDIT_LABELS.get(new, (new,))[0]}", "success")
+    return redirect(url_for("montaj.index"))
+
+
+@bp.route("/montaj/<int:jid>/delete", methods=["POST"])
+@login_required
+def delete(jid):
+    """Adashib yaralgan kartani o'chirish (faqat rahbar)."""
+    u = current_user()
+    if not u.is_admin:
+        flash("O'chirish faqat rahbar uchun", "error")
+        return redirect(url_for("montaj.index"))
+    j = EditJob.query.get_or_404(jid)
+    db.session.delete(j)
+    db.session.commit()
+    flash("🗑 Montaj kartasi o'chirildi", "success")
     return redirect(url_for("montaj.index"))
 
 

@@ -34,6 +34,17 @@ def save():
     if not t.name:
         flash("⛔ Ism kiritilishi shart", "error")
         return redirect(url_for("teachers.index"))
+    # Dublikat himoyasi: bir xil telefon (oxirgi 9 raqam) bilan faol ustoz
+    # bor bo'lsa — yangisini yaratmaymiz, mavjud kartani ochamiz
+    _digits = "".join(c for c in (f.get("phone") or "") if c.isdigit())[-9:]
+    if is_new and len(_digits) == 9:
+        for ex in Teacher.query.filter_by(is_active=True).all():
+            ex_d = "".join(c for c in (ex.phone or "") if c.isdigit())[-9:]
+            if ex_d == _digits:
+                db.session.rollback()
+                flash(f"ℹ️ Bu raqam bazada bor: {ex.name} — kartasi ochildi "
+                      f"(takror yozilmadi)", "error")
+                return redirect(url_for("teachers.detail", tid=ex.id))
     t.phone = (f.get("phone") or "").strip()[:50]
     t.telegram = (f.get("telegram") or "").strip().lstrip("@")[:64]
     t.subject = (f.get("subject") or "").strip()[:120]

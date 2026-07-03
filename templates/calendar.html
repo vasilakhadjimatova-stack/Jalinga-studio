@@ -38,9 +38,13 @@
         <span class="tag tag-{{ b.status_color }}">{{ b.status_label }}</span>
         {% if b.status == 'active' %}
         <div style="display:flex;gap:4px">
+          <button class="btn btn-sm btn-out" title="Ko'chirish/tahrirlash" type="button"
+            data-b='{{ b|tojson }}' onclick="bEdit(JSON.parse(this.dataset.b))"><i class="icon-pencil"></i></button>
           <form method="POST" action="/bookings/{{ b.id }}/status"><input type="hidden" name="status" value="done">
             <button class="btn btn-sm btn-out" title="Yozildi" type="submit"><i class="icon-check"></i></button></form>
-          <form method="POST" action="/bookings/{{ b.id }}/status"><input type="hidden" name="status" value="noshow">
+          <form method="POST" action="/bookings/{{ b.id }}/status"
+                onsubmit="return confirm('Kelmadi deb belgilansinmi? Paket bo\'lsa soat kuyadi (24 soat qoidasi).')">
+            <input type="hidden" name="status" value="noshow">
             <button class="btn btn-sm btn-out" title="Kelmadi" type="submit">😴</button></form>
           <form method="POST" action="/bookings/{{ b.id }}/status"
                 onsubmit="return confirm('Bron bekor qilinsinmi?')"><input type="hidden" name="status" value="cancelled">
@@ -94,4 +98,46 @@
     </form>
   </div>
 </div>
+
+<!-- Bronni ko'chirish/tahrirlash -->
+<div class="modal-ov" id="m-edit" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-pencil"></i> Bronni ko'chirish</div>
+    <div id="be-who" style="font-size:12.5px;color:var(--txt3);margin-bottom:4px"></div>
+    <form method="POST" id="be-form" action="">
+      <label>Studiya</label>
+      <select class="select" name="studio_id" id="be-studio">
+        {% for s in studios %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div><label>Sana</label><input class="input" type="date" name="date" id="be-date" required></div>
+        <div><label>Boshlanish</label><input class="input" type="time" name="start" id="be-start" required></div>
+        <div><label>Tugash</label><input class="input" type="time" name="end" id="be-end" required></div>
+      </div>
+      <label>Operator</label>
+      <input class="input" name="operator" id="be-operator">
+      <div style="font-size:11.5px;color:var(--txt3);margin-top:10px">
+        Konflikt, ish vaqti va paket balansi avtomatik qayta tekshiriladi.
+        Soatbay bo'lsa kutilayotgan to'lov summasi yangilanadi.</div>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-edit').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Saqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function bEdit(b){
+  document.getElementById('be-form').action = '/bookings/' + b.id + '/edit';
+  document.getElementById('be-who').textContent = '👨‍🏫 ' + (b.teacher_name||'') +
+    ' · ' + (b.pay_type==='package' ? '📦 paket' : '💵 soatbay');
+  document.getElementById('be-studio').value = b.studio_id;
+  document.getElementById('be-date').value = b.date;
+  document.getElementById('be-start').value = b.start;
+  document.getElementById('be-end').value = b.end;
+  document.getElementById('be-operator').value = b.operator||'';
+  document.getElementById('m-edit').classList.add('open');
+}
+</script>
 {% endblock %}

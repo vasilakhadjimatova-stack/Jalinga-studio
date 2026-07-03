@@ -74,6 +74,14 @@ class Booking(db.Model):
         return BOOKING_STATUSES.get(self.status, (self.status, "gray"))[1]
 
     @staticmethod
+    def within_work_hours(start, end):
+        """Ish vaqti ichidami (Config.WORK_START..WORK_END)."""
+        from config import Config
+        s, e = _to_minutes(start), _to_minutes(end)
+        return (Config.WORK_START * 60 <= s and e <= Config.WORK_END * 60
+                and e > s)
+
+    @staticmethod
     def conflict(studio_id, date, start, end, exclude_id=None):
         """Shu studiya+sanada vaqt ustma-ust tushadigan FAOL bron bormi."""
         s, e = _to_minutes(start), _to_minutes(end)

@@ -73,6 +73,13 @@
           <button class="btn btn-sm btn-out" type="submit"><i class="icon-check"></i></button>
         </form>
         {% endif %}
+        {% if current_user.is_admin %}
+        <form method="POST" action="/montaj/{{ j.id }}/delete" style="margin-top:6px;text-align:right"
+              onsubmit="return confirm('Karta o\'chirilsinmi?')">
+          <button class="btn btn-sm btn-ghost" type="submit" style="font-size:10.5px;color:var(--txt3)">
+            <i class="icon-trash-2"></i></button>
+        </form>
+        {% endif %}
       </div>
       {% else %}
       <div class="empty" style="padding:22px 8px"><i class="icon-inbox"></i>Bo'sh</div>

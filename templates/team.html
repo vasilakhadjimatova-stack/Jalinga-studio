@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Jamoa{% endblock %}
+{% block page_title %}Jamoa{% endblock %}
+{% block page_crumb %}Xodimlar — rollar va kirish kodlari{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Jamoa</div>
+  <div class="ph-sub">Operator va montajchilar — kirish kodi bilan ishlaydi</div>
+</div>
+<button class="btn btn-gold" onclick="tEdit()"><i class="icon-user-plus"></i> Yangi xodim</button></div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr><th>Xodim</th><th>Rol</th><th>Holat</th><th></th></tr></thead>
+    <tbody>
+      {% for u in team %}
+      <tr>
+        <td><div style="display:flex;align-items:center;gap:10px">
+          <span class="sb-av" style="width:32px;height:32px;font-size:12.5px">{{ u.name[0]|upper }}</span>
+          <b>{{ u.name }}</b>
+          {% if u.id == current_user.id %}<span class="tag tag-blue">siz</span>{% endif %}
+        </div></td>
+        <td>{{ role_labels.get(u.role, u.role) }}</td>
+        <td><span class="tag tag-{{ 'green' if u.is_active else 'gray' }}">{{ 'Faol' if u.is_active else "O'chiq" }}</span></td>
+        <td class="r">
+          <button class="btn btn-sm btn-out"
+            data-u='{{ {"id":u.id,"name":u.name,"role":u.role,"is_active":u.is_active}|tojson }}'
+            onclick="tEdit(JSON.parse(this.dataset.u))"><i class="icon-pencil"></i> Tahrirlash</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="modal-ov" id="m-team" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="mt-title"><i class="icon-user-plus"></i> Xodim</div>
+    <form method="POST" action="/team/save">
+      <input type="hidden" name="id" id="mt-id">
+      <label>Ism *</label><input class="input" name="name" id="mt-name" required>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Kirish kodi <span id="mt-code-hint" style="color:var(--txt3);font-weight:400">(kamida 4 raqam)</span></label>
+          <input class="input" name="code" id="mt-code" inputmode="numeric" placeholder="masalan 4729"></div>
+        <div><label>Rol</label>
+          <select class="select" name="role" id="mt-role">
+            <option value="operator">🎥 Operator</option>
+            <option value="montaj">✂️ Montajchi</option>
+            <option value="admin">👑 Rahbar</option>
+          </select></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:13px;cursor:pointer" id="mt-active-w">
+        <input type="checkbox" name="is_active" id="mt-active" value="1" checked style="width:17px;height:17px"> Faol
+      </label>
+      <div style="font-size:11.5px;color:var(--txt3);margin-top:10px">
+        Xodim shu kod bilan kiradi. Rollar: Rahbar — hammasi; Operator/Montajchi —
+        kalendar, ustozlar, montaj (moliya o'chirish va jamoa faqat rahbarda).</div>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-team').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Saqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function tEdit(u){
+  u=u||{};
+  document.getElementById('mt-title').innerHTML = '<i class="icon-user-plus"></i> ' + (u.id ? u.name : 'Yangi xodim');
+  document.getElementById('mt-id').value = u.id||'';
+  document.getElementById('mt-name').value = u.name||'';
+  document.getElementById('mt-code').value = '';
+  document.getElementById('mt-code-hint').textContent = u.id ? "(bo'sh qoldirsangiz o'zgarmaydi)" : "(kamida 4 raqam)";
+  document.getElementById('mt-role').value = u.role||'operator';
+  document.getElementById('mt-active').checked = (u.is_active!==false);
+  document.getElementById('m-team').classList.add('open');
+}
+</script>
+{% endblock %}

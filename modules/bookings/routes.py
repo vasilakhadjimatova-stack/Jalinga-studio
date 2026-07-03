@@ -80,6 +80,13 @@ def save():
         flash("⛔ Tugash vaqti boshlanishdan keyin bo'lishi kerak", "error")
         return redirect(url_for("bookings.calendar", date=day))
 
+    # Ish vaqti chegarasi (studiya 09:00–21:00 ishlaydi)
+    from config import Config
+    if not Booking.within_work_hours(start, end):
+        flash(f"⛔ Studiya ish vaqti: {Config.WORK_START:02d}:00–"
+              f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.", "error")
+        return redirect(url_for("bookings.calendar", date=day))
+
     # Konflikt — bir studiyada bir vaqtda bitta yozuv
     c = Booking.conflict(studio.id, day, start, end)
     if c:
@@ -130,15 +137,94 @@ def set_status(bid):
         flash("Holat noto'g'ri", "error")
         return redirect(url_for("bookings.calendar", date=b.date))
     b.status = new
-    # Bekor bo'lsa — bog'liq kutilayotgan soatbay to'lov ham bekor
+    from models.montaj import EditJob
+    # Bekor bo'lsa — kutilayotgan soatbay to'lov + topshirilmagan montaj
+    # kartasi ham bekor (yetim karta qolmaydi)
     if new == "cancelled":
         Payment.query.filter_by(booking_id=b.id, is_paid=False).delete(
             synchronize_session=False)
+        EditJob.query.filter(EditJob.booking_id == b.id,
+                             EditJob.status != "delivered").delete(
+            synchronize_session=False)
     # Yozildi ✓ → montaj kartasi avto-yaraladi (kanbanда ko'rinadi)
     if new == "done":
-        from models.montaj import EditJob
         t = Teacher.query.get(b.teacher_id)
         EditJob.for_booking(b, teacher_name=(t.name if t else ""))
     db.session.commit()
-    flash(f"Holat: {b.status_label()}", "success")
+    extra = ""
+    if new == "noshow" and b.pay_type == "package":
+        extra = f" — {b.hours:g} soat balansdan kuydi (24 soat qoidasi)"
+    elif new == "noshow":
+        extra = " — soatbay to'lov qarz sifatida qoladi"
+    flash(f"Holat: {b.status_label()}{extra}", "success")
     return redirect(url_for("bookings.calendar", date=b.date))
+
+
+@bp.route("/bookings/<int:bid>/edit", methods=["POST"])
+@login_required
+def edit(bid):
+    """Bronni ko'chirish/tahrirlash — konflikt, ish vaqti va balans qayta
+    tekshiriladi; kutilayotgan soatbay to'lov summasi yangilanadi."""
+    from config import Config
+    u = current_user()
+    b = Booking.query.get_or_404(bid)
+    if b.status not in ("active",):
+        flash("Faqat rejalashtirilgan bronni tahrirlash mumkin", "error")
+        return redirect(url_for("bookings.calendar", date=b.date))
+    f = request.form
+    try:
+        studio = Studio.query.get(int(f.get("studio_id") or b.studio_id))
+    except (ValueError, TypeError):
+        studio = Studio.query.get(b.studio_id)
+    day = (f.get("date") or b.date).strip()[:10]
+    start = (f.get("start") or b.start).strip()[:5]
+    end = (f.get("end") or b.end).strip()[:5]
+
+    old_hours = b.hours
+    old_desc = f"{b.date} {b.start}–{b.end}"
+
+    # Validatsiyalar (yaratishdagi bilan bir xil qat'iylik)
+    from models.studio import _to_minutes
+    if _to_minutes(end) <= _to_minutes(start):
+        flash("⛔ Tugash vaqti boshlanishdan keyin bo'lishi kerak", "error")
+        return redirect(url_for("bookings.calendar", date=b.date))
+    if not Booking.within_work_hours(start, end):
+        flash(f"⛔ Studiya ish vaqti: {Config.WORK_START:02d}:00–"
+              f"{Config.WORK_END:02d}:00.", "error")
+        return redirect(url_for("bookings.calendar", date=b.date))
+    c = Booking.conflict(studio.id, day, start, end, exclude_id=b.id)
+    if c:
+        flash(f"⛔ VAQT BAND: {day} «{studio.name}» {c.start}–{c.end}. "
+              f"Boshqa vaqt tanlang.", "error")
+        return redirect(url_for("bookings.calendar", date=b.date))
+
+    # Yangi davomiylik
+    new_hours = (_to_minutes(end) - _to_minutes(start)) / 60
+    teacher = Teacher.query.get(b.teacher_id)
+    # Paket: balans qayta tekshiruvi (shu bronning eski soatini chiqarib)
+    if b.pay_type == "package" and teacher:
+        available = teacher.balance_hours() + old_hours
+        if available < new_hours:
+            flash(f"⛔ Balans yetarli emas: {available:g} soat mavjud, "
+                  f"{new_hours:g} kerak.", "error")
+            return redirect(url_for("bookings.calendar", date=b.date))
+
+    b.studio_id, b.date, b.start, b.end = studio.id, day, start, end
+    b.operator = (f.get("operator") or b.operator or "").strip()[:120]
+    b.reminded = False   # vaqt o'zgardi — eslatma qayta yuborilsin
+    # Soatbay: kutilayotgan to'lov summasi/izohi yangilanadi
+    if b.pay_type == "hourly":
+        p = Payment.query.filter_by(booking_id=b.id, is_paid=False).first()
+        if p:
+            p.amount = round(new_hours * (studio.hourly_rate or 0))
+            p.date = day
+            p.note = f"{studio.name} · {day} {start}–{end} ({new_hours:g} soat)"
+    db.session.commit()
+
+    try:
+        from core.telegram import notify_teacher_booking
+        notify_teacher_booking(b, studio, teacher, created=False)
+    except Exception:
+        pass
+    flash(f"✏️ Bron ko'chirildi: {old_desc} → {day} {start}–{end}", "success")
+    return redirect(url_for("bookings.calendar", date=day))

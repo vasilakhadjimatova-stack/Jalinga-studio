@@ -37,11 +37,14 @@ class Teacher(db.Model):
             Payment.kind == "package").scalar() or 0)
 
     def hours_used(self):
+        """Ishlatilgan soatlar. "noshow" (kelmadi) HAM kuyadi — 24 soat
+        qoidasining mantiqiy davomi: vaqtida bekor qilmagan mijoz slotni
+        band qilib turdi. Faqat "cancelled" soatni qaytaradi."""
         from models.studio import Booking
         rows = Booking.query.filter(
             Booking.teacher_id == self.id,
             Booking.pay_type == "package",
-            Booking.status.in_(("active", "done"))).all()
+            Booking.status.in_(("active", "done", "noshow"))).all()
         return sum(b.hours for b in rows)
 
     def balance_hours(self):
