@@ -15,12 +15,13 @@ from config import Config
 bp = Blueprint("pwa", __name__)
 
 # SW versiyasi — o'zgarsa eski kesh tozalanadi (sw.js ichида ishlatiladi)
-CACHE_VERSION = "jalinga-v1"
+CACHE_VERSION = "jalinga-v2"
 
 
 @bp.route("/manifest.webmanifest")
 def manifest():
     data = {
+        "id": "/",
         "name": f"{Config.COMPANY_NAME} — Boshqaruv",
         "short_name": "Jalinga",
         "description": "Jalinga Studio boshqaruv paneli: bron, mijozlar, "
@@ -34,6 +35,9 @@ def manifest():
         "orientation": "portrait-primary",
         "background_color": "#0B0C11",
         "theme_color": "#0B0C11",
+        # Ikonка bosilganда yangi oyna emas — mavjud ilova oynasi ochiladi
+        "launch_handler": {"client_mode": "navigate-existing"},
+        "prefer_related_applications": False,
         "categories": ["business", "productivity", "finance"],
         "icons": [
             {"src": "/static/icons/icon-192.png", "sizes": "192x192",
@@ -98,11 +102,14 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
+  e.waitUntil(Promise.all([
     caches.keys().then((keys) => Promise.all(
       keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))
-    )).then(() => self.clients.claim())
-  );
+    )),
+    // Navigation preload — sahifa so'rovi SW ishga tushishini kutmaydi (tezroq)
+    self.registration.navigationPreload ?
+      self.registration.navigationPreload.enable() : Promise.resolve(),
+  ]).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (e) => {
@@ -110,17 +117,20 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;                    // faqat GET
   const url = new URL(req.url);
 
-  // Sahifa navigatsiyasi: network-first → cache → oflayn
+  // Sahifa navigatsiyasi: preload/network-first → cache → oflayn
   if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-          return res;
-        })
-        .catch(() => caches.match(req).then((r) => r || caches.match('/offline')))
-    );
+    e.respondWith((async () => {
+      try {
+        const preload = await e.preloadResponse;
+        const res = preload || await fetch(req);
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        return res;
+      } catch (_) {
+        const cached = await caches.match(req);
+        return cached || caches.match('/offline');
+      }
+    })());
     return;
   }
 

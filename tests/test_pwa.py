@@ -9,6 +9,9 @@ def test_manifest(client):
     m = json.loads(r.data)
     assert m["display"] == "standalone"
     assert m["start_url"].startswith("/")
+    assert m["id"] == "/"
+    # Ikonка bosilganда mavjud oyna ochilsin (dublikat emas)
+    assert m["launch_handler"]["client_mode"] == "navigate-existing"
     # 192 va 512 ikonlar (installability talabi) + maskable
     sizes = {i["sizes"] for i in m["icons"]}
     assert "192x192" in sizes and "512x512" in sizes
@@ -23,6 +26,20 @@ def test_service_worker(client):
     # SW keshlanmasligi kerak (yangilanish darhol yetsin)
     assert "no-cache" in r.headers.get("Cache-Control", "")
     assert b"addEventListener" in r.data and b"fetch" in r.data
+    # Navigation preload — tezroq sahifa yuklanishi
+    assert b"navigationPreload" in r.data and b"preloadResponse" in r.data
+
+
+def test_native_feel_assets(admin_client):
+    """iOS splash, view-transition, pull-to-refresh va progress-bar mavjud."""
+    r = admin_client.get("/")
+    assert b"apple-touch-startup-image" in r.data
+    assert b"@view-transition" in r.data
+    assert b"navprog" in r.data      # navigatsiya progress-bar
+    assert b"ptr" in r.data          # pull-to-refresh
+    # Splash fayllari real mavjud
+    assert admin_client.get(
+        "/static/splash/splash-390x844-3x.png").status_code == 200
 
 
 def test_offline_page(client):

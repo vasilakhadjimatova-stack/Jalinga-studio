@@ -69,10 +69,17 @@ emas, App Store/Play Market ham):
   tugmasini bosadi (Android/Chrome) yoki iOS Safari'да «Ulashish → Bosh
   ekranga qo'shish». Ilova to'liq ekranда, o'z ikonкаsi bilan, brauzer
   paneliсiz ochiladi.
-- **⚡ Service worker** — sahifalar tez yuklanadi (kesh), oflaynда «ulanish
-  yo'q» sahifasi ko'rsatiladi, ulanish tiklansa avto-yangilanadi.
+- **⚡ Service worker** — sahifalar tez yuklanadi (kesh + navigation
+  preload), oflaynда «ulanish yo'q» sahifasi, ulanish tiklansa
+  avto-yangilanadi.
 - **🎨 Ikonlar** — `static/icons/` (192/512 + maskable + apple-touch);
   logotipdan generatsiya qilingan, to'q premium fon.
+- **✨ Native-his UX** — iOS splash ekranlari (oq ekran o'rniga logotipli
+  to'q splash, 6 o'lcham), sahifalar orasida silliq o'tish
+  (view-transitions), navigatsiya progress-bar, pull-to-refresh
+  (faqat o'rnatilgan ilovada), pastki nav haptik, notch/status-bar
+  safe-area, ikonка bosilganда dublikat oyna ochilmaydi
+  (launch_handler: navigate-existing).
 - **Manzil**: `/manifest.webmanifest`, `/sw.js`, `/offline` — HTTPS
   (Railway) ostida installability talablariga to'liq javob beradi.
 
