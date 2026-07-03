@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Studiyalar{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="ph-title">🎬 Studiyalar</div>
+  <div class="ph-sub">Xonalar, narxlar va holat</div>
+</div>
+{% if current_user.is_admin %}
+<button class="btn btn-gold" onclick="sEdit()">➕ Yangi studiya</button>
+{% endif %}</div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
+  {% for s in studios %}
+  <div class="card" style="margin:0;border-top:3px solid {{ s.color }}">
+    <div class="card-bd">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <b style="font-size:15px">{{ s.name }}</b>
+        <span class="tag tag-{{ 'green' if s.is_active else 'gray' }}">{{ 'Faol' if s.is_active else 'O`chiq' }}</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--txt3);margin:6px 0 10px">{{ s.description or '—' }}</div>
+      <div style="font-weight:800;font-size:17px;color:var(--brand)">{{ s.hourly_rate|som }} <span style="font-size:11px;color:var(--txt3)">so'm/soat</span></div>
+      {% if current_user.is_admin %}
+      <button class="btn btn-sm btn-out" style="margin-top:12px"
+        data-s='{{ s|tojson }}' onclick="sEdit(JSON.parse(this.dataset.s))">✏️ Tahrirlash</button>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="empty">Hali studiya yo'q</div>
+  {% endfor %}
+</div>
+
+{% if current_user.is_admin %}
+<div class="modal-ov" id="m-studio" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div style="font-weight:800;font-size:16px" id="ms-title">Studiya</div>
+    <form method="POST" action="/studios/save">
+      <input type="hidden" name="id" id="ms-id">
+      <label>Nomi</label><input class="input" name="name" id="ms-name" required>
+      <label>Tavsif</label><input class="input" name="description" id="ms-desc">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div><label>Narx (so'm/soat)</label><input class="input" type="number" name="hourly_rate" id="ms-rate" min="0" step="1000"></div>
+        <div><label>Rang</label><input class="input" type="color" name="color" id="ms-color" value="#6098F2" style="height:41px;padding:4px"></div>
+        <div><label>Tartib</label><input class="input" type="number" name="sort" id="ms-sort" value="100"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:13px;cursor:pointer">
+        <input type="checkbox" name="is_active" id="ms-active" value="1" checked style="width:17px;height:17px"> Faol
+      </label>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-studio').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2">Saqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function sEdit(s){
+  s=s||{};
+  document.getElementById('ms-title').textContent = s.id ? '✏️ '+s.name : '➕ Yangi studiya';
+  document.getElementById('ms-id').value = s.id||'';
+  document.getElementById('ms-name').value = s.name||'';
+  document.getElementById('ms-desc').value = s.description||'';
+  document.getElementById('ms-rate').value = s.hourly_rate||'';
+  document.getElementById('ms-color').value = s.color||'#6098F2';
+  document.getElementById('ms-sort').value = (s.sort!=null?s.sort:100);
+  document.getElementById('ms-active').checked = (s.is_active!==false);
+  document.getElementById('m-studio').classList.add('open');
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Moliya{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="ph-title">💰 Moliya</div>
+  <div class="ph-sub">{{ month }} — to'lovlar jurnali</div>
+</div>
+<form method="get" action="/finance">
+  <input class="input" type="month" name="month" value="{{ month }}" onchange="this.form.submit()" style="width:auto">
+</form></div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div>
+    <div class="kpi-label">To'langan</div>
+    <div class="kpi-val" style="font-size:19px;color:var(--green)">{{ paid|som }}</div>
+  </div><div class="kpi-ico" style="background:var(--green-bg)">✅</div></div>
+  <div class="kpi"><div>
+    <div class="kpi-label">Kutilmoqda</div>
+    <div class="kpi-val" style="font-size:19px;color:{% if pending %}var(--amber){% else %}var(--txt3){% endif %}">{{ pending|som }}</div>
+  </div><div class="kpi-ico" style="background:var(--amber-bg)">⏳</div></div>
+</div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr><th>Sana</th><th>Ustoz</th><th>Turi</th><th class="r">Summa</th><th>Holat</th><th></th></tr></thead>
+    <tbody>
+      {% for p in items %}
+      <tr>
+        <td style="font-variant-numeric:tabular-nums">{{ p.date }}</td>
+        <td><a href="/teachers/{{ p.teacher_id }}" style="color:inherit;font-weight:700;text-decoration:none">{{ p.teacher_name }}</a>
+          {% if p.note %}<div style="font-size:11px;color:var(--txt3)">{{ p.note }}</div>{% endif %}</td>
+        <td>{{ p.kind_label }}{% if p.hours %} ({{ p.hours|round(1) }} soat){% endif %}</td>
+        <td class="r"><b>{{ p.amount|som }}</b></td>
+        <td><span class="tag tag-{{ 'green' if p.is_paid else 'amber' }}">{{ "To'landi" if p.is_paid else 'Kutilmoqda' }}</span></td>
+        <td class="r" style="white-space:nowrap">
+          <form method="POST" action="/finance/{{ p.id }}/toggle" style="display:inline">
+            <button class="btn btn-sm btn-out" type="submit">{{ '↩︎' if p.is_paid else "✓ To'landi" }}</button>
+          </form>
+          {% if current_user.is_admin %}
+          <form method="POST" action="/finance/{{ p.id }}/delete" style="display:inline"
+                onsubmit="return confirm('To\'lov o\'chirilsinmi?')">
+            <button class="btn btn-sm btn-out" type="submit">🗑</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6"><div class="empty">Bu oyda to'lov yo'q</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

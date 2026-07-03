@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ t.name }}{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="ph-title">👨‍🏫 {{ t.name }}</div>
+  <div class="ph-sub">{{ t.subject or '—' }} · {{ t.phone or '' }}{% if t.telegram %} · @{{ t.telegram }}{% endif %}</div>
+</div>
+<a href="/teachers" class="btn btn-out">← Ustozlar</a></div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div>
+    <div class="kpi-label">Balans</div>
+    <div class="kpi-val" style="color:{% if t.balance_hours > 2 %}var(--green){% elif t.balance_hours > 0 %}var(--amber){% else %}var(--txt3){% endif %}">{{ t.balance_hours }} <span style="font-size:13px;color:var(--txt3)">soat</span></div>
+  </div><div class="kpi-ico" style="background:var(--brand-bg)">📦</div></div>
+  <div class="kpi"><div>
+    <div class="kpi-label">Sotib olingan</div>
+    <div class="kpi-val">{{ purchased|round(1) }}</div>
+  </div><div class="kpi-ico" style="background:var(--green-bg)">🛒</div></div>
+  <div class="kpi"><div>
+    <div class="kpi-label">Ishlatilgan</div>
+    <div class="kpi-val">{{ used|round(1) }}</div>
+  </div><div class="kpi-ico" style="background:var(--blue-bg)">🎬</div></div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="card-hd"><div class="card-title">📦 Paket sotish</div></div>
+    <div class="card-bd">
+      <form method="POST" action="/teachers/{{ t.id }}/package">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>Soat</label><input class="input" type="number" name="hours" min="1" step="0.5" value="10" required></div>
+          <div><label>Summa (so'm)</label><input class="input" type="number" name="amount" min="0" step="1000" required></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>To'lov usuli</label>
+            <select class="select" name="method">{% for m in methods %}<option>{{ m }}</option>{% endfor %}</select></div>
+          <div><label>Sana</label><input class="input" type="date" name="date" value="{{ today }}"></div>
+        </div>
+        <label>Izoh</label><input class="input" name="note">
+        <button class="btn btn-gold" type="submit" style="margin-top:14px">💰 Paketni saqlash</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><div class="card-title">✏️ Profil</div></div>
+    <div class="card-bd">
+      <form method="POST" action="/teachers/save">
+        <input type="hidden" name="id" value="{{ t.id }}">
+        <label>Ism</label><input class="input" name="name" value="{{ t.name }}" required>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>Telefon</label><input class="input" name="phone" value="{{ t.phone }}"></div>
+          <div><label>Telegram</label><input class="input" name="telegram" value="{{ t.telegram }}"></div>
+        </div>
+        <label>Fan</label><input class="input" name="subject" value="{{ t.subject }}">
+        <label>Izoh</label><input class="input" name="note" value="{{ t.note }}">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
+          <input type="checkbox" name="is_active" value="1" {% if t.is_active %}checked{% endif %}
+                 style="width:17px;height:17px"> Faol
+        </label>
+        <button class="btn btn-out" type="submit" style="margin-top:14px">Saqlash</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="card-hd"><div class="card-title">🎬 Yozuvlar tarixi</div></div>
+    <div class="card-bd" style="padding:0;max-height:400px;overflow-y:auto">
+      {% for b in bookings %}
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px">
+        <span style="font-variant-numeric:tabular-nums;color:var(--txt3)">{{ b.date }}</span>
+        <b>{{ b.start }}–{{ b.end }}</b>
+        <span style="flex:1;color:var(--txt3)">{{ b.studio_name }} · {{ '📦' if b.pay_type=='package' else '💵' }}</span>
+        <span class="tag tag-{{ b.status_color }}">{{ b.status_label }}</span>
+      </div>
+      {% else %}<div class="empty">Hali yozuv yo'q</div>{% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title">💰 To'lovlar</div></div>
+    <div class="card-bd" style="padding:0;max-height:400px;overflow-y:auto">
+      {% for p in payments %}
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px">
+        <span style="font-variant-numeric:tabular-nums;color:var(--txt3)">{{ p.date }}</span>
+        <span style="flex:1">{{ p.kind_label }}{% if p.hours %} · {{ p.hours|round(1) }} soat{% endif %}</span>
+        <b>{{ p.amount|som }} so'm</b>
+        <span class="tag tag-{{ 'green' if p.is_paid else 'amber' }}">{{ "To'landi" if p.is_paid else 'Kutilmoqda' }}</span>
+      </div>
+      {% else %}<div class="empty">Hali to'lov yo'q</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

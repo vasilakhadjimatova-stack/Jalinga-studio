@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Jalinga Studio{% endblock %} — Jalinga</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+:root{
+  --bg:#0B0D12;--surface:#12151D;--surface2:#1A1E29;--line:rgba(255,255,255,.08);
+  --txt:#EAEDF3;--txt2:#B6BDCB;--txt3:#7C8496;
+  --brand:#F0B548;--brand-bg:rgba(240,181,72,.13);--brand-dk:#D99A25;
+  --blue:#6098F2;--blue-bg:rgba(96,152,242,.13);
+  --green:#34D399;--green-bg:rgba(52,211,153,.12);
+  --red:#F87171;--red-bg:rgba(248,113,113,.12);
+  --amber:#FBBF24;--amber-bg:rgba(251,191,36,.12);
+  --r:16px;--r2:11px;--ease:cubic-bezier(.22,1,.36,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-size:14px;line-height:1.5;min-height:100vh}
+a{color:var(--brand)}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;flex:0 0 auto;background:var(--surface);border-right:1px solid var(--line);
+  padding:18px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;font-weight:800;font-size:17px}
+.logo .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,var(--brand),var(--brand-dk));
+  display:flex;align-items:center;justify-content:center;font-size:17px}
+.nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  color:var(--txt2);text-decoration:none;font-weight:600;font-size:13.5px;margin-bottom:2px}
+.nav a:hover{background:var(--surface2);color:var(--txt)}
+.nav a.act{background:var(--brand-bg);color:var(--brand)}
+.main{flex:1;min-width:0;padding:22px 26px 60px}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.ph-title{font-size:21px;font-weight:800}
+.ph-sub{font-size:12.5px;color:var(--txt3);margin-top:3px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.card-hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card-title{font-weight:800;font-size:14.5px}
+.card-bd{padding:16px 18px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;text-decoration:none;color:inherit}
+.kpi-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)}
+.kpi-val{font-size:24px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums}
+.kpi-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+.btn{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;font-family:inherit;
+  font-weight:700;font-size:13px;padding:10px 16px;border-radius:11px;text-decoration:none;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}
+.btn-gold{background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#151004}
+.btn-out{background:var(--surface2);color:var(--txt);border:1px solid var(--line)}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:9px}
+.input,.select,textarea{width:100%;padding:10px 13px;font-size:13.5px;font-family:inherit;
+  background:var(--surface2);border:1.5px solid var(--line);border-radius:var(--r2);color:var(--txt);outline:0}
+.input:focus,.select:focus,textarea:focus{border-color:var(--brand)}
+label{display:block;font-size:11.5px;font-weight:700;color:var(--txt2);margin:11px 0 5px}
+.tag{display:inline-flex;align-items:center;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px}
+.tag-green{background:var(--green-bg);color:var(--green)}
+.tag-blue{background:var(--blue-bg);color:var(--blue)}
+.tag-red{background:var(--red-bg);color:var(--red)}
+.tag-gray{background:var(--surface2);color:var(--txt3)}
+.tag-amber{background:var(--amber-bg);color:var(--amber)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:9px 12px;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.4px;color:var(--txt3);border-bottom:1px solid var(--line)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .r{text-align:right;font-variant-numeric:tabular-nums}
+.empty{text-align:center;padding:34px 14px;color:var(--txt3);font-size:13px}
+.ntf{position:fixed;top:16px;right:16px;z-index:900;display:flex;flex-direction:column;gap:8px}
+.ntf div{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--green);
+  border-radius:11px;padding:11px 16px;font-size:13px;box-shadow:0 14px 40px rgba(0,0,0,.4);
+  animation:slide .3s var(--ease)}
+.ntf div.error{border-left-color:var(--red)}
+@keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+.modal-ov{position:fixed;inset:0;background:rgba(5,7,10,.65);z-index:500;display:none;
+  align-items:center;justify-content:center;padding:16px}
+.modal-ov.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:18px;max-width:460px;
+  width:100%;padding:22px;max-height:92vh;overflow-y:auto}
+@media(max-width:760px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:static;display:flex;gap:4px;overflow-x:auto;padding:10px}
+  .logo{display:none}.nav{display:flex;gap:4px}.nav a{white-space:nowrap}
+  .main{padding:14px 12px 40px}
+}
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% if msgs %}<div class="ntf">{% for cat, m in msgs %}<div class="{{ cat }}">{{ m }}</div>{% endfor %}</div>
+<script>setTimeout(function(){var n=document.querySelector('.ntf');if(n)n.remove();},6000);</script>
+{% endif %}{% endwith %}
+
+{% if current_user %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo"><span class="mark">🎬</span> Jalinga</div>
+    <nav class="nav">
+      <a href="/" class="{% if request.path=='/' %}act{% endif %}">📊 Panel</a>
+      <a href="/calendar" class="{% if request.path.startswith('/calendar') or request.path.startswith('/bookings') %}act{% endif %}">📅 Kalendar</a>
+      <a href="/teachers" class="{% if request.path.startswith('/teachers') %}act{% endif %}">👨‍🏫 Ustozlar</a>
+      <a href="/studios" class="{% if request.path.startswith('/studios') %}act{% endif %}">🎬 Studiyalar</a>
+      <a href="/finance" class="{% if request.path.startswith('/finance') %}act{% endif %}">💰 Moliya</a>
+      <a href="/logout" style="margin-top:14px;color:var(--txt3)">↩ Chiqish ({{ current_user.name }})</a>
+    </nav>
+  </aside>
+  <main class="main">{% block content %}{% endblock %}</main>
+</div>
+{% else %}
+{% block anon %}{% endblock %}
+{% endif %}
+
+<script>
+// Har POST formaga CSRF token avto-qo'shiladi
+document.addEventListener('submit', function(e){
+  var f = e.target;
+  if(f.method && f.method.toLowerCase()==='post' && !f.querySelector('input[name="_csrf"]')){
+    var i=document.createElement('input'); i.type='hidden'; i.name='_csrf';
+    i.value=(document.querySelector('meta[name="csrf-token"]')||{}).content||'';
+    f.appendChild(i);
+  }
+}, true);
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

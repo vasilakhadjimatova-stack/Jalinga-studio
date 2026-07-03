@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Kalendar{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="ph-title">📅 Kalendar</div>
+  <div class="ph-sub">{{ day }}{% if is_today %} · bugun{% endif %} — studiya bandligi</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <a href="/calendar?date={{ prev_day }}" class="btn btn-out">← Oldingi</a>
+  <form method="get" action="/calendar" style="display:inline">
+    <input class="input" type="date" name="date" value="{{ day }}" onchange="this.form.submit()" style="width:auto">
+  </form>
+  <a href="/calendar?date={{ next_day }}" class="btn btn-out">Keyingi →</a>
+  <button class="btn btn-gold" onclick="document.getElementById('m-book').classList.add('open')">➕ Yangi bron</button>
+</div></div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+  {% for s in studios %}
+  <div class="card" style="margin:0">
+    <div class="card-hd" style="border-top:3px solid {{ s.color }}">
+      <div class="card-title">{{ s.name }}</div>
+      <span style="font-size:11.5px;color:var(--txt3)">{{ s.hourly_rate|som }} so'm/soat</span>
+    </div>
+    <div class="card-bd" style="padding:10px 14px;min-height:120px">
+      {% for b in by_studio.get(s.id, []) %}
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;margin-bottom:7px;
+           background:var(--surface2);border-radius:10px;border-left:3px solid {{ s.color }}">
+        <b style="font-variant-numeric:tabular-nums;flex:0 0 auto">{{ b.start }}–{{ b.end }}</b>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:12.5px">{{ b.teacher_name }}</div>
+          <div style="font-size:10.5px;color:var(--txt3)">
+            {{ '📦 paket' if b.pay_type=='package' else '💵 soatbay' }}{% if b.operator %} · 🎥 {{ b.operator }}{% endif %}</div>
+        </div>
+        <span class="tag tag-{{ b.status_color }}">{{ b.status_label }}</span>
+        {% if b.status == 'active' %}
+        <div style="display:flex;gap:4px">
+          <form method="POST" action="/bookings/{{ b.id }}/status"><input type="hidden" name="status" value="done">
+            <button class="btn btn-sm btn-out" title="Yozildi" type="submit">✓</button></form>
+          <form method="POST" action="/bookings/{{ b.id }}/status"><input type="hidden" name="status" value="noshow">
+            <button class="btn btn-sm btn-out" title="Kelmadi" type="submit">😴</button></form>
+          <form method="POST" action="/bookings/{{ b.id }}/status"
+                onsubmit="return confirm('Bron bekor qilinsinmi?')"><input type="hidden" name="status" value="cancelled">
+            <button class="btn btn-sm btn-out" title="Bekor" type="submit">✕</button></form>
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="empty" style="padding:20px 8px">Bo'sh — bron qilish mumkin</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Yangi bron -->
+<div class="modal-ov" id="m-book" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div style="font-weight:800;font-size:16px;margin-bottom:4px">➕ Yangi bron</div>
+    <form method="POST" action="/bookings/save">
+      <label>Studiya</label>
+      <select class="select" name="studio_id" required>
+        {% for s in studios %}<option value="{{ s.id }}">{{ s.name }} — {{ s.hourly_rate|som }}/soat</option>{% endfor %}
+      </select>
+      <label>Ustoz</label>
+      <select class="select" name="teacher_id" required>
+        {% for t in teachers %}<option value="{{ t.id }}">{{ t.name }} (balans: {{ t.balance_hours }} soat)</option>{% endfor %}
+      </select>
+      {% if not teachers %}
+      <div style="font-size:12px;color:var(--amber);margin-top:6px">Avval <a href="/teachers">ustoz qo'shing</a></div>
+      {% endif %}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div><label>Sana</label><input class="input" type="date" name="date" value="{{ day }}" required></div>
+        <div><label>Boshlanish</label><input class="input" type="time" name="start" value="10:00" required></div>
+        <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
+      </div>
+      <label>To'lov turi</label>
+      <select class="select" name="pay_type">
+        <option value="hourly">💵 Soatbay (to'lov yoziladi)</option>
+        <option value="package">📦 Paket balansidan</option>
+      </select>
+      <label>Operator (ixtiyoriy)</label>
+      <input class="input" name="operator" placeholder="Kim yozib beradi">
+      <label>Izoh</label>
+      <input class="input" name="note" placeholder="Dars mavzusi, talablar...">
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-book').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2">Bron qilish</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

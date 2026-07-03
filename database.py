@@ -1,0 +1,64 @@
+"""Baza + yengil avto-migratsiya (Impulse'da sinalgan yondashuv).
+
+db.create_all() faqat yangi JADVAL yaratadi; model'ga keyin qo'shilgan
+ustunlar ALTER TABLE bilan qo'shiladi. Idempotent — har startda xavfsiz.
+"""
+import logging
+
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text
+
+logger = logging.getLogger(__name__)
+db = SQLAlchemy()
+
+
+def init_db(app):
+    db.init_app(app)
+    with app.app_context():
+        import models  # noqa: F401 — barcha modellarni ro'yxatga oladi
+        db.create_all()
+        _auto_migrate()
+
+
+def _column_default_sql(col):
+    d = col.default.arg if col.default is not None and not callable(
+        getattr(col.default, "arg", None)) else None
+    if d is None:
+        return ""
+    if isinstance(d, bool):
+        return f" DEFAULT {1 if d else 0}"
+    if isinstance(d, (int, float)):
+        return f" DEFAULT {d}"
+    return " DEFAULT '" + str(d).replace("'", "''") + "'"
+
+
+def _auto_migrate():
+    try:
+        inspector = inspect(db.engine)
+        dialect = db.engine.dialect
+    except Exception as exc:
+        logger.warning(f"auto-migrate inspector xato: {exc}")
+        return
+    for table in db.metadata.sorted_tables:
+        try:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing:
+                    continue
+                try:
+                    col_type = col.type.compile(dialect=dialect)
+                except Exception:
+                    col_type = "VARCHAR(255)"
+                ddl = (f"ALTER TABLE {table.name} ADD COLUMN "
+                       f"{col.name} {col_type}{_column_default_sql(col)}")
+                try:
+                    db.session.execute(text(ddl))
+                    db.session.commit()
+                    logger.info(f"🔧 migratsiya: {table.name}.{col.name}")
+                except Exception as exc:
+                    db.session.rollback()
+                    logger.warning(f"migratsiya o'tmadi {table.name}.{col.name}: {exc}")
+        except Exception as exc:
+            logger.warning(f"migratsiya jadval {table.name}: {exc}")

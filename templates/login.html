@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Kirish{% endblock %}
+{% block anon %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);
+       border-radius:20px;padding:30px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <span style="width:44px;height:44px;border-radius:13px;background:linear-gradient(140deg,var(--brand),var(--brand-dk));
+        display:flex;align-items:center;justify-content:center;font-size:21px">🎬</span>
+      <div>
+        <div style="font-weight:800;font-size:19px">Jalinga Studio</div>
+        <div style="font-size:12px;color:var(--txt3)">Interaktiv video studiya boshqaruvi</div>
+      </div>
+    </div>
+    <form method="POST" style="margin-top:18px">
+      <input type="hidden" name="next" value="{{ request.args.get('next','') }}">
+      <label>Shaxsiy kod</label>
+      <input class="input" type="password" name="code" inputmode="numeric"
+             placeholder="• • • • • •" autofocus autocomplete="off"
+             style="font-size:19px;letter-spacing:6px;text-align:center">
+      <button class="btn btn-gold" type="submit" style="width:100%;margin-top:16px;justify-content:center">
+        Kirish →</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
