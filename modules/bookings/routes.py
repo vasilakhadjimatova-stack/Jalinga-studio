@@ -1,11 +1,15 @@
-"""Bronlar — kunlik kalendar + yaratish/holat (konflikt tekshiruvi bilan).
+"""Bronlar — oylik kalendar (Impulse uslubi) + yaratish/holat/tahrirlash.
+
+Kalendar: oylik grid, studiya tablari, bron chipi bosilsa detal-popup.
+Yangi bron bir nechta kunga birdan yozilishi mumkin (har kun alohida
+konflikt/balans tekshiruvidan o'tadi).
 
 Paket bron: ustoz balansidan yechiladi (balans yetmasa bloklanadi).
 Soatbay bron: yaratilganda Payment (kutilmoqda) yoziladi — Moliya sahifasida
 "to'landi" qilinadi. Bekor bo'lsa to'lov ham bekor bo'ladi.
 """
 import calendar as pycal
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
@@ -20,55 +24,41 @@ bp = Blueprint("bookings", __name__)
 MONTHS_UZ = ["", "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
              "Iyul", "Avgust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr"]
 WEEKDAYS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"]
+UZ_WD_FULL = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba",
+              "Juma", "Shanba", "Yakshanba"]
+UZ_MO_FULL = ["yanvar", "fevral", "mart", "aprel", "may", "iyun",
+              "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"]
+
+
+def _human_date(ds):
+    """'2026-07-06' → ('6 iyul 2026', 'Dushanba')."""
+    try:
+        dt = datetime.strptime(ds, "%Y-%m-%d")
+        return (f"{dt.day} {UZ_MO_FULL[dt.month - 1]} {dt.year}",
+                UZ_WD_FULL[dt.weekday()])
+    except (ValueError, IndexError):
+        return ds, ""
 
 
 @bp.route("/calendar")
 @login_required
 def calendar():
-    day = (request.args.get("date") or today_iso()).strip()
-    try:
-        d0 = datetime.strptime(day, "%Y-%m-%d").date()
-    except ValueError:
-        d0 = datetime.strptime(today_iso(), "%Y-%m-%d").date()
-        day = d0.strftime("%Y-%m-%d")
-    prev_day = (d0 - timedelta(days=1)).strftime("%Y-%m-%d")
-    next_day = (d0 + timedelta(days=1)).strftime("%Y-%m-%d")
+    """Oylik kalendar — yagona kalendar ko'rinishi.
 
-    studios = Studio.query.filter_by(is_active=True).order_by(
-        Studio.sort.asc(), Studio.id.asc()).all()
-    teachers = Teacher.query.filter_by(is_active=True).order_by(
-        Teacher.name.asc()).all()
-    tmap = {t.id: t.name for t in teachers}
-
-    bookings = Booking.query.filter(
-        Booking.date == day,
-        Booking.status.in_(("active", "done", "noshow"))).order_by(
-        Booking.start.asc()).all()
-    by_studio = {}
-    for b in bookings:
-        d = b.to_dict()
-        d["teacher_name"] = tmap.get(b.teacher_id, "?")
-        by_studio.setdefault(b.studio_id, []).append(d)
-
-    return render_template(
-        "calendar.html", day=day, prev_day=prev_day, next_day=next_day,
-        is_today=(day == today_iso()),
-        studios=[s.to_dict() for s in studios],
-        teachers=[t.to_dict() for t in teachers],
-        by_studio=by_studio)
-
-
-@bp.route("/calendar/month")
-@login_required
-def month_view():
-    """Oylik kalendar (Impulse uslubi) — studiya bo'yicha filtrlash mumkin.
-
-    Studiyalar sahifasida yoki kunlik kalendarda studiya bosilsa shu sahifa
-    ochiladi. Kun katakchasi bosilsa — shu sana bilan bron oynasi ochiladi.
+    ?year=&month= yoki ?date=YYYY-MM-DD (eski havolalar) qabul qilinadi;
+    ?studio=ID — bitta studiya bo'yicha filtr.
     """
     today = datetime.strptime(today_iso(), "%Y-%m-%d").date()
-    year = request.args.get("year", type=int, default=today.year)
-    month = request.args.get("month", type=int, default=today.month)
+    year = request.args.get("year", type=int, default=0)
+    month = request.args.get("month", type=int, default=0)
+    dparam = (request.args.get("date") or "").strip()
+    if dparam and not (year and month):
+        try:
+            dd = datetime.strptime(dparam, "%Y-%m-%d").date()
+            year, month = dd.year, dd.month
+        except ValueError:
+            pass
+    year, month = year or today.year, month or today.month
     if month < 1:
         month, year = 12, year - 1
     if month > 12:
@@ -90,15 +80,30 @@ def month_view():
         Booking.status.in_(("active", "done", "noshow")))
     if sel:
         q = q.filter(Booking.studio_id == sel.id)
-    buckets, n_book, total_hours = {}, 0, 0.0
+    buckets, bk, n_book, total_hours = {}, {}, 0, 0.0
     for b in q.order_by(Booking.date.asc(), Booking.start.asc()).all():
         st = smap.get(b.studio_id)
+        scolor = st.color if st else "#6098F2"
         buckets.setdefault(b.date, []).append({
+            "id": b.id,
             "title": f"{b.start} {tmap.get(b.teacher_id, '?')}",
-            "color": b.status_color(),
-            "scolor": (st.color if st else "#6098F2"),
+            "color": b.status_color(), "scolor": scolor,
             "studio": (st.name if st else "?"),
         })
+        dh, wd = _human_date(b.date)
+        bk[b.id] = {
+            "id": b.id, "studio_id": b.studio_id,
+            "studio": (st.name if st else "?"), "scolor": scolor,
+            "teacher": tmap.get(b.teacher_id, "?"),
+            "date": b.date, "date_human": dh, "weekday": wd,
+            "start": b.start, "end": b.end, "hours": b.hours,
+            "status": b.status, "status_label": b.status_label(),
+            "status_color": b.status_color(), "pay_type": b.pay_type,
+            "amount": (round(b.hours * (st.hourly_rate or 0))
+                       if (st and b.pay_type == "hourly") else 0),
+            "operator": b.operator or "", "note": b.note or "",
+            "created_by": b.created_by or "",
+        }
         n_book += 1
         total_hours += b.hours
 
@@ -124,7 +129,7 @@ def month_view():
     return render_template(
         "calendar_month.html",
         year=year, month=month, month_name=MONTHS_UZ[month],
-        weekdays=WEEKDAYS, weeks=weeks, agenda=agenda,
+        weekdays=WEEKDAYS, weeks=weeks, agenda=agenda, bk=bk,
         studios=[s.to_dict() for s in studios],
         teachers=[t.to_dict() for t in teachers],
         sel=(sel.to_dict() if sel else None),
@@ -133,9 +138,19 @@ def month_view():
         today_iso=today.strftime("%Y-%m-%d"))
 
 
+@bp.route("/calendar/month")
+@login_required
+def month_view():
+    """Eski havolalar uchun — /calendar'ga yo'naltiradi."""
+    return redirect(url_for("bookings.calendar", **request.args))
+
+
 @bp.route("/bookings/save", methods=["POST"])
 @login_required
 def save():
+    """Bron yaratish — bir yoki BIR NECHTA kunga (har biri alohida
+    konflikt/balans tekshiruvidan o'tadi; xatolar kun-kun ko'rsatiladi)."""
+    from config import Config
     u = current_user()
     f = request.form
     try:
@@ -143,69 +158,84 @@ def save():
         teacher = Teacher.query.get(int(f.get("teacher_id") or 0))
     except (ValueError, TypeError):
         studio = teacher = None
-    day = (f.get("date") or "").strip()
+    dates = []
+    for d in f.getlist("date"):
+        d = (d or "").strip()[:10]
+        if d and d not in dates:
+            dates.append(d)
+    dates.sort()
     start = (f.get("start") or "").strip()
     end = (f.get("end") or "").strip()
     pay_type = "package" if f.get("pay_type") == "package" else "hourly"
-    if not (studio and teacher and day and start and end):
+    first = dates[0] if dates else None
+    if not (studio and teacher and dates and start and end):
         flash("⛔ Studiya, ustoz, sana va vaqt to'ldirilishi shart", "error")
-        return redirect(url_for("bookings.calendar", date=day or None))
+        return redirect(url_for("bookings.calendar", date=first))
 
-    b = Booking(studio_id=studio.id, teacher_id=teacher.id, date=day,
-                start=start, end=end, pay_type=pay_type,
-                operator=(f.get("operator") or "").strip()[:120],
-                note=(f.get("note") or "").strip()[:300],
-                created_by=u.name)
-    if b.hours <= 0:
+    probe = Booking(studio_id=studio.id, teacher_id=teacher.id,
+                    date=first, start=start, end=end)
+    if probe.hours <= 0:
         flash("⛔ Tugash vaqti boshlanishdan keyin bo'lishi kerak", "error")
-        return redirect(url_for("bookings.calendar", date=day))
+        return redirect(url_for("bookings.calendar", date=first))
 
-    # Ish vaqti chegarasi (studiya 09:00–21:00 ishlaydi)
-    from config import Config
+    # Ish vaqti chegarasi (hamma kun uchun bir xil vaqt)
     if not Booking.within_work_hours(start, end):
         flash(f"⛔ Studiya ish vaqti: {Config.WORK_START:02d}:00–"
               f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.", "error")
-        return redirect(url_for("bookings.calendar", date=day))
+        return redirect(url_for("bookings.calendar", date=first))
 
-    # Konflikt — bir studiyada bir vaqtda bitta yozuv
-    c = Booking.conflict(studio.id, day, start, end)
-    if c:
-        flash(f"⛔ VAQT BAND: {day} «{studio.name}» {c.start}–{c.end} "
-              f"allaqachon bron qilingan. Boshqa vaqt tanlang.", "error")
-        return redirect(url_for("bookings.calendar", date=day))
-
-    # Paket: balans yetarlimi (shu bron hisobga kirmasidan avval)
-    if pay_type == "package":
-        bal = teacher.balance_hours()
-        if bal < b.hours:
-            flash(f"⛔ {teacher.name} balansi yetarli emas: {bal} soat bor, "
-                  f"{b.hours:g} soat kerak. Avval paket sotib oling.", "error")
-            return redirect(url_for("bookings.calendar", date=day))
-
-    db.session.add(b)
-    db.session.flush()
-
-    # Soatbay: kutilayotgan to'lov yoziladi (Moliya sahifasida tasdiqlanadi)
-    if pay_type == "hourly":
-        amount = round(b.hours * (studio.hourly_rate or 0))
-        db.session.add(Payment(
-            teacher_id=teacher.id, booking_id=b.id, kind="hourly",
-            amount=amount, hours=0, date=day, is_paid=False,
-            note=f"{studio.name} · {day} {start}–{end} ({b.hours:g} soat)",
-            created_by=u.name))
+    per_hours = probe.hours
+    operator = (f.get("operator") or "").strip()[:120]
+    note = (f.get("note") or "").strip()[:300]
+    made, errs = [], []
+    for day in dates:
+        # Konflikt — bir studiyada bir vaqtda bitta yozuv
+        c = Booking.conflict(studio.id, day, start, end)
+        if c:
+            errs.append(f"{day} — band ({c.start}–{c.end})")
+            continue
+        # Paket: balans (flush qilingan yangi bronlar ham hisobga kiradi)
+        if pay_type == "package":
+            bal = teacher.balance_hours()
+            if bal < per_hours:
+                errs.append(f"{day} — balans yetmadi ({bal:g} soat qoldi)")
+                continue
+        b = Booking(studio_id=studio.id, teacher_id=teacher.id, date=day,
+                    start=start, end=end, pay_type=pay_type,
+                    operator=operator, note=note, created_by=u.name)
+        db.session.add(b)
+        db.session.flush()
+        # Soatbay: kutilayotgan to'lov (Moliya sahifasida tasdiqlanadi)
+        if pay_type == "hourly":
+            amount = round(per_hours * (studio.hourly_rate or 0))
+            db.session.add(Payment(
+                teacher_id=teacher.id, booking_id=b.id, kind="hourly",
+                amount=amount, hours=0, date=day, is_paid=False,
+                note=f"{studio.name} · {day} {start}–{end} ({per_hours:g} soat)",
+                created_by=u.name))
+        made.append(b)
     db.session.commit()
 
-    try:
-        from core.telegram import notify_teacher_booking
-        notify_teacher_booking(b, studio, teacher, created=True)
-    except Exception:
-        pass
+    for b in made:
+        try:
+            from core.telegram import notify_teacher_booking
+            notify_teacher_booking(b, studio, teacher, created=True)
+        except Exception:
+            pass
 
-    extra = (f" · balansdan {b.hours:g} soat" if pay_type == "package"
-             else f" · to'lov {round(b.hours * (studio.hourly_rate or 0)):,.0f} so'm (kutilmoqda)")
-    flash(f"✅ Bron: {teacher.name} — {studio.name} {day} {start}–{end}{extra}",
-          "success")
-    return redirect(url_for("bookings.calendar", date=day))
+    if made:
+        days_txt = ", ".join(b.date for b in made[:5])
+        if len(made) > 5:
+            days_txt += f" +{len(made) - 5}"
+        extra = (f" · balansdan {per_hours * len(made):g} soat"
+                 if pay_type == "package" else
+                 f" · to'lov {round(per_hours * (studio.hourly_rate or 0)) * len(made):,.0f} so'm (kutilmoqda)")
+        flash(f"✅ {teacher.name} — {studio.name} {start}–{end}: "
+              f"{len(made)} kun bron qilindi ({days_txt}){extra}", "success")
+    if errs:
+        flash("⛔ Bron bo'lmadi: " + " · ".join(errs), "error")
+    return redirect(url_for("bookings.calendar",
+                            date=(made[0].date if made else first)))
 
 
 @bp.route("/bookings/<int:bid>/status", methods=["POST"])
@@ -226,7 +256,7 @@ def set_status(bid):
         EditJob.query.filter(EditJob.booking_id == b.id,
                              EditJob.status != "delivered").delete(
             synchronize_session=False)
-    # Yozildi ✓ → montaj kartasi avto-yaraladi (kanbanда ko'rinadi)
+    # Yozildi ✓ → montaj kartasi avto-yaraladi (kanbanda ko'rinadi)
     if new == "done":
         t = Teacher.query.get(b.teacher_id)
         EditJob.for_booking(b, teacher_name=(t.name if t else ""))

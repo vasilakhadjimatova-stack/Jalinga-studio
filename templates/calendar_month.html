@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Oylik kalendar{% endblock %}
-{% block page_title %}Oylik kalendar{% endblock %}
+{% block title %}Kalendar{% endblock %}
+{% block page_title %}Kalendar / Bron{% endblock %}
 {% block page_crumb %}{{ month_name }} {{ year }}{% if sel %} · {{ sel.name }}{% endif %}{% endblock %}
 {% block extra_css %}
 <style>
@@ -17,8 +17,8 @@
 .cal td.today .cal-day{color:var(--brand)}
 .cal-ev{font-size:10.5px;padding:3px 8px 3px 9px;border-radius:6px;margin-bottom:4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-weight:600;
-  letter-spacing:.1px;position:relative;border-left:3px solid currentColor;
-  transition:transform .15s,box-shadow .15s;text-decoration:none}
+  letter-spacing:.1px;position:relative;border-left:3px solid currentColor;cursor:pointer;
+  transition:transform .15s,box-shadow .15s}
 .cal-ev:hover{transform:translateX(2px);box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .ce-green{background:var(--green-bg);color:var(--green)}
 .ce-amber{background:var(--amber-bg);color:var(--amber)}
@@ -34,6 +34,39 @@
 .stab:hover{border-color:var(--brand);color:var(--txt)}
 .stab.on{background:var(--brand-bg);border-color:var(--brand);color:var(--brand)}
 .stab .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+/* ═══ BRON DETAL POPUP (Impulse/Google Calendar uslubi) ═══ */
+.cev-ov{position:fixed;inset:0;background:rgba(8,9,12,.6);z-index:400;display:none;
+  align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(6px);animation:cevF .18s ease}
+@keyframes cevF{from{opacity:0}to{opacity:1}}
+.cev-ov.open{display:flex}
+.cev{background:var(--surface);border:1px solid var(--line);border-radius:20px;max-width:420px;width:100%;
+  max-height:90vh;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 30px 80px rgba(0,0,0,.5);animation:cevU .28s cubic-bezier(.22,1,.36,1)}
+@keyframes cevU{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+.cev-strip{height:6px;flex:0 0 auto;background:var(--txt3)}
+.cev-strip.ce-green{background:var(--green)}.cev-strip.ce-amber{background:var(--amber)}
+.cev-strip.ce-red{background:var(--red)}.cev-strip.ce-blue{background:var(--blue)}.cev-strip.ce-gray{background:var(--txt3)}
+.cev-hd{padding:16px 18px 4px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex:0 0 auto}
+.cev-ttl{font-size:18px;font-weight:800;color:var(--txt);line-height:1.25;letter-spacing:-.3px}
+.cev-x{width:34px;height:34px;border-radius:50%;background:var(--surface2);border:0;color:var(--txt2);
+  cursor:pointer;font-size:13px;flex:0 0 auto;transition:.18s}
+.cev-x:hover{background:var(--red-bg);color:var(--red);transform:rotate(90deg)}
+.cev-when{padding:0 18px 10px;font-size:13.5px;color:var(--txt2);font-weight:600;flex:0 0 auto}
+.cev-when b{color:var(--txt);font-weight:800}
+.cev-tags{display:flex;gap:7px;flex-wrap:wrap;padding:0 18px 12px;flex:0 0 auto}
+.cev-body{padding:13px 18px;overflow-y:auto;border-top:1px solid var(--line)}
+.cev-row{display:flex;align-items:flex-start;gap:11px;padding:7px 0;font-size:13.5px}
+.cev-row .ic{width:20px;text-align:center;font-size:15px;flex:0 0 auto}
+.cev-row .lb{color:var(--txt3);font-weight:600;min-width:78px;flex:0 0 auto}
+.cev-row .vl{font-weight:700;color:var(--txt);flex:1;min-width:0}
+.cev-note{margin-top:11px;padding:10px 13px;background:var(--surface2);border-radius:10px;
+  font-size:12.5px;color:var(--txt2);line-height:1.5;border-left:3px solid var(--brand)}
+.cev-foot{padding:13px 18px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);flex:0 0 auto}
+.cev-foot form{flex:1;min-width:88px;display:flex}
+.cev-foot .btn{flex:1;justify-content:center}
+/* Ko'p kunlik sana qatorlari */
+.mbd-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.mbd-row .input{flex:1}
 @media(max-width:860px){.cal td{height:74px;padding:4px}.cal-ev{font-size:9px;padding:2px 4px}}
 </style>
 {% endblock %}
@@ -46,23 +79,24 @@
     <div class="ph-sub cal-stats">
       <span>🎬 <b>{{ n_book }}</b> bron</span>
       <span>⏱ <b>{{ '%g'|format(total_hours) }}</b> soat band</span>
-      <span style="color:var(--txt3)">kun ustiga bosing — shu kunga bron</span>
+      <span style="color:var(--txt3)">kun ustiga bosing — bron · chip ustiga bosing — batafsil</span>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <a href="/calendar" class="btn btn-ghost btn-sm"><i class="icon-columns-3"></i> Kunlik</a>
-    <a href="/calendar/month?year={{ prev_y }}&month={{ prev_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">‹ Oldingi</a>
-    <a href="/calendar/month{% if sel %}?studio={{ sel.id }}{% endif %}" class="btn btn-ghost btn-sm">Bugun</a>
-    <a href="/calendar/month?year={{ next_y }}&month={{ next_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">Keyingi ›</a>
+    <a href="/calendar?year={{ prev_y }}&month={{ prev_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">‹ Oldingi</a>
+    <a href="/calendar{% if sel %}?studio={{ sel.id }}{% endif %}" class="btn btn-ghost btn-sm">Bugun</a>
+    <a href="/calendar?year={{ next_y }}&month={{ next_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">Keyingi ›</a>
+    <button class="btn btn-gold" onclick="mcBook('{{ today_iso }}')">
+      <i class="icon-plus"></i> Yangi bron</button>
   </div>
 </div>
 
 <!-- Studiya tablari -->
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-  <a href="/calendar/month?year={{ year }}&month={{ month }}" class="stab {% if not sel %}on{% endif %}">
+  <a href="/calendar?year={{ year }}&month={{ month }}" class="stab {% if not sel %}on{% endif %}">
     <i class="icon-layout-grid"></i> Barcha studiyalar</a>
   {% for s in studios %}
-  <a href="/calendar/month?year={{ year }}&month={{ month }}&studio={{ s.id }}"
+  <a href="/calendar?year={{ year }}&month={{ month }}&studio={{ s.id }}"
      class="stab {% if sel and sel.id == s.id %}on{% endif %}">
     <span class="dot" style="background:{{ s.color }}"></span> {{ s.name }}</a>
   {% endfor %}
@@ -81,9 +115,9 @@
                 onclick="mcBook('{{ d.iso }}', event)" title="Shu kunga bron qilish">
               <div class="cal-day">{{ d.day }}</div>
               {% for it in d.evs[:4] %}
-              <a href="/calendar?date={{ d.iso }}" class="cal-ev ce-{{ it.color }}"
-                 style="border-left-color:{{ it.scolor }}"
-                 title="{{ it.studio }} · {{ it.title }}">{{ it.title }}</a>
+              <span class="cal-ev ce-{{ it.color }}" style="border-left-color:{{ it.scolor }}"
+                    onclick="mcShow({{ it.id }});event.stopPropagation()"
+                    title="{{ it.studio }} · {{ it.title }}">{{ it.title }}</span>
               {% endfor %}
               {% if d.evs|length > 4 %}
               <div style="font-size:10px;color:var(--txt3)">+{{ d.evs|length - 4 }} ko'proq</div>
@@ -101,13 +135,13 @@
     <div class="card-hd"><div class="card-title"><i class="icon-list"></i> Yaqin kunlar</div></div>
     <div style="padding:0;max-height:560px;overflow-y:auto">
       {% for a in agenda %}
-      <a href="/calendar?date={{ a.date }}" class="feed-item" style="text-decoration:none">
+      <div class="feed-item" style="cursor:pointer" onclick="mcShow({{ a.id }})">
         <span class="dot" style="width:9px;height:9px;border-radius:50%;background:{{ a.scolor }};flex:0 0 auto"></span>
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:12.5px">{{ a.title }}</div>
           <div style="font-size:11px;color:var(--txt3)">{{ a.date }} · {{ a.studio }}</div>
         </div>
-      </a>
+      </div>
       {% else %}
       <div class="empty"><i class="icon-calendar-check"></i>Bu oyda hali bron yo'q</div>
       {% endfor %}
@@ -115,7 +149,44 @@
   </div>
 </div>
 
-<!-- Yangi bron (kun bosilganda sana avtomatik to'ladi) -->
+<!-- ═══ BRON DETAL POPUP ═══ -->
+<div class="cev-ov" id="bkModal" onclick="if(event.target===this)bkClose()">
+  <div class="cev">
+    <div class="cev-strip" id="bkStrip"></div>
+    <div class="cev-hd">
+      <div class="cev-ttl" id="bkTtl">—</div>
+      <button class="cev-x" onclick="bkClose()" title="Yopish">✕</button>
+    </div>
+    <div class="cev-when" id="bkWhen">—</div>
+    <div class="cev-tags" id="bkTags"></div>
+    <div class="cev-body">
+      <div class="cev-row"><span class="ic">🎬</span><span class="lb">Studiya</span><span class="vl" id="bkStudio">—</span></div>
+      <div class="cev-row"><span class="ic">⏱</span><span class="lb">Davomiylik</span><span class="vl" id="bkHours">—</span></div>
+      <div class="cev-row" id="bkAmountRow"><span class="ic">💵</span><span class="lb">To'lov</span><span class="vl" id="bkAmount">—</span></div>
+      <div class="cev-row" id="bkOpRow"><span class="ic">🎥</span><span class="lb">Operator</span><span class="vl">—</span></div>
+      <div class="cev-row" id="bkByRow"><span class="ic">🧑‍💼</span><span class="lb">Kim yozdi</span><span class="vl">—</span></div>
+      <div class="cev-note" id="bkNote" style="display:none"></div>
+    </div>
+    <div class="cev-foot" id="bkFoot">
+      <form method="POST" id="bkDone"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="status" value="done">
+        <button class="btn btn-gold btn-sm" type="submit"><i class="icon-check"></i> Yozildi</button></form>
+      <form method="POST" id="bkNoshow"
+            onsubmit="return confirm('Kelmadi deb belgilansinmi? Paket bo\'lsa soat kuyadi (24 soat qoidasi).')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="status" value="noshow">
+        <button class="btn btn-out btn-sm" type="submit">😴 Kelmadi</button></form>
+      <form method="POST" id="bkCancel" onsubmit="return confirm('Bron bekor qilinsinmi?')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="status" value="cancelled">
+        <button class="btn btn-out btn-sm" type="submit"><i class="icon-x"></i> Bekor</button></form>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="bkEdit()" style="flex:1">
+        <i class="icon-pencil"></i> Ko'chirish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Yangi bron (bir nechta kunga birdan) -->
 <div class="modal-ov" id="m-book" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
     <div class="modal-title"><i class="icon-calendar-plus"></i> Yangi bron</div>
@@ -133,8 +204,16 @@
       {% if not teachers %}
       <div style="font-size:12px;color:var(--amber);margin-top:6px">Avval <a href="/teachers" style="color:var(--brand)">ustoz qo'shing</a></div>
       {% endif %}
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div><label>Sana</label><input class="input" type="date" name="date" id="mb-date" value="{{ today_iso }}" required></div>
+      <label>Kunlar</label>
+      <div id="mb-dates">
+        <div class="mbd-row">
+          <input class="input" type="date" name="date" id="mb-date" value="{{ today_iso }}" required>
+          <button type="button" class="btn btn-out btn-sm" onclick="mcAddDate()" title="Yana kun qo'shish">
+            <i class="icon-plus"></i> kun</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--txt3);margin-top:-2px">Bir nechta kunga birdan bron qilish mumkin — har kun alohida tekshiriladi (band bo'lsa o'sha kun o'tkazib yuboriladi)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label>Boshlanish</label><input class="input" type="time" name="start" value="10:00" required></div>
         <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
       </div>
@@ -155,11 +234,113 @@
     </form>
   </div>
 </div>
+
+<!-- Bronni ko'chirish/tahrirlash -->
+<div class="modal-ov" id="m-edit" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-pencil"></i> Bronni ko'chirish</div>
+    <div id="be-who" style="font-size:12.5px;color:var(--txt3);margin-bottom:4px"></div>
+    <form method="POST" id="be-form" action="">
+      <label>Studiya</label>
+      <select class="select" name="studio_id" id="be-studio">
+        {% for s in studios %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div><label>Sana</label><input class="input" type="date" name="date" id="be-date" required></div>
+        <div><label>Boshlanish</label><input class="input" type="time" name="start" id="be-start" required></div>
+        <div><label>Tugash</label><input class="input" type="time" name="end" id="be-end" required></div>
+      </div>
+      <label>Operator</label>
+      <input class="input" name="operator" id="be-operator">
+      <div style="font-size:11.5px;color:var(--txt3);margin-top:10px">
+        Konflikt, ish vaqti va paket balansi avtomatik qayta tekshiriladi.
+        Soatbay bo'lsa kutilayotgan to'lov summasi yangilanadi.</div>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-edit').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Saqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script>
+var BK = {{ bk|tojson }};
+var bkCur = null;
+
+/* Kun bosildi → yangi bron (sana avtomatik) */
 function mcBook(iso, e){
-  if(e && e.target && e.target.closest('.cal-ev')) return;  // bron chipi bosilsa — kun ochilmaydi
+  if(e && e.target && e.target.closest('.cal-ev')) return;  // chip bosilsa — kun ochilmaydi
   document.getElementById('mb-date').value = iso;
   document.getElementById('m-book').classList.add('open');
 }
+
+/* + kun — yana bitta sana qatori */
+function mcAddDate(){
+  var wrap = document.getElementById('mb-dates');
+  var row = document.createElement('div');
+  row.className = 'mbd-row';
+  var inp = document.createElement('input');
+  inp.className = 'input'; inp.type = 'date'; inp.name = 'date'; inp.required = true;
+  inp.value = document.getElementById('mb-date').value;
+  var rm = document.createElement('button');
+  rm.type = 'button'; rm.className = 'btn btn-out btn-sm'; rm.textContent = '−';
+  rm.title = "Bu kunni olib tashlash";
+  rm.onclick = function(){ row.remove(); };
+  row.appendChild(inp); row.appendChild(rm);
+  wrap.appendChild(row);
+  inp.focus();
+}
+
+/* Chip bosildi → detal popup */
+function mcShow(id){
+  var b = BK[id] || BK[String(id)]; if(!b) return;
+  bkCur = b;
+  document.getElementById('bkStrip').className = 'cev-strip ce-' + (b.status_color||'gray');
+  document.getElementById('bkTtl').textContent = '👨‍🏫 ' + b.teacher;
+  document.getElementById('bkWhen').innerHTML = '📅 <b>' + b.date_human + '</b>' +
+    (b.weekday ? ', ' + b.weekday : '') + ' · ' + b.start + '–' + b.end;
+  document.getElementById('bkTags').innerHTML =
+    '<span class="tag tag-' + (b.status_color||'gray') + '">' + b.status_label + '</span>' +
+    '<span class="tag tag-' + (b.pay_type==='package' ? 'gold' : 'blue') + '">' +
+      (b.pay_type==='package' ? '📦 paket' : '💵 soatbay') + '</span>';
+  var st = document.getElementById('bkStudio');
+  st.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' +
+    b.scolor + ';margin-right:6px"></span>' + b.studio;
+  document.getElementById('bkHours').textContent = b.hours + ' soat';
+  _bkRow('bkAmountRow', b.pay_type==='hourly' ? _money(b.amount) + " so'm" : '');
+  _bkRow('bkOpRow', b.operator);
+  _bkRow('bkByRow', b.created_by);
+  var nb = document.getElementById('bkNote');
+  if(b.note){ nb.textContent = '📝 ' + b.note; nb.style.display='block'; } else { nb.style.display='none'; }
+  // Amallar faqat rejalashtirilgan (active) bron uchun
+  document.getElementById('bkFoot').style.display = (b.status==='active') ? 'flex' : 'none';
+  document.getElementById('bkDone').action = '/bookings/' + b.id + '/status';
+  document.getElementById('bkNoshow').action = '/bookings/' + b.id + '/status';
+  document.getElementById('bkCancel').action = '/bookings/' + b.id + '/status';
+  document.getElementById('bkModal').classList.add('open');
+}
+function bkClose(){ document.getElementById('bkModal').classList.remove('open'); }
+function _bkRow(rowId, val){
+  var r = document.getElementById(rowId);
+  if(val){ r.querySelector('.vl').textContent = val; r.style.display='flex'; }
+  else { r.style.display='none'; }
+}
+function _money(n){ return String(Math.round(n||0)).replace(/\B(?=(\d{3})+(?!\d))/g,' '); }
+
+/* Popupdan «Ko'chirish» → tahrirlash oynasi */
+function bkEdit(){
+  if(!bkCur) return;
+  bkClose();
+  document.getElementById('be-form').action = '/bookings/' + bkCur.id + '/edit';
+  document.getElementById('be-who').textContent = '👨‍🏫 ' + bkCur.teacher +
+    ' · ' + (bkCur.pay_type==='package' ? '📦 paket' : '💵 soatbay');
+  document.getElementById('be-studio').value = bkCur.studio_id;
+  document.getElementById('be-date').value = bkCur.date;
+  document.getElementById('be-start').value = bkCur.start;
+  document.getElementById('be-end').value = bkCur.end;
+  document.getElementById('be-operator').value = bkCur.operator||'';
+  document.getElementById('m-edit').classList.add('open');
+}
+document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') bkClose(); });
 </script>
 {% endblock %}
