@@ -108,6 +108,12 @@ def save():
             created_by=u.name))
     db.session.commit()
 
+    try:
+        from core.telegram import notify_teacher_booking
+        notify_teacher_booking(b, studio, teacher, created=True)
+    except Exception:
+        pass
+
     extra = (f" · balansdan {b.hours:g} soat" if pay_type == "package"
              else f" · to'lov {round(b.hours * (studio.hourly_rate or 0)):,.0f} so'm (kutilmoqda)")
     flash(f"✅ Bron: {teacher.name} — {studio.name} {day} {start}–{end}{extra}",

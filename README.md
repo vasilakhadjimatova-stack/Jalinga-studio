@@ -11,8 +11,13 @@ uchun: bron, kalendar, ustozlar bazasi, paket/soatbay to'lovlar, boshliq paneli.
 - **📊 Boshliq paneli** — bugungi yozuvlar, oy tushumi, haftalik bandlik %, paketi tugayotgan ustozlar
 - **🔐 Kirish** — 6 xonali shaxsiy kod (parolsiz, tez)
 
+## 2-bosqich (tayyor)
+- **🔗 Ustoz kabineti** — maxfiy havola (`/my/<token>`, parolsiz): balans, kelgusi yozuvlar, tarix
+- **🟢 Online bron** — ustoz o'zi bo'sh vaqtga bron qiladi (konflikt/balans/o'tgan-vaqt himoyasi)
+- **✕ Bekor qilish siyosati** — darsdan ≥24 soat oldin (paket soatlari qaytadi)
+- **✈️ Telegram bot** — `/start <token>` bilan ulanish, bron tasdig'i, dars oldidan ~2 soat qolganda eslatma
+
 ## Keyingi bosqichlar
-2. Ustoz kabineti + online bron + Telegram bot
 3. Montaj kanban (yozildi → montajda → tekshiruvda → topshirildi) + operator jadvali
 4. Bandlik heatmap, churn radar, referral, onlayn to'lov (Payme/Click)
 
@@ -28,6 +33,7 @@ ADMIN_CODE=123456 python app.py        # http://localhost:5060
 | `SECRET_KEY` | Sessiya kaliti (prod'da majburiy) |
 | `DATABASE_URL` | Postgres/SQLite (default: `sqlite:///jalinga.db`) |
 | `ADMIN_CODE` | Birinchi admin kirish kodi (default: 111111 — o'zgartiring!) |
+| `TELEGRAM_BOT_TOKEN` | Bot tokeni (@BotFather) — bo'lmasa bot jim o'chiq |
 
 ## Test
 ```bash

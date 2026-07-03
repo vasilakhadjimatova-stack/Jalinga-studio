@@ -1,4 +1,4 @@
-"""Ustoz (mijoz) + to'lovlar/paket balansi.
+"""Ustoz (mijoz) + to'lovlar/paket balansi + shaxsiy portal.
 
 Balans mantiqi (shaffof, yagona formula):
   sotib olingan soatlar (Payment kind='package')
@@ -22,6 +22,10 @@ class Teacher(db.Model):
     subject    = db.Column(db.String(120), default="")   # fan/yo'nalish
     note       = db.Column(db.Text, default="")
     is_active  = db.Column(db.Boolean, nullable=False, default=True)
+    # Shaxsiy portal — maxfiy havola tokeni (parolsiz kirish; havola = kalit)
+    portal_token = db.Column(db.String(48), default="", index=True)
+    # Telegram bog'lanish (bot /start <token> orqali)
+    tg_chat_id   = db.Column(db.String(24), default="")
     created_by = db.Column(db.String(120), default="")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -42,6 +46,13 @@ class Teacher(db.Model):
 
     def balance_hours(self):
         return round(self.hours_purchased() - self.hours_used(), 2)
+
+    def ensure_token(self):
+        """Portal tokeni yo'q bo'lsa yaratadi (commit chaqiruvchida)."""
+        if not (self.portal_token or "").strip():
+            import secrets
+            self.portal_token = secrets.token_urlsafe(24)[:48]
+        return self.portal_token
 
     def to_dict(self):
         return {

@@ -58,6 +58,8 @@ class Booking(db.Model):
     operator     = db.Column(db.String(120), default="")   # kim yozib beradi
     note         = db.Column(db.String(300), default="")
     created_by   = db.Column(db.String(120), default="")
+    # Telegram: dars oldidan eslatma yuborildimi (takror ketmasin)
+    reminded     = db.Column(db.Boolean, nullable=False, default=False)
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property

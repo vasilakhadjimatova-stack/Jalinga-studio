@@ -39,15 +39,31 @@ def save():
     t.subject = (f.get("subject") or "").strip()[:120]
     t.note = (f.get("note") or "").strip()
     t.is_active = bool(f.get("is_active", "1"))
+    t.ensure_token()   # portal havolasi darhol tayyor bo'lsin
     db.session.commit()
     flash(f"✅ {t.name} {'qo`shildi' if is_new else 'yangilandi'}", "success")
     return redirect(url_for("teachers.detail", tid=t.id))
+
+
+@bp.route("/teachers/<int:tid>/token", methods=["POST"])
+@login_required
+def regen_token(tid):
+    """Portal havolasini yangilash (eski havola bekor bo'ladi)."""
+    t = Teacher.query.get_or_404(tid)
+    t.portal_token = ""
+    t.ensure_token()
+    db.session.commit()
+    flash("🔗 Yangi portal havolasi yaratildi (eskisi bekor)", "success")
+    return redirect(url_for("teachers.detail", tid=tid))
 
 
 @bp.route("/teachers/<int:tid>")
 @login_required
 def detail(tid):
     t = Teacher.query.get_or_404(tid)
+    if not t.portal_token:
+        t.ensure_token()
+        db.session.commit()
     payments = Payment.query.filter_by(teacher_id=tid).order_by(
         Payment.id.desc()).limit(50).all()
     bookings = Booking.query.filter_by(teacher_id=tid).order_by(
@@ -58,11 +74,13 @@ def detail(tid):
         d = b.to_dict()
         d["studio_name"] = smap.get(b.studio_id, "?")
         brows.append(d)
+    portal_url = request.host_url.rstrip("/") + "/my/" + t.portal_token
     return render_template(
         "teacher_detail.html", t=t.to_dict(),
         purchased=t.hours_purchased(), used=t.hours_used(),
         payments=[p.to_dict() for p in payments],
-        bookings=brows, methods=PAY_METHODS, today=today_iso())
+        bookings=brows, methods=PAY_METHODS, today=today_iso(),
+        portal_url=portal_url, tg_linked=bool(t.tg_chat_id))
 
 
 @bp.route("/teachers/<int:tid>/package", methods=["POST"])

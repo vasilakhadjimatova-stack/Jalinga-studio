@@ -1,0 +1,162 @@
+"""Telegram bot — yengil (Impulse botining soddalashgani).
+
+Vazifalari:
+  • Ustozni ulash: portal havolasidagi "Telegram'ga ulash" tugmasi
+    https://t.me/<bot>?start=<portal_token> ochadi → /start <token> keladi →
+    Teacher.tg_chat_id saqlanadi.
+  • Xabarlar: bron tasdig'i, dars oldidan ~2 soat qolganda eslatma,
+    paket balansi tugayotganda ogohlantirish.
+
+TELEGRAM_BOT_TOKEN env bo'lmasa — hammasi jim no-op (dastur ishlayveradi).
+"""
+import json
+import logging
+import os
+import threading
+import time
+import urllib.parse
+import urllib.request
+
+logger = logging.getLogger(__name__)
+
+TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN", "") or "").strip()
+_API = f"https://api.telegram.org/bot{TOKEN}"
+
+
+def is_configured():
+    return bool(TOKEN)
+
+
+def tg_send(chat_id, text):
+    """Xabar yuborish — xatoda jim (asosiy oqim to'xtamaydi)."""
+    if not TOKEN or not chat_id:
+        return False
+    try:
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id, "text": text, "parse_mode": "HTML"}).encode()
+        urllib.request.urlopen(f"{_API}/sendMessage", data=data, timeout=10)
+        return True
+    except Exception as exc:
+        logger.warning(f"tg_send xato: {exc}")
+        return False
+
+
+def notify_teacher_booking(b, studio, teacher, created=True):
+    """Ustozga bron tasdig'i/o'zgarishi (TG ulangan bo'lsa)."""
+    if not (teacher and teacher.tg_chat_id):
+        return
+    head = "✅ Yozuv tasdiqlandi" if created else "ℹ️ Yozuv yangilandi"
+    pay = "📦 paket balansidan" if b.pay_type == "package" else "💵 soatbay"
+    tg_send(teacher.tg_chat_id,
+            f"<b>{head}</b>\n🎬 {studio.name}\n"
+            f"📅 {b.date} · {b.start}–{b.end} ({b.hours:g} soat)\n{pay}")
+
+
+def _handle_update(app, upd):
+    msg = upd.get("message") or {}
+    text = (msg.get("text") or "").strip()
+    chat_id = str((msg.get("chat") or {}).get("id") or "")
+    if not chat_id:
+        return
+    if text.startswith("/start"):
+        token = text[6:].strip()
+        if token:
+            with app.app_context():
+                from database import db
+                from models.billing import Teacher
+                t = Teacher.query.filter_by(portal_token=token).first()
+                if t:
+                    t.tg_chat_id = chat_id
+                    db.session.commit()
+                    tg_send(chat_id,
+                            f"👋 Salom, <b>{t.name}</b>!\nJalinga Studio botiga "
+                            f"ulandingiz. Endi bron tasdig'i va dars oldidan "
+                            f"eslatmalar shu yerga keladi. 🎬")
+                    return
+        tg_send(chat_id, "👋 Jalinga Studio boti. Ulash uchun shaxsiy portal "
+                         "havolangizdagi «Telegram'ga ulash» tugmasini bosing.")
+
+
+def _poll_loop(app):
+    offset = 0
+    while True:
+        try:
+            with urllib.request.urlopen(
+                    f"{_API}/getUpdates?timeout=25&offset={offset}",
+                    timeout=35) as r:
+                data = json.loads(r.read().decode())
+            for upd in data.get("result", []):
+                offset = upd["update_id"] + 1
+                try:
+                    _handle_update(app, upd)
+                except Exception as exc:
+                    logger.error(f"tg update xato: {exc}")
+        except Exception:
+            time.sleep(5)
+
+
+def _reminder_loop(app):
+    """Har 5 daqiqada: 2 soat ichida boshlanadigan bronlarga eslatma."""
+    from datetime import datetime, timedelta
+    time.sleep(30)
+    while True:
+        try:
+            with app.app_context():
+                from database import db
+                from models.studio import Booking, Studio
+                from models.billing import Teacher
+                from core.timeutils import now_tashkent
+                now = now_tashkent()
+                horizon = now + timedelta(hours=2)
+                for b in Booking.query.filter(
+                        Booking.status == "active",
+                        Booking.reminded.is_(False),
+                        Booking.date == now.strftime("%Y-%m-%d")).all():
+                    try:
+                        starts = datetime.strptime(
+                            f"{b.date} {b.start}", "%Y-%m-%d %H:%M")
+                    except ValueError:
+                        continue
+                    if now <= starts <= horizon:
+                        t = Teacher.query.get(b.teacher_id)
+                        s = Studio.query.get(b.studio_id)
+                        if t and t.tg_chat_id:
+                            left = int((starts - now).total_seconds() // 60)
+                            tg_send(t.tg_chat_id,
+                                    f"⏰ <b>Eslatma:</b> {left} daqiqadan so'ng "
+                                    f"yozuv!\n🎬 {s.name if s else ''}\n"
+                                    f"📅 {b.date} · {b.start}–{b.end}")
+                        b.reminded = True
+                db.session.commit()
+        except Exception as exc:
+            logger.error(f"tg eslatma xato: {exc}")
+        time.sleep(300)
+
+
+def start_bot(app):
+    """Polling + eslatma threadlari (token bo'lsa)."""
+    if not TOKEN:
+        logger.info("Telegram bot o'chiq (TELEGRAM_BOT_TOKEN yo'q)")
+        return
+    threading.Thread(target=_poll_loop, args=(app,), daemon=True,
+                     name="jalinga-tg-poll").start()
+    threading.Thread(target=_reminder_loop, args=(app,), daemon=True,
+                     name="jalinga-tg-remind").start()
+    logger.info("🤖 Telegram bot ishga tushdi")
+
+
+def bot_username():
+    """Deep-link uchun bot nomi (kesh bilan)."""
+    global _BOT_NAME
+    try:
+        return _BOT_NAME
+    except NameError:
+        pass
+    if not TOKEN:
+        return ""
+    try:
+        with urllib.request.urlopen(f"{_API}/getMe", timeout=10) as r:
+            _BOT_NAME = json.loads(r.read().decode())["result"]["username"]
+    except Exception:
+        _BOT_NAME = ""
+    return _BOT_NAME

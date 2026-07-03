@@ -30,12 +30,14 @@ def create_app():
     from modules.bookings.routes import bp as bookings_bp
     from modules.teachers.routes import bp as teachers_bp
     from modules.finance.routes import bp as finance_bp
+    from modules.portal.routes import bp as portal_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dash_bp)
     app.register_blueprint(studios_bp)
     app.register_blueprint(bookings_bp)
     app.register_blueprint(teachers_bp)
     app.register_blueprint(finance_bp)
+    app.register_blueprint(portal_bp)
 
     @app.context_processor
     def inject_globals():
@@ -52,6 +54,11 @@ def create_app():
     with app.app_context():
         from seed import seed_all
         seed_all()
+
+    # Telegram bot (token bo'lsa; testda o'chiq)
+    if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):
+        from core.telegram import start_bot
+        start_bot(app)
 
     return app
 
