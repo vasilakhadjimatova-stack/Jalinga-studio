@@ -4,6 +4,7 @@ Paket bron: ustoz balansidan yechiladi (balans yetmasa bloklanadi).
 Soatbay bron: yaratilganda Payment (kutilmoqda) yoziladi — Moliya sahifasida
 "to'landi" qilinadi. Bekor bo'lsa to'lov ham bekor bo'ladi.
 """
+import calendar as pycal
 from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
@@ -15,6 +16,10 @@ from models.studio import Studio, Booking
 from models.billing import Teacher, Payment
 
 bp = Blueprint("bookings", __name__)
+
+MONTHS_UZ = ["", "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+             "Iyul", "Avgust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr"]
+WEEKDAYS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"]
 
 
 @bp.route("/calendar")
@@ -51,6 +56,81 @@ def calendar():
         studios=[s.to_dict() for s in studios],
         teachers=[t.to_dict() for t in teachers],
         by_studio=by_studio)
+
+
+@bp.route("/calendar/month")
+@login_required
+def month_view():
+    """Oylik kalendar (Impulse uslubi) — studiya bo'yicha filtrlash mumkin.
+
+    Studiyalar sahifasida yoki kunlik kalendarda studiya bosilsa shu sahifa
+    ochiladi. Kun katakchasi bosilsa — shu sana bilan bron oynasi ochiladi.
+    """
+    today = datetime.strptime(today_iso(), "%Y-%m-%d").date()
+    year = request.args.get("year", type=int, default=today.year)
+    month = request.args.get("month", type=int, default=today.month)
+    if month < 1:
+        month, year = 12, year - 1
+    if month > 12:
+        month, year = 1, year + 1
+
+    studios = Studio.query.filter_by(is_active=True).order_by(
+        Studio.sort.asc(), Studio.id.asc()).all()
+    sel_id = request.args.get("studio", type=int)
+    sel = next((s for s in studios if s.id == sel_id), None)
+
+    teachers = Teacher.query.filter_by(is_active=True).order_by(
+        Teacher.name.asc()).all()
+    tmap = {t.id: t.name for t in teachers}
+    smap = {s.id: s for s in studios}
+
+    prefix = f"{year:04d}-{month:02d}"
+    q = Booking.query.filter(
+        Booking.date.like(prefix + "%"),
+        Booking.status.in_(("active", "done", "noshow")))
+    if sel:
+        q = q.filter(Booking.studio_id == sel.id)
+    buckets, n_book, total_hours = {}, 0, 0.0
+    for b in q.order_by(Booking.date.asc(), Booking.start.asc()).all():
+        st = smap.get(b.studio_id)
+        buckets.setdefault(b.date, []).append({
+            "title": f"{b.start} {tmap.get(b.teacher_id, '?')}",
+            "color": b.status_color(),
+            "scolor": (st.color if st else "#6098F2"),
+            "studio": (st.name if st else "?"),
+        })
+        n_book += 1
+        total_hours += b.hours
+
+    cal = pycal.Calendar(firstweekday=0)  # Dushanba
+    weeks = []
+    for week in cal.monthdatescalendar(year, month):
+        row = []
+        for d in week:
+            ds = d.strftime("%Y-%m-%d")
+            row.append({"day": d.day, "in_month": d.month == month,
+                        "is_today": d == today, "iso": ds,
+                        "evs": buckets.get(ds, [])})
+        weeks.append(row)
+
+    # Yaqin kunlar (bugundan boshlab, shu oy ichida)
+    agenda = []
+    for ds in sorted(buckets):
+        if ds >= today.strftime("%Y-%m-%d"):
+            for it in buckets[ds]:
+                agenda.append({**it, "date": ds})
+    agenda = agenda[:15]
+
+    return render_template(
+        "calendar_month.html",
+        year=year, month=month, month_name=MONTHS_UZ[month],
+        weekdays=WEEKDAYS, weeks=weeks, agenda=agenda,
+        studios=[s.to_dict() for s in studios],
+        teachers=[t.to_dict() for t in teachers],
+        sel=(sel.to_dict() if sel else None),
+        n_book=n_book, total_hours=total_hours,
+        prev_m=month - 1, prev_y=year, next_m=month + 1, next_y=year,
+        today_iso=today.strftime("%Y-%m-%d"))
 
 
 @bp.route("/bookings/save", methods=["POST"])

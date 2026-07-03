@@ -9,6 +9,8 @@
   <div class="ph-sub">{{ day }}{% if is_today %} · bugun{% endif %} — har studiya alohida ustun</div>
 </div>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <a href="/calendar/month" class="btn btn-ghost btn-sm" title="Oylik ko'rinish (Impulse uslubi)">
+    <i class="icon-calendar-days"></i> Oylik</a>
   <a href="/calendar?date={{ prev_day }}" class="btn btn-out btn-sm"><i class="icon-chevron-left"></i></a>
   <form method="get" action="/calendar" style="display:inline">
     <input class="input" type="date" name="date" value="{{ day }}" onchange="this.form.submit()" style="width:auto;padding:8px 12px">
@@ -22,7 +24,8 @@
   {% for s in studios %}
   <div class="card" style="margin:0;border-top:3px solid {{ s.color }}">
     <div class="card-hd">
-      <div class="card-title"><i class="icon-clapperboard" style="color:{{ s.color }}"></i> {{ s.name }}</div>
+      <a href="/calendar/month?studio={{ s.id }}" class="card-title" style="text-decoration:none;color:inherit"
+         title="{{ s.name }} — oylik kalendar"><i class="icon-clapperboard" style="color:{{ s.color }}"></i> {{ s.name }}</a>
       <span style="font-size:11.5px;color:var(--txt3);font-weight:700">{{ s.hourly_rate|som }} so'm/soat</span>
     </div>
     <div style="padding:12px 14px;min-height:130px">

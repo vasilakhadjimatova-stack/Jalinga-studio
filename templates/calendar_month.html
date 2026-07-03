@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Oylik kalendar{% endblock %}
+{% block page_title %}Oylik kalendar{% endblock %}
+{% block page_crumb %}{{ month_name }} {{ year }}{% if sel %} · {{ sel.name }}{% endif %}{% endblock %}
+{% block extra_css %}
+<style>
+.cal{width:100%;border-collapse:collapse;table-layout:fixed}
+.cal th{padding:12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--txt3);font-weight:700;text-align:center;border-bottom:1px solid var(--line)}
+.cal td{height:112px;border:1px solid var(--line);vertical-align:top;padding:7px;width:14.28%;
+  cursor:pointer;transition:background .15s}
+.cal td:hover{background:var(--brand-bg)}
+.cal td.out{background:var(--surface2)}
+.cal td.out .cal-day{color:var(--txt3);opacity:.5}
+.cal td.today{background:var(--brand-bg);border-color:var(--brand)}
+.cal-day{font-size:12.5px;font-weight:700;color:var(--txt2);margin-bottom:5px}
+.cal td.today .cal-day{color:var(--brand)}
+.cal-ev{font-size:10.5px;padding:3px 8px 3px 9px;border-radius:6px;margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-weight:600;
+  letter-spacing:.1px;position:relative;border-left:3px solid currentColor;
+  transition:transform .15s,box-shadow .15s;text-decoration:none}
+.cal-ev:hover{transform:translateX(2px);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ce-green{background:var(--green-bg);color:var(--green)}
+.ce-amber{background:var(--amber-bg);color:var(--amber)}
+.ce-red{background:var(--red-bg);color:var(--red)}
+.ce-blue{background:var(--blue-bg);color:var(--blue)}
+.ce-gray{background:var(--surface2);color:var(--txt2)}
+.cal-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--txt2);font-weight:600;align-items:center}
+.cal-stats b{color:var(--txt);font-weight:800}
+/* Studiya tablar */
+.stab{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;
+  border:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--txt2);
+  text-decoration:none;transition:.18s;background:var(--surface)}
+.stab:hover{border-color:var(--brand);color:var(--txt)}
+.stab.on{background:var(--brand-bg);border-color:var(--brand);color:var(--brand)}
+.stab .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+@media(max-width:860px){.cal td{height:74px;padding:4px}.cal-ev{font-size:9px;padding:2px 4px}}
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="ph">
+  <div>
+    <div class="gold-bar"></div>
+    <div class="ph-title">{{ month_name }} {{ year }}{% if sel %} — {{ sel.name }}{% endif %}</div>
+    <div class="ph-sub cal-stats">
+      <span>🎬 <b>{{ n_book }}</b> bron</span>
+      <span>⏱ <b>{{ '%g'|format(total_hours) }}</b> soat band</span>
+      <span style="color:var(--txt3)">kun ustiga bosing — shu kunga bron</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <a href="/calendar" class="btn btn-ghost btn-sm"><i class="icon-columns-3"></i> Kunlik</a>
+    <a href="/calendar/month?year={{ prev_y }}&month={{ prev_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">‹ Oldingi</a>
+    <a href="/calendar/month{% if sel %}?studio={{ sel.id }}{% endif %}" class="btn btn-ghost btn-sm">Bugun</a>
+    <a href="/calendar/month?year={{ next_y }}&month={{ next_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">Keyingi ›</a>
+  </div>
+</div>
+
+<!-- Studiya tablari -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+  <a href="/calendar/month?year={{ year }}&month={{ month }}" class="stab {% if not sel %}on{% endif %}">
+    <i class="icon-layout-grid"></i> Barcha studiyalar</a>
+  {% for s in studios %}
+  <a href="/calendar/month?year={{ year }}&month={{ month }}&studio={{ s.id }}"
+     class="stab {% if sel and sel.id == s.id %}on{% endif %}">
+    <span class="dot" style="background:{{ s.color }}"></span> {{ s.name }}</a>
+  {% endfor %}
+</div>
+
+<div class="grid" style="grid-template-columns:1fr 320px;gap:16px">
+  <div class="card" style="margin:0">
+    <div class="card-bd" style="padding:14px;overflow-x:auto">
+      <table class="cal">
+        <thead><tr>{% for w in weekdays %}<th>{{ w }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for week in weeks %}
+          <tr>
+            {% for d in week %}
+            <td class="{% if not d.in_month %}out{% endif %} {% if d.is_today %}today{% endif %}"
+                onclick="mcBook('{{ d.iso }}', event)" title="Shu kunga bron qilish">
+              <div class="cal-day">{{ d.day }}</div>
+              {% for it in d.evs[:4] %}
+              <a href="/calendar?date={{ d.iso }}" class="cal-ev ce-{{ it.color }}"
+                 style="border-left-color:{{ it.scolor }}"
+                 title="{{ it.studio }} · {{ it.title }}">{{ it.title }}</a>
+              {% endfor %}
+              {% if d.evs|length > 4 %}
+              <div style="font-size:10px;color:var(--txt3)">+{{ d.evs|length - 4 }} ko'proq</div>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-list"></i> Yaqin kunlar</div></div>
+    <div style="padding:0;max-height:560px;overflow-y:auto">
+      {% for a in agenda %}
+      <a href="/calendar?date={{ a.date }}" class="feed-item" style="text-decoration:none">
+        <span class="dot" style="width:9px;height:9px;border-radius:50%;background:{{ a.scolor }};flex:0 0 auto"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:12.5px">{{ a.title }}</div>
+          <div style="font-size:11px;color:var(--txt3)">{{ a.date }} · {{ a.studio }}</div>
+        </div>
+      </a>
+      {% else %}
+      <div class="empty"><i class="icon-calendar-check"></i>Bu oyda hali bron yo'q</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Yangi bron (kun bosilganda sana avtomatik to'ladi) -->
+<div class="modal-ov" id="m-book" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-calendar-plus"></i> Yangi bron</div>
+    <form method="POST" action="/bookings/save">
+      <label>Studiya</label>
+      <select class="select" name="studio_id" id="mb-studio" required>
+        {% for s in studios %}
+        <option value="{{ s.id }}" {% if sel and sel.id == s.id %}selected{% endif %}>{{ s.name }} — {{ s.hourly_rate|som }}/soat</option>
+        {% endfor %}
+      </select>
+      <label>Ustoz</label>
+      <select class="select" name="teacher_id" required>
+        {% for t in teachers %}<option value="{{ t.id }}">{{ t.name }} (balans: {{ t.balance_hours }} soat)</option>{% endfor %}
+      </select>
+      {% if not teachers %}
+      <div style="font-size:12px;color:var(--amber);margin-top:6px">Avval <a href="/teachers" style="color:var(--brand)">ustoz qo'shing</a></div>
+      {% endif %}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div><label>Sana</label><input class="input" type="date" name="date" id="mb-date" value="{{ today_iso }}" required></div>
+        <div><label>Boshlanish</label><input class="input" type="time" name="start" value="10:00" required></div>
+        <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
+      </div>
+      <label>To'lov turi</label>
+      <select class="select" name="pay_type">
+        <option value="hourly">💵 Soatbay (to'lov yoziladi)</option>
+        <option value="package">📦 Paket balansidan</option>
+      </select>
+      <label>Operator (ixtiyoriy)</label>
+      <input class="input" name="operator" placeholder="Kim yozib beradi">
+      <label>Izoh</label>
+      <input class="input" name="note" placeholder="Dars mavzusi, talablar...">
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-book').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Bron qilish</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function mcBook(iso, e){
+  if(e && e.target && e.target.closest('.cal-ev')) return;  // bron chipi bosilsa — kun ochilmaydi
+  document.getElementById('mb-date').value = iso;
+  document.getElementById('m-book').classList.add('open');
+}
+</script>
+{% endblock %}

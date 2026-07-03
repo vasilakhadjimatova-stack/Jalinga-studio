@@ -14,7 +14,9 @@
 
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(270px,1fr))">
   {% for s in studios %}
-  <div class="card" style="margin:0;border-top:3px solid {{ s.color }}">
+  <div class="card" style="margin:0;border-top:3px solid {{ s.color }};cursor:pointer"
+       onclick="location='/calendar/month?studio={{ s.id }}'"
+       title="{{ s.name }} — oylik kalendarini ochish">
     <div class="card-bd">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div style="display:flex;align-items:center;gap:10px">
@@ -27,11 +29,15 @@
       <div style="font-size:12.5px;color:var(--txt3);margin:10px 0 12px">{{ s.description or '—' }}</div>
       <div style="font-weight:800;font-size:19px;color:var(--brand)">{{ s.hourly_rate|som }}
         <span style="font-size:11px;color:var(--txt3);font-weight:600">so'm / soat</span></div>
-      {% if current_user.is_admin %}
-      <button class="btn btn-sm btn-out" style="margin-top:14px"
-        data-s='{{ s|tojson }}' onclick="sEdit(JSON.parse(this.dataset.s))">
-        <i class="icon-pencil"></i> Tahrirlash</button>
-      {% endif %}
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <a class="btn btn-sm btn-gold" href="/calendar/month?studio={{ s.id }}"
+           onclick="event.stopPropagation()"><i class="icon-calendar-days"></i> Kalendar</a>
+        {% if current_user.is_admin %}
+        <button class="btn btn-sm btn-out"
+          data-s='{{ s|tojson }}' onclick="event.stopPropagation();sEdit(JSON.parse(this.dataset.s))">
+          <i class="icon-pencil"></i> Tahrirlash</button>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% else %}
