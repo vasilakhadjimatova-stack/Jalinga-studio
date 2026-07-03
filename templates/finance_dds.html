@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Pul oqimi (ДДС){% endblock %}
+{% block page_title %}Moliya — ДДС{% endblock %}
+{% block page_crumb %}{{ year }} — pul oqimi hisoboti{% endblock %}
+{% block extra_css %}
+<style>
+.dds-wrap{overflow-x:auto}
+.dds{width:100%;border-collapse:collapse;font-size:12px;min-width:1150px}
+.dds th,.dds td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dds th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3);font-weight:800;text-align:right}
+.dds th:first-child{text-align:left}
+.dds td{text-align:right;font-variant-numeric:tabular-nums}
+.dds td:first-child{text-align:left;font-weight:600;position:sticky;left:0;
+  background:var(--surface);z-index:2;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.dds th:first-child{position:sticky;left:0;background:var(--surface);z-index:3}
+.dds .sec td{font-weight:800;font-size:12.5px;background:rgba(240,168,49,.07)}
+.dds .sub td{font-weight:700;color:var(--txt2)}
+.dds .cat td:first-child{padding-left:26px;font-weight:500;color:var(--txt2)}
+.dds .bal td{font-weight:800;background:rgba(96,165,250,.07)}
+.dds .net td{font-weight:800;font-size:12.5px;background:rgba(124,191,160,.08)}
+.dds .tech td{color:var(--txt3);font-weight:500;font-style:italic}
+.dds .tot{border-left:1px solid var(--line);font-weight:800!important}
+.dds .z{color:var(--txt3);opacity:.45}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.dds .fut{opacity:.4}
+</style>
+{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Pul oqimi hisoboti (ДДС)</div>
+  <div class="ph-sub">{{ year }} — operatsion, investitsion va moliyaviy faoliyat, oyma-oy</div>
+</div>
+<form method="get" action="/finance/dds">
+  <select class="select" name="year" onchange="this.form.submit()" style="width:auto">
+    {% for y in years %}<option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+  </select>
+</form></div>
+
+{% macro cell(v, cls='') %}
+  {%- if v is none or v == 0 -%}<td class="z {{ cls }}">0</td>
+  {%- else -%}<td class="{{ cls }}">{{ v|som }}</td>
+  {%- endif -%}
+{% endmacro %}
+{% macro cell_signed(v, cls='') %}
+  {%- if v is none or v == 0 -%}<td class="z {{ cls }}">0</td>
+  {%- elif v > 0 -%}<td class="pos {{ cls }}">+{{ v|som }}</td>
+  {%- else -%}<td class="neg {{ cls }}">−{{ (-v)|som }}</td>
+  {%- endif -%}
+{% endmacro %}
+
+<div class="card"><div class="dds-wrap">
+<table class="dds">
+  <thead><tr>
+    <th>Ko'rsatkich</th>
+    {% for m in range(1,13) %}<th class="{{ 'fut' if r.last_month and m > r.last_month }}">{{ month_names[m][:3] }}</th>{% endfor %}
+    <th class="tot">Jami {{ year }}</th>
+  </tr></thead>
+  <tbody>
+    <tr class="bal"><td>Davr boshidagi qoldiq</td>
+      {% for m in range(1,13) %}{{ cell(r.opening[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot">{{ r.opening[1]|som }}</td></tr>
+
+    {% for s in r.sections %}
+    {% if s.in_total or s.out_total %}
+    <tr class="sec"><td>{{ s.label }}</td>
+      {% for m in range(1,13) %}{{ cell_signed(s.net[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      {{ cell_signed(s.net_total, 'tot') }}</tr>
+    {% if s.rows_in %}
+    <tr class="sub"><td>Kirimlar</td>
+      {% for m in range(1,13) %}{{ cell(s['in'][m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot pos">{{ s.in_total|som }}</td></tr>
+    {% for row in s.rows_in %}
+    <tr class="cat"><td title="{{ row.name }}">{{ row.name }}</td>
+      {% for m in range(1,13) %}{{ cell(row.months[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot">{{ row.total|som }}</td></tr>
+    {% endfor %}
+    {% endif %}
+    {% if s.rows_out %}
+    <tr class="sub"><td>Chiqimlar</td>
+      {% for m in range(1,13) %}{{ cell(s['out'][m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot neg">{{ s.out_total|som }}</td></tr>
+    {% for row in s.rows_out %}
+    <tr class="cat"><td title="{{ row.name }}">{{ row.name }}</td>
+      {% for m in range(1,13) %}{{ cell(row.months[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot">{{ row.total|som }}</td></tr>
+    {% endfor %}
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+
+    <tr class="net"><td>Sof pul oqimi</td>
+      {% for m in range(1,13) %}{{ cell_signed(r.net_flow[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      {{ cell_signed(r.net_flow_total, 'tot') }}</tr>
+
+    {% if r.transfer_in|sum or r.transfer_out|sum %}
+    <tr class="tech"><td>Hisoblar aro o'tkazma (kirim)</td>
+      {% for m in range(1,13) %}{{ cell(r.transfer_in[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot">{{ r.transfer_in|sum|som }}</td></tr>
+    <tr class="tech"><td>Hisoblar aro o'tkazma (chiqim)</td>
+      {% for m in range(1,13) %}{{ cell(r.transfer_out[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot">{{ r.transfer_out|sum|som }}</td></tr>
+    {% endif %}
+
+    <tr class="bal"><td>Davr oxiridagi qoldiq</td>
+      {% for m in range(1,13) %}{{ cell(r.closing[m], 'fut' if r.last_month and m > r.last_month) }}{% endfor %}
+      <td class="tot">{{ (r.last_month and r.closing[r.last_month] or r.closing[12])|som }}</td></tr>
+  </tbody>
+</table>
+</div></div>
+
+<div style="font-size:11px;color:var(--txt3);margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
+  <span><i class="icon-info"></i> Sof oqim = operatsion + investitsion + moliyaviy (texnik o'tkazmalar kirmaydi)</span>
+  <span>Qoldiq = ochilish + barcha harakatlar (o'tkazmalar bilan)</span>
+</div>
+{% endblock %}

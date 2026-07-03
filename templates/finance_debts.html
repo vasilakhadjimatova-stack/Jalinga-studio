@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Qarzlar{% endblock %}
+{% block page_title %}Moliya — qarzlar{% endblock %}
+{% block page_crumb %}Qarz daftari (DOLG){% endblock %}
+{% block extra_css %}
+<style>
+.pbar{height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;min-width:110px}
+.pbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),#5EA98A)}
+</style>
+{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Qarz daftari</div>
+  <div class="ph-sub">Google Sheets «DOLG» varag'i — kim kimga, qancha, qancha qaytdi</div>
+</div></div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Berilgan qarzlar (jami)</div>
+    <div class="kpi-val" style="font-size:20px">{{ total|som }}</div>
+  </div><div class="kpi-ico blue"><i class="icon-hand-coins"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Qaytarilgan</div>
+    <div class="kpi-val" style="font-size:20px;color:var(--green)">{{ repaid|som }}</div>
+  </div><div class="kpi-ico green"><i class="icon-check-circle"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Qoldiq (kutilmoqda)</div>
+    <div class="kpi-val" style="font-size:20px;color:{{ 'var(--amber)' if outstanding > 0 else 'var(--txt3)' }}">{{ outstanding|som }}</div>
+  </div><div class="kpi-ico amber"><i class="icon-hourglass"></i></div></div></div>
+</div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr>
+      <th>Sana</th><th>Kimga</th><th>Sabab</th>
+      <th class="r">Summa</th><th class="r">Qaytdi</th><th class="r">Qoldiq</th><th>Holat</th>
+    </tr></thead>
+    <tbody>
+      {% for d in rows %}
+      <tr>
+        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ d.date or '—' }}</td>
+        <td><b>{{ d.creditor or '—' }}</b>
+          {% if d.debtor %}<div style="font-size:11px;color:var(--txt3)">{{ d.debtor }} bergan</div>{% endif %}</td>
+        <td style="max-width:380px"><div style="white-space:normal;font-size:12px;color:var(--txt2)">{{ d.reason or '—' }}</div></td>
+        <td class="r"><b>{{ d.amount|som }}</b></td>
+        <td class="r" style="color:var(--green)">{{ d.repaid|som }}</td>
+        <td class="r"><b style="color:{{ 'var(--amber)' if d.remainder > 0 else 'var(--txt3)' }}">{{ d.remainder|som }}</b></td>
+        <td style="min-width:130px">
+          {% set pct = (d.repaid / d.amount * 100)|round if d.amount else 100 %}
+          {% if d.remainder <= 0 %}
+          <span class="tag tag-green">✓ Yopilgan</span>
+          {% else %}
+          <div class="pbar" title="{{ pct }}% qaytdi"><i style="width:{{ pct }}%"></i></div>
+          <div style="font-size:10.5px;color:var(--txt3);margin-top:3px">{{ pct }}% qaytdi</div>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7"><div class="empty"><i class="icon-hand-coins"></i>Qarzlar yo'q</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

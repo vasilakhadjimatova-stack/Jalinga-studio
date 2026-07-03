@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dividendlar{% endblock %}
+{% block page_title %}Moliya — dividendlar{% endblock %}
+{% block page_crumb %}Ta'sischilarga to'lovlar{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Dividendlar</div>
+  <div class="ph-sub">«Дивиденды» statyasi bo'yicha barcha to'lovlar</div>
+</div></div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Jami to'langan</div>
+    <div class="kpi-val" style="font-size:20px;color:var(--gold)">{{ total|som }}</div>
+  </div><div class="kpi-ico gold"><i class="icon-crown"></i></div></div></div>
+  {% for y, v in by_year %}
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">{{ y }} yil</div>
+    <div class="kpi-val" style="font-size:20px">{{ v|som }}</div>
+  </div><div class="kpi-ico blue"><i class="icon-calendar"></i></div></div></div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr><th>Sana</th><th>Izoh</th><th>Hisob</th><th class="r">Summa</th></tr></thead>
+    <tbody>
+      {% for t in rows %}
+      <tr>
+        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ t.date }}</td>
+        <td>{{ t.purpose or '—' }}
+          {% if t.counterparty %}<div style="font-size:11px;color:var(--txt3)">{{ t.counterparty }}</div>{% endif %}</td>
+        <td style="white-space:nowrap">{{ t.wallet }}</td>
+        <td class="r"><b style="color:var(--gold)">{{ t.amount|som }}</b></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4"><div class="empty"><i class="icon-crown"></i>Dividend to'lovlari yo'q</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

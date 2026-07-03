@@ -66,6 +66,13 @@ def create_app():
     with app.app_context():
         from seed import seed_all
         seed_all()
+        # Moliya: baza bo'sh bo'lsa repo'dagi Sheets snapshotini yuklaymiz
+        # (birinchi ishga tushishda internetsiz ham ma'lumot bo'lsin)
+        try:
+            from modules.finance.sheets_sync import import_snapshot_if_empty
+            import_snapshot_if_empty()
+        except Exception:
+            logging.exception("Moliya snapshotini yuklab bo'lmadi")
 
     # Telegram bot (token bo'lsa; testda o'chiq)
     if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Tranzaksiyalar{% endblock %}
+{% block page_title %}Moliya — jurnal{% endblock %}
+{% block page_crumb %}Pul harakatlari jurnali{% endblock %}
+{% block extra_css %}
+<style>
+.flt{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;align-items:end}
+.flt label{margin:0 0 4px}
+.src-lock{font-size:10px;color:var(--txt3);display:inline-flex;align-items:center;gap:3px}
+</style>
+{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Tranzaksiyalar jurnali</div>
+  <div class="ph-sub">{% if month %}{{ month }}{% else %}Barcha davr{% endif %} — {{ rows|length }} ta yozuv</div>
+</div>
+{% if current_user.is_admin %}
+<button class="btn btn-gold" onclick="document.getElementById('addMod').classList.add('open')">
+  <i class="icon-plus"></i> Tranzaksiya</button>
+{% endif %}
+</div>
+
+<!-- Filtrlar -->
+<div class="card"><div class="card-bd">
+<form method="get" action="/finance/transactions" class="flt">
+  <div><label>Oy</label><input class="input" type="month" name="month" value="{{ month }}"></div>
+  <div><label>Hisob</label><select class="select" name="wallet">
+    <option value="">Barchasi</option>
+    {% for w in wallets %}<option value="{{ w.name }}" {% if w.name==wallet %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+  </select></div>
+  <div><label>Statya</label><select class="select" name="category">
+    <option value="">Barchasi</option>
+    {% for c in cats %}<option value="{{ c.name }}" {% if c.name==category %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select></div>
+  <div><label>Yo'nalish</label><select class="select" name="dir">
+    <option value="">Hammasi</option>
+    <option value="in" {% if dirf=='in' %}selected{% endif %}>Kirim</option>
+    <option value="out" {% if dirf=='out' %}selected{% endif %}>Chiqim</option>
+  </select></div>
+  <div><label>Qidiruv</label><input class="input" type="text" name="q" value="{{ q }}" placeholder="izoh, kontragent…"></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-gold btn-sm" type="submit" style="flex:1"><i class="icon-filter"></i> Filtr</button>
+    <a href="/finance/transactions?all=1" class="btn btn-ghost btn-sm">✕</a>
+  </div>
+</form>
+</div></div>
+
+<!-- Jami -->
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Kirim (tanlov)</div>
+    <div class="kpi-val" style="font-size:20px;color:var(--green)">{{ t_in|som }}</div>
+  </div><div class="kpi-ico green"><i class="icon-arrow-down-left"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Chiqim (tanlov)</div>
+    <div class="kpi-val" style="font-size:20px;color:var(--red)">{{ t_out|som }}</div>
+  </div><div class="kpi-ico red"><i class="icon-arrow-up-right"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Saldo</div>
+    <div class="kpi-val" style="font-size:20px;color:{{ 'var(--green)' if t_in - t_out >= 0 else 'var(--red)' }}">
+      {{ (t_in - t_out)|som }}</div>
+  </div><div class="kpi-ico gold"><i class="icon-scale"></i></div></div></div>
+</div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr>
+      <th>Sana</th><th>Statya</th><th>Hisob</th><th>Izoh</th>
+      <th class="r">Summa</th><th>Faoliyat</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for t in rows %}
+      <tr>
+        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ t.date }}</td>
+        <td><b>{{ t.category }}</b>
+          {% if t.subcategory %}<div style="font-size:11px;color:var(--txt3)">{{ t.subcategory }}</div>{% endif %}</td>
+        <td style="white-space:nowrap">{{ t.wallet }}</td>
+        <td style="max-width:340px">
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ t.purpose }}">{{ t.purpose or '—' }}</div>
+          {% if t.counterparty %}<div style="font-size:11px;color:var(--txt3)">{{ t.counterparty }}</div>{% endif %}</td>
+        <td class="r" style="white-space:nowrap"><b style="color:{{ 'var(--green)' if t.direction=='in' else 'var(--red)' }}">
+          {{ '+' if t.direction=='in' else '−' }}{{ t.amount|som }}</b></td>
+        <td><span class="tag {{ {'operating':'tag-blue','investing':'tag-amber','financing':'tag-gray','technical':'tag-gray'}[t.activity] }}">
+          {{ {'operating':'Operatsion','investing':'Investitsion','financing':'Moliyaviy','technical':'O\'tkazma'}[t.activity] }}</span></td>
+        <td class="r" style="white-space:nowrap">
+          {% if t.source == 'sheet' %}
+          <span class="src-lock" title="Google Sheets'dan — jadvalda o'zgartiriladi"><i class="icon-cloud"></i> Sheets</span>
+          {% elif current_user.is_admin %}
+          <form method="POST" action="/finance/transactions/{{ t.id }}/delete" style="display:inline"
+                onsubmit="return confirm('Tranzaksiya o\'chirilsinmi?')">
+            <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7"><div class="empty"><i class="icon-search-x"></i>Tanlovga mos yozuv topilmadi</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- Qo'shish modali -->
+{% if current_user.is_admin %}
+<div class="modal-ov" id="addMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-plus-circle"></i> Yangi tranzaksiya</div>
+    <div style="font-size:11.5px;color:var(--txt3);margin-bottom:8px">
+      Qo'lda kiritilgan yozuv Sheets sync'da o'chirilmaydi</div>
+    <form method="POST" action="/finance/transactions/add">
+      <label>Sana</label><input class="input" type="date" name="date" required>
+      <label>Statya</label>
+      <select class="select" name="category" required>
+        <optgroup label="Kirim">
+          {% for c in cats %}{% if c.direction=='in' %}<option value="{{ c.name }}">{{ c.name }}</option>{% endif %}{% endfor %}
+        </optgroup>
+        <optgroup label="Chiqim">
+          {% for c in cats %}{% if c.direction=='out' %}<option value="{{ c.name }}">{{ c.name }}</option>{% endif %}{% endfor %}
+        </optgroup>
+      </select>
+      <label>Hisob</label>
+      <select class="select" name="wallet" required>
+        {% for w in wallets %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}
+      </select>
+      <label>Summa (so'm)</label><input class="input" type="number" name="amount" min="1" step="0.01" required placeholder="1 000 000">
+      <label>Kontragent (ixtiyoriy)</label><input class="input" type="text" name="counterparty" maxlength="200">
+      <label>Izoh (ixtiyoriy)</label><input class="input" type="text" name="purpose" maxlength="400">
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Saqlash</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('addMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

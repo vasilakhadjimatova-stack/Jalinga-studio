@@ -19,3 +19,12 @@ class Config:
     # Ish vaqti (kalendar to'ri)
     WORK_START = 9    # 09:00
     WORK_END = 21     # 21:00
+
+    # ── Moliya ERP — Google Sheets «Jalinga 2026» ───────────────────────────
+    # Jadval havola orqali ochiq bo'lishi kerak (anyone with link, Viewer) —
+    # sync autentifikatsiyasiz xlsx eksport URL'idan o'qiydi.
+    FINANCE_SPREADSHEET_ID = os.environ.get(
+        "FINANCE_SPREADSHEET_ID",
+        "1IRRQDOjHI0iJEUqov0Aq1XaD8mLzwlwe0j3A4xgPjTk")
+    # $ kassani so'm ekvivalentiga keltirish kursi (ochilish qoldig'i uchun)
+    USD_RATE = float(os.environ.get("USD_RATE", "12000"))
