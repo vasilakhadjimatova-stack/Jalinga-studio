@@ -1,12 +1,1 @@
-<svg viewBox="-18 -18 176 176" xmlns="http://www.w3.org/2000/svg" aria-label="Jalinga">
-  <g transform="rotate(-45 70 70)">
-    <!-- Orange lane (to'liq chiziq) -->
-    <rect x="14" y="34" width="78" height="18" rx="2" fill="#E87A3C"/>
-    <!-- Green lane (pastki-chap qism) -->
-    <rect x="14" y="58" width="36" height="18" rx="2" fill="#7CBFA0"/>
-    <!-- Yellow lane + ilgak (o'ng uchi pastga buriladi) -->
-    <path d="M58,58 H92 A36,36 0 0 1 128,94 H110 A18,18 0 0 0 92,76 H58 Z" fill="#F0A831"/>
-    <!-- Green chorak disk — ilgak ochilishida -->
-    <path d="M118,101 L135,101 A17,17 0 0 1 118,118 Z" fill="#7CBFA0"/>
-  </g>
-</svg>
+<img src="/static/logo.png" alt="Jalinga" style="width:100%;height:100%;object-fit:contain;display:block">
