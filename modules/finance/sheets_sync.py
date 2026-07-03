@@ -244,6 +244,40 @@ def sync_from_sheets(spreadsheet_id, usd_rate=12000.0, timeout=45):
     return stats
 
 
+def start_autosync(app, interval_minutes):
+    """Fon thread: har `interval_minutes` daqiqada Google Sheets'дан avto-sync.
+
+    Tarmoq/format xatosi jim (log bilan) — dastur to'xtamaydi, mavjud ma'lumot
+    saqlanadi. interval <= 0 bo'lsa o'chiq. Telegram bot bilan bir xil naqsh.
+    """
+    import threading
+    import time
+
+    interval = max(0, int(interval_minutes or 0))
+    if interval <= 0:
+        logger.info("Moliya avto-sync o'chiq (FINANCE_SYNC_INTERVAL=0)")
+        return
+
+    from config import Config
+
+    def _loop():
+        time.sleep(60)   # ishga tushish shovqini tinchisin
+        while True:
+            try:
+                with app.app_context():
+                    stats = sync_from_sheets(Config.FINANCE_SPREADSHEET_ID,
+                                             usd_rate=Config.USD_RATE)
+                    logger.info("Moliya avto-sync: %s", stats)
+            except Exception as exc:
+                logger.warning("Moliya avto-sync o'tmadi (mavjud ma'lumot "
+                               "saqlanadi): %s", exc)
+            time.sleep(interval * 60)
+
+    threading.Thread(target=_loop, daemon=True,
+                     name="jalinga-finance-sync").start()
+    logger.info("🔄 Moliya avto-sync ishga tushdi (har %d daqiqa)", interval)
+
+
 def import_snapshot_if_empty():
     """Birinchi ishga tushish: baza bo'sh bo'lsa repo'dagi snapshotni yuklaydi."""
     if FinTransaction.query.first() is not None:

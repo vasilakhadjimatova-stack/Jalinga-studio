@@ -37,11 +37,14 @@ def test_dds_matches_google_sheet(app):
 
 
 def test_wallet_balances(app):
-    """Balans = ochilish + kirim - chiqim; jami iyun oxiri qoldig'iga teng."""
-    from modules.finance.routes import _wallet_balances
-    total = sum(b["balance"] for b in _wallet_balances())
+    """Sheets manbali balans = ochilish + Sheets harakatlari; iyun oxiri
+    qoldig'iga teng. (Studiya/qo'lda yozuvlar alohida — bu yerda hisobga
+    olinmaydi, chunki test bazasi boshqa testlar bilan bo'lishiladi.)"""
+    opening = sum(w.opening_balance or 0 for w in FinWallet.query.all())
+    flow = sum(t.signed for t in
+               FinTransaction.query.filter_by(source="sheet").all())
     # ДДС_2026 iyun: Чистый денежный поток = 19 162 414.52
-    assert total == pytest.approx(19162414.52, abs=0.05)
+    assert opening + flow == pytest.approx(19162414.52, abs=0.05)
 
 
 def test_finance_pages_load(admin_client):
@@ -88,3 +91,108 @@ def test_txn_add_admin_only(client, post):
     r = client.post("/finance/transactions/add", data={"_csrf": "x"})
     assert r.status_code in (302, 303, 403)
     assert FinTransaction.query.filter_by(purpose="hack").first() is None
+
+
+# ── Studiya to'lovi → moliya jurnaliga avto-ulash ──
+
+def test_studio_payment_links_to_finance(app, admin_client, post):
+    """To'lov tasdiqlanганда moliyaga kirim tushadi, bekor bo'lsa yo'qoladi."""
+    from models.billing import Teacher, Payment
+    t = Teacher(name="Moliya Test Mijoz")
+    db.session.add(t)
+    db.session.commit()
+    p = Payment(teacher_id=t.id, kind="hourly", amount=333000, hours=0,
+                method="karta", date="2026-06-20", is_paid=False)
+    db.session.add(p)
+    db.session.commit()
+    pid = p.id
+
+    # Kutilmoqda holatда — moliyaда yozuv yo'q
+    assert FinTransaction.query.filter_by(payment_id=pid).first() is None
+
+    # Tasdiqlash → kirim paydo bo'ladi
+    post(admin_client, f"/finance/{pid}/toggle")
+    ft = FinTransaction.query.filter_by(payment_id=pid, source="studio").first()
+    assert ft is not None
+    assert ft.direction == "in" and ft.activity == "operating"
+    assert ft.amount == pytest.approx(333000)
+    assert ft.wallet == "карта 9933"        # karta usuli → shu hisob
+    assert ft.counterparty == "Moliya Test Mijoz"
+
+    # Kutilmoqdaга qaytarish → moliyadan o'chadi
+    post(admin_client, f"/finance/{pid}/toggle")
+    assert FinTransaction.query.filter_by(payment_id=pid).first() is None
+
+
+def test_studio_payment_delete_unlinks_finance(app, admin_client, post):
+    from models.billing import Teacher, Payment
+    from modules.finance.studio_link import sync_payment_to_finance
+    t = Teacher(name="O'chirish Mijoz")
+    db.session.add(t)
+    db.session.commit()
+    p = Payment(teacher_id=t.id, kind="package", amount=500000, hours=10,
+                method="naqd", date="2026-06-21", is_paid=True)
+    db.session.add(p)
+    db.session.commit()
+    sync_payment_to_finance(p, teacher_name=t.name)
+    db.session.commit()
+    pid = p.id
+    assert FinTransaction.query.filter_by(payment_id=pid).first() is not None
+    assert (FinTransaction.query.filter_by(payment_id=pid).first().wallet
+            == "Наличные")   # naqd → naqd hisob
+    # To'lovни o'chirish → moliya yozuvи ham ketadi
+    post(admin_client, f"/finance/{pid}/delete")
+    assert FinTransaction.query.filter_by(payment_id=pid).first() is None
+
+
+def test_bonus_package_not_booked(app):
+    """Bonus (bepul) paket moliyaga tushmaydi — real pul kirmaydi."""
+    from models.billing import Teacher, Payment
+    from modules.finance.studio_link import sync_payment_to_finance
+    t = Teacher(name="Bonus Mijoz")
+    db.session.add(t)
+    db.session.commit()
+    p = Payment(teacher_id=t.id, kind="package", amount=0, hours=5,
+                method="bonus", date="2026-06-22", is_paid=True)
+    db.session.add(p)
+    db.session.commit()
+    sync_payment_to_finance(p, teacher_name=t.name)
+    db.session.commit()
+    assert FinTransaction.query.filter_by(payment_id=p.id).first() is None
+
+
+def test_studio_linked_txn_delete_blocked(app, admin_client, post):
+    """Studiyaga bog'langan moliya yozuvi jurnaldan o'chirilmaydi."""
+    from models.billing import Teacher, Payment
+    from modules.finance.studio_link import sync_payment_to_finance
+    t = Teacher(name="Bloklangan Mijoz")
+    db.session.add(t)
+    db.session.commit()
+    p = Payment(teacher_id=t.id, kind="hourly", amount=120000, hours=0,
+                method="karta", date="2026-06-23", is_paid=True)
+    db.session.add(p)
+    db.session.commit()
+    sync_payment_to_finance(p, teacher_name=t.name)
+    db.session.commit()
+    ft = FinTransaction.query.filter_by(payment_id=p.id).first()
+    post(admin_client, f"/finance/transactions/{ft.id}/delete")
+    assert FinTransaction.query.get(ft.id) is not None
+
+
+# ── Moliya bo'limi faqat rahbarga ──
+
+def test_finance_pages_operator_blocked(app):
+    """Operator moliyani ko'ra olmaydi — dashboardга yo'naltiriladi."""
+    from models.user import User
+    u = User.query.filter_by(role="operator").first()
+    if u is None:
+        u = User(name="Op", code="222222", role="operator")
+        db.session.add(u)
+        db.session.commit()
+    c = app.test_client()
+    c.post("/login", data={"code": u.code})
+    for url in ("/finance", "/finance/transactions", "/finance/dds",
+                "/finance/debts", "/finance/dividends"):
+        r = c.get(url)
+        assert r.status_code in (302, 303), url
+        assert "/finance" not in r.headers.get("Location", ""), url

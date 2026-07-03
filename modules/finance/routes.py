@@ -12,7 +12,7 @@ from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash)
 
 from config import Config
-from core.auth import login_required, admin_required
+from core.auth import admin_required
 from core.timeutils import current_month_iso
 from database import db
 from models.billing import Teacher, Payment
@@ -74,7 +74,7 @@ def _sync_info():
 # ── Dashboard ────────────────────────────────────────────────────────────────
 
 @bp.route("/finance")
-@login_required
+@admin_required
 def index():
     year = _pick_year()
     try:
@@ -132,7 +132,7 @@ def index():
 # ── Tranzaksiyalar jurnali ───────────────────────────────────────────────────
 
 @bp.route("/finance/transactions")
-@login_required
+@admin_required
 def transactions():
     month = (request.args.get("month") or "").strip()[:7]   # YYYY-MM yoki ''
     wallet = (request.args.get("wallet") or "").strip()
@@ -211,6 +211,10 @@ def txn_delete(tid):
     if t.source == "sheet":
         flash("Sheets'dan kelgan yozuv o'chirilmaydi — Google Jadvalda "
               "o'zgartiring va sinxronlang", "error")
+        return redirect(url_for("finance.transactions", month=t.date[:7]))
+    if t.source == "studio":
+        flash("Bu yozuv studiya to'loviга bog'langan — «Studiya to'lovlari» "
+              "sahifasidan boshqaring", "error")
         return redirect(url_for("finance.transactions", month=t.date[:7]))
     month = t.date[:7]
     db.session.delete(t)
@@ -293,7 +297,7 @@ def build_dds(year):
 
 
 @bp.route("/finance/dds")
-@login_required
+@admin_required
 def dds():
     year = _pick_year()
     report = build_dds(year)
@@ -305,7 +309,7 @@ def dds():
 # ── Qarzlar (DOLG) ───────────────────────────────────────────────────────────
 
 @bp.route("/finance/debts")
-@login_required
+@admin_required
 def debts():
     rows = FinDebt.query.all()
     total = sum(d.amount or 0 for d in rows)
@@ -318,7 +322,7 @@ def debts():
 # ── Dividendlar ──────────────────────────────────────────────────────────────
 
 @bp.route("/finance/dividends")
-@login_required
+@admin_required
 def dividends():
     rows = (FinTransaction.query.filter_by(category="Дивиденды")
             .order_by(FinTransaction.date.desc()).all())
@@ -357,7 +361,7 @@ def _safe_back(month=None):
 
 
 @bp.route("/finance/payments")
-@login_required
+@admin_required
 def payments():
     month = (request.args.get("month") or current_month_iso()).strip()[:7]
     rows = Payment.query.filter(Payment.date.like(month + "%")).order_by(
@@ -377,19 +381,25 @@ def payments():
 @bp.route("/finance/<int:pid>/toggle", methods=["POST"])
 @admin_required
 def toggle(pid):
+    from modules.finance.studio_link import sync_payment_to_finance
     p = Payment.query.get_or_404(pid)
     p.is_paid = not p.is_paid
+    # Tasdiqlanganда moliya jurnaliga kirim tushadi (bekor bo'lsa yo'qoladi)
+    t = Teacher.query.get(p.teacher_id)
+    sync_payment_to_finance(p, teacher_name=t.name if t else None)
     db.session.commit()
-    flash("✅ To'landi deb belgilandi" if p.is_paid
-          else "↩️ Kutilmoqda holatiga qaytarildi", "success")
+    flash("✅ To'landi — moliya jurnaliga tushdi" if p.is_paid
+          else "↩️ Kutilmoqda — moliyadan olib tashlandi", "success")
     return _safe_back(p.date[:7] if p.date else None)
 
 
 @bp.route("/finance/<int:pid>/delete", methods=["POST"])
 @admin_required
 def delete(pid):
+    from modules.finance.studio_link import unlink_payment_finance
     p = Payment.query.get_or_404(pid)
     month = p.date[:7] if p.date else None
+    unlink_payment_finance(p.id)   # bog'langan moliya yozuvини ham o'chiramiz
     db.session.delete(p)
     db.session.commit()
     flash("🗑 To'lov o'chirildi", "success")

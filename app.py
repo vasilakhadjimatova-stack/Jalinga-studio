@@ -74,6 +74,14 @@ def create_app():
         except Exception:
             logging.exception("Moliya snapshotini yuklab bo'lmadi")
 
+    # Moliya avto-sync (fon thread; test/DISABLE_BOT'да o'chiq)
+    if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):
+        try:
+            from modules.finance.sheets_sync import start_autosync
+            start_autosync(app, Config.FINANCE_SYNC_INTERVAL)
+        except Exception:
+            logging.exception("Moliya avto-sync ishga tushmadi")
+
     # Telegram bot (token bo'lsa; testda o'chiq)
     if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):
         from core.telegram import start_bot

@@ -48,7 +48,10 @@ class FinTransaction(db.Model):
     category = db.Column(db.String(200), nullable=False, index=True)
     direction = db.Column(db.String(8), nullable=False)   # in | out
     activity = db.Column(db.String(16), nullable=False)   # operating|investing|financing|technical
-    source = db.Column(db.String(16), default="manual")   # sheet | manual
+    source = db.Column(db.String(16), default="manual")   # sheet | manual | studio
+    # source='studio' bo'lsa — bog'langan studiya to'lovi (Payment.id).
+    # Shu to'lov tasdiqlanганda avto-yaraladi, bekor/o'chirilganда yo'qoladi.
+    payment_id = db.Column(db.Integer, index=True)
 
     @property
     def signed(self):

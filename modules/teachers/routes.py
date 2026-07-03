@@ -154,12 +154,16 @@ def buy_package(tid):
     if not (0 < hours <= 1000) or not (0 < amount <= 1_000_000_000):
         flash("⛔ Soat (0–1000) va summa 0 dan katta, real qiymat bo'lsin", "error")
         return redirect(url_for("teachers.detail", tid=tid))
-    db.session.add(Payment(
+    pay = Payment(
         teacher_id=tid, kind="package", hours=hours, amount=amount,
         method=(f.get("method") or "naqd")[:20],
         date=(f.get("date") or today_iso())[:10], is_paid=True,
         note=(f.get("note") or f"{hours:g} soatlik paket").strip()[:300],
-        created_by=u.name))
+        created_by=u.name)
+    db.session.add(pay)
+    db.session.flush()   # pay.id kerak (moliyaga bog'lash uchun)
+    from modules.finance.studio_link import sync_payment_to_finance
+    sync_payment_to_finance(pay, teacher_name=t.name)
     db.session.commit()
     flash(f"✅ {t.name}: +{hours:g} soat paket ({amount:,.0f} so'm). "
           f"Yangi balans: {t.balance_hours():g} soat", "success")

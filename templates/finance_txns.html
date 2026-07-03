@@ -89,6 +89,8 @@
         <td class="r" style="white-space:nowrap">
           {% if t.source == 'sheet' %}
           <span class="src-lock" title="Google Sheets'dan — jadvalda o'zgartiriladi"><i class="icon-cloud"></i> Sheets</span>
+          {% elif t.source == 'studio' %}
+          <span class="src-lock" title="Studiya to'loviga bog'langan — «Studiya to'lovlari» sahifasidan boshqaring"><i class="icon-clapperboard"></i> Studiya</span>
           {% elif current_user.is_admin %}
           <form method="POST" action="/finance/transactions/{{ t.id }}/delete" style="display:inline"
                 onsubmit="return confirm('Tranzaksiya o\'chirilsinmi?')">

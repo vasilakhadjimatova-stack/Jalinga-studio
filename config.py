@@ -28,3 +28,6 @@ class Config:
         "1IRRQDOjHI0iJEUqov0Aq1XaD8mLzwlwe0j3A4xgPjTk")
     # $ kassani so'm ekvivalentiga keltirish kursi (ochilish qoldig'i uchun)
     USD_RATE = float(os.environ.get("USD_RATE", "12000"))
+    # Avto-sync intervali (daqiqa). 0 → o'chiq (faqat qo'lda «Sync» tugmasi).
+    # Railway'да masalan 120 (2 soat) qo'yish tavsiya etiladi.
+    FINANCE_SYNC_INTERVAL = int(os.environ.get("FINANCE_SYNC_INTERVAL", "0"))
