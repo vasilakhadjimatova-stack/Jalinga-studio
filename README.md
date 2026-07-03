@@ -62,6 +62,20 @@ Google Sheets «Jalinga 2026» jadvali asosida to'liq moliya boshqaruvi
 - **🔐 Faqat rahbar** — butun Moliya bo'limi `admin` rolli foydalanuvchi
   uchun (operator ko'rmaydi, nav'da ham chiqmaydi).
 
+## 6-bosqich — Telefon ilovasi (PWA, tayyor)
+Butun panel telefonga o'rnatiladigan ilovaga aylantirildi (native app kerak
+emas, App Store/Play Market ham):
+- **📲 Bosh ekranga qo'shish** — rahbar telefonда «Ilovani o'rnatish»
+  tugmasini bosadi (Android/Chrome) yoki iOS Safari'да «Ulashish → Bosh
+  ekranga qo'shish». Ilova to'liq ekranда, o'z ikonкаsi bilan, brauzer
+  paneliсiz ochiladi.
+- **⚡ Service worker** — sahifalar tez yuklanadi (kesh), oflaynда «ulanish
+  yo'q» sahifasi ko'rsatiladi, ulanish tiklansa avto-yangilanadi.
+- **🎨 Ikonlar** — `static/icons/` (192/512 + maskable + apple-touch);
+  logotipdan generatsiya qilingan, to'q premium fon.
+- **Manzil**: `/manifest.webmanifest`, `/sw.js`, `/offline` — HTTPS
+  (Railway) ostida installability talablariga to'liq javob beradi.
+
 ## Keyingi (ixtiyoriy)
 - Onlayn to'lov (Payme/Click) — merchant hisob ochilgach ulanadi
 

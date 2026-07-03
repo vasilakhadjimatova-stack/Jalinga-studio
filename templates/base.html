@@ -6,6 +6,15 @@
 <title>{% block title %}Jalinga{% endblock %} — Jalinga Studio</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="icon" type="image/png" href="/static/favicon.png">
+<!-- PWA — telefonga o'rnatiladigan ilova -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0B0C11">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jalinga">
+<meta name="application-name" content="Jalinga">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/font/lucide.css" rel="stylesheet">
@@ -376,6 +385,57 @@ document.addEventListener('submit', function(e){
     f.appendChild(i);
   }
 }, true);
+
+/* ── PWA: service worker + «Ilovani o'rnatish» ─────────────────────────── */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
+(function(){
+  var deferred = null;
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+  }
+  function makeBtn(onclick){
+    var b = document.createElement('button');
+    b.id = 'pwaInstall';
+    b.innerHTML = '<i class="icon-download"></i> Ilovani o\'rnatish';
+    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);'+
+      'bottom:calc(84px + env(safe-area-inset-bottom));z-index:800;display:flex;'+
+      'align-items:center;gap:8px;font:inherit;font-weight:700;font-size:13px;'+
+      'padding:12px 20px;border:0;border-radius:14px;color:#151004;cursor:pointer;'+
+      'background:linear-gradient(135deg,#F0A831,#D98A1B);'+
+      'box-shadow:0 8px 26px rgba(240,168,49,.4)';
+    b.onclick = onclick;
+    document.body.appendChild(b);
+    return b;
+  }
+  // Android/Chrome: beforeinstallprompt
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e;
+    if(isStandalone() || sessionStorage.getItem('pwaHide')) return;
+    var b = makeBtn(function(){
+      b.remove(); if(!deferred) return;
+      deferred.prompt(); deferred.userChoice.finally(function(){ deferred=null; });
+    });
+  });
+  window.addEventListener('appinstalled', function(){
+    var b=document.getElementById('pwaInstall'); if(b) b.remove();
+  });
+  // iOS Safari (beforeinstallprompt yo'q) — bir marta qo'llanma ko'rsatamiz
+  window.addEventListener('load', function(){
+    var iOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var inSafari = iOS && !navigator.standalone && !sessionStorage.getItem('pwaHide');
+    if(inSafari && !isStandalone()){
+      var b = makeBtn(function(){
+        alert('Ilovani o\'rnatish:\n\n1) Pastdagi «Ulashish» (⬆️) tugmasini bosing\n2) «Bosh ekranga qo\'shish»ni tanlang');
+        sessionStorage.setItem('pwaHide','1'); b.remove();
+      });
+    }
+  });
+})();
 </script>
 {% block extra_js %}{% endblock %}
 </body>
