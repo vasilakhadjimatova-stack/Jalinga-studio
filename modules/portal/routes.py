@@ -18,6 +18,7 @@ from models.billing import Teacher, Payment
 bp = Blueprint("portal", __name__)
 
 CANCEL_HOURS = 24   # bekor qilish siyosati: kamida 24 soat oldin
+MAX_UPCOMING = 8    # portaldan spam-bandlikni cheklash (faol kelgusi bronlar)
 
 
 def _teacher_or_404(token):
@@ -122,6 +123,17 @@ def book(token):
               f"(bandlik ro'yxati pastda).", "error")
         return redirect(url_for("portal.home", token=token, date=day))
 
+    # Spam-bandlik cheklovi: juda ko'p faol kelgusi bron bo'lsa — bloklaymiz
+    today = today_iso()
+    active_upcoming = Booking.query.filter(
+        Booking.teacher_id == t.id, Booking.status == "active",
+        Booking.date >= today).count()
+    if active_upcoming >= MAX_UPCOMING:
+        flash(f"⛔ Sizда {MAX_UPCOMING} ta faol bron bor. Yangi bron uchun "
+              f"avvalgilaridan birini yakunlang yoki studiyaga murojaat qiling.",
+              "error")
+        return redirect(url_for("portal.home", token=token, date=day))
+
     b = Booking(studio_id=studio.id, teacher_id=t.id, date=day,
                 start=start, end=end, pay_type=pay_type,
                 note=(f.get("note") or "").strip()[:300],
@@ -140,7 +152,14 @@ def book(token):
             date=day, is_paid=False,
             note=f"{studio.name} · {day} {start}–{end} (portal)",
             created_by=f"portal:{t.name}"))
-    db.session.commit()
+    from sqlalchemy.exc import IntegrityError
+    try:
+        db.session.commit()
+    except IntegrityError:   # poyga: shu vaqt endigina band bo'ldi
+        db.session.rollback()
+        flash(f"⛔ {start}–{end} endigina band bo'ldi. Boshqa vaqt tanlang.",
+              "error")
+        return redirect(url_for("portal.home", token=token, date=day))
 
     try:
         from core.telegram import notify_teacher_booking
@@ -163,6 +182,7 @@ def cancel(token, bid):
               f"studiyaga qo'ng'iroq qiling.", "error")
         return redirect(url_for("portal.home", token=token))
     b.status = "cancelled"
+    # To'langan to'lovga tegmaymiz (haqiqiy pul); faqat kutilayotganini o'chiramiz
     Payment.query.filter_by(booking_id=b.id, is_paid=False).delete(
         synchronize_session=False)
     db.session.commit()
@@ -170,3 +190,70 @@ def cancel(token, bid):
           (" — paket soatlaringiz qaytdi" if b.pay_type == "package" else ""),
           "success")
     return redirect(url_for("portal.home", token=token))
+
+
+@bp.route("/my/<token>/reschedule/<int:bid>", methods=["POST"])
+def reschedule(token, bid):
+    """Mijoz o'zi bronni boshqa vaqtga ko'chiradi (kamida 24 soat oldin).
+
+    Ish vaqti, konflikt va (paket bo'lsa) balans qayta tekshiriladi.
+    To'lov turi va studiya o'zgarmaydi — faqat sana/vaqt."""
+    from config import Config
+    t = _teacher_or_404(token)
+    b = Booking.query.get_or_404(bid)
+    if b.teacher_id != t.id or b.status != "active":
+        abort(404)
+    st0 = _starts_at(b)
+    if not st0 or (st0 - now_tashkent()) < timedelta(hours=CANCEL_HOURS):
+        flash(f"⛔ {CANCEL_HOURS} soatdan kam qoldi — ko'chirish uchun "
+              f"studiyaga qo'ng'iroq qiling.", "error")
+        return redirect(url_for("portal.home", token=token))
+
+    f = request.form
+    day = (f.get("date") or b.date).strip()[:10]
+    start = (f.get("start") or b.start).strip()[:5]
+    studio = Studio.query.get(b.studio_id)
+    try:
+        dur = min(6.0, max(0.5, float(f.get("hours") or b.hours)))
+    except (ValueError, TypeError):
+        dur = b.hours
+    try:
+        new_st = datetime.strptime(f"{day} {start}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        flash("⛔ Sana/vaqt formati xato", "error")
+        return redirect(url_for("portal.home", token=token))
+    if new_st <= now_tashkent():
+        flash("⛔ O'tgan vaqtga ko'chirib bo'lmaydi", "error")
+        return redirect(url_for("portal.home", token=token))
+    end = (new_st + timedelta(hours=dur)).strftime("%H:%M")
+
+    if not Booking.within_work_hours(start, end):
+        flash(f"⛔ Studiya ish vaqti: {Config.WORK_START:02d}:00–"
+              f"{Config.WORK_END:02d}:00.", "error")
+        return redirect(url_for("portal.home", token=token))
+    if Booking.conflict(studio.id, day, start, end, exclude_id=b.id):
+        flash(f"⛔ {start}–{end} band. Boshqa vaqt tanlang.", "error")
+        return redirect(url_for("portal.home", token=token))
+    # Paket: balans qayta tekshiruvi (shu bronning eski soatini chiqarib)
+    new_hours = dur
+    if b.pay_type == "package":
+        if t.balance_hours() + b.hours < new_hours:
+            flash(f"⛔ Balans yetarli emas ({t.balance_hours():g} soat).", "error")
+            return redirect(url_for("portal.home", token=token))
+
+    old = f"{b.date} {b.start}"
+    b.date, b.start, b.end, b.reminded = day, start, end, False
+    if b.pay_type == "hourly":
+        p = Payment.query.filter_by(booking_id=b.id, is_paid=False).first()
+        if p:
+            p.amount = round(new_hours * (studio.hourly_rate or 0))
+            p.date = day
+            p.note = f"{studio.name} · {day} {start}–{end} (portal ko'chirish)"
+    db.session.commit()
+    try:
+        from core.telegram import notify_teacher_booking
+        notify_teacher_booking(b, studio, t, created=False)
+    except Exception:
+        pass
+    flash(f"✅ Bron ko'chirildi: {old} → {day} {start}", "success")
+    return redirect(url_for("portal.home", token=token, date=day))

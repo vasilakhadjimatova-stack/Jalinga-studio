@@ -44,31 +44,39 @@ def _resolve_client(f, created_by):
     """Bron formasidan mijozni aniqlaydi.
 
     'mavjud' rejim → teacher_id bo'yicha; 'yangi' rejim → ism/telefon bilan
-    yaratadi (telefon oxirgi 9 raqami mos faol mijoz bo'lsa — o'shani qaytaradi,
-    dublikat yaratmaydi). Qaytaradi: (client|None, xato_matni|None)."""
+    yaratadi. Dublikat himoyasi: to'liq raqamlar bir xil (mamlakat kodi bilan)
+    bo'lsa yoki telefon 9 raqamli milliy formatда oxirgi 9 mos bo'lsa —
+    mavjud mijozни qaytaradi (yangi yaratmaydi).
+    Qaytaradi: (client|None, created(bool), xato_matni|None)."""
     mode = (f.get("client_mode") or "existing").strip()
     if mode == "new":
         name = (f.get("new_name") or "").strip()[:200]
         if not name:
-            return None, "Yangi mijoz ismi kiritilmadi"
+            return None, False, "Yangi mijoz ismi kiritilmadi"
         phone = (f.get("new_phone") or "").strip()[:50]
-        digits = "".join(c for c in phone if c.isdigit())[-9:]
-        if len(digits) == 9:  # telefon bo'yicha dublikat tekshiruvi
+        full = "".join(c for c in phone if c.isdigit())
+        d9 = full[-9:]
+        if len(full) >= 7:  # telefon bo'yicha dublikat tekshiruvi
             for ex in Teacher.query.filter_by(is_active=True).all():
-                if "".join(c for c in (ex.phone or "") if c.isdigit())[-9:] == digits:
-                    return ex, None
+                exf = "".join(c for c in (ex.phone or "") if c.isdigit())
+                # to'liq mos yoki (ikkalasi ham 9-raqamli milliy) oxirgi 9 mos
+                if exf and (exf == full or
+                            (len(exf) >= 7 and len(full) >= 9 and len(exf) >= 9
+                             and exf[-9:] == d9)):
+                    return ex, False, None
         t = Teacher(name=name, phone=phone,
+                    subject=(f.get("new_subject") or "").strip()[:120],
                     telegram=(f.get("new_telegram") or "").strip().lstrip("@")[:64],
                     created_by=created_by)
         t.ensure_token()
         db.session.add(t)
         db.session.flush()
-        return t, None
+        return t, True, None
     try:
         t = Teacher.query.get(int(f.get("teacher_id") or 0))
     except (ValueError, TypeError):
         t = None
-    return t, (None if t else "Mijoz tanlanmadi")
+    return t, False, (None if t else "Mijoz tanlanmadi")
 
 
 @bp.route("/calendar")
@@ -204,8 +212,7 @@ def save():
         return redirect(url_for("bookings.calendar", date=first))
 
     # Mijoz: mavjudini tanlash yoki shu yerda yangisini qo'shish
-    teacher, cerr = _resolve_client(f, u.name)
-    was_new_client = teacher and (f.get("client_mode") == "new")
+    teacher, was_new_client, cerr = _resolve_client(f, u.name)
     if not teacher:
         flash(f"⛔ {cerr}", "error")
         return redirect(url_for("bookings.calendar", date=first))
@@ -222,6 +229,7 @@ def save():
               f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.", "error")
         return redirect(url_for("bookings.calendar", date=first))
 
+    from sqlalchemy.exc import IntegrityError
     per_hours = probe.hours
     operator = (f.get("operator") or "").strip()[:120]
     note = (f.get("note") or "").strip()[:300]
@@ -238,19 +246,25 @@ def save():
             if bal < per_hours:
                 errs.append(f"{day} — balans yetmadi ({bal:g} soat qoldi)")
                 continue
-        b = Booking(studio_id=studio.id, teacher_id=teacher.id, date=day,
-                    start=start, end=end, pay_type=pay_type,
-                    operator=operator, note=note, created_by=u.name)
-        db.session.add(b)
-        db.session.flush()
-        # Soatbay: kutilayotgan to'lov (Moliya sahifasida tasdiqlanadi)
-        if pay_type == "hourly":
-            amount = round(per_hours * (studio.hourly_rate or 0))
-            db.session.add(Payment(
-                teacher_id=teacher.id, booking_id=b.id, kind="hourly",
-                amount=amount, hours=0, date=day, is_paid=False,
-                note=f"{studio.name} · {day} {start}–{end} ({per_hours:g} soat)",
-                created_by=u.name))
+        # Savepoint: shu kun poyga tufayli DB'да rad etilsa (unikal slot
+        # indeksi), faqat shu kun tushib qoladi — qolganlari saqlanadi.
+        try:
+            with db.session.begin_nested():
+                b = Booking(studio_id=studio.id, teacher_id=teacher.id,
+                            date=day, start=start, end=end, pay_type=pay_type,
+                            operator=operator, note=note, created_by=u.name)
+                db.session.add(b)
+                db.session.flush()
+                if pay_type == "hourly":
+                    amount = round(per_hours * (studio.hourly_rate or 0))
+                    db.session.add(Payment(
+                        teacher_id=teacher.id, booking_id=b.id, kind="hourly",
+                        amount=amount, hours=0, date=day, is_paid=False,
+                        note=f"{studio.name} · {day} {start}–{end} "
+                             f"({per_hours:g} soat)", created_by=u.name))
+        except IntegrityError:
+            errs.append(f"{day} — endigina band bo'ldi")
+            continue
         made.append(b)
     db.session.commit()
 
@@ -291,25 +305,34 @@ def set_status(bid):
         return redirect(url_for("bookings.calendar", date=b.date))
     b.status = new
     from models.montaj import EditJob
-    # Bekor bo'lsa — kutilayotgan soatbay to'lov + topshirilmagan montaj
-    # kartasi ham bekor (yetim karta qolmaydi)
+    warn = ""
+    # Bekor bo'lsa — kutilayotgan soatbay to'lov o'chadi. Agar to'lov ALLAQACHON
+    # "to'landi" bo'lsa — u haqiqiy pul, o'chirmaymiz, lekin ogohlantiramiz
+    # (kerak bo'lsa Moliyada qaytariladi) — arvoh daromad oldini olish.
     if new == "cancelled":
+        paid_left = Payment.query.filter_by(
+            booking_id=b.id, is_paid=True).count()
         Payment.query.filter_by(booking_id=b.id, is_paid=False).delete(
             synchronize_session=False)
-        EditJob.query.filter(EditJob.booking_id == b.id,
-                             EditJob.status != "delivered").delete(
-            synchronize_session=False)
-    # Yozildi ✓ → montaj kartasi avto-yaraladi (kanbanda ko'rinadi)
+        if paid_left:
+            warn = (" · ⚠️ bu bronда to'langan to'lov bor — kerak bo'lsa "
+                    "Moliyada qaytaring")
+    # «done» dan boshqa holatga o'tsa — montaj kartasi endi keraksiz
+    # (yetim karta kanbanда qolib ketmasin: cancel/noshow/active hammasi).
     if new == "done":
         t = Teacher.query.get(b.teacher_id)
         EditJob.for_booking(b, teacher_name=(t.name if t else ""))
+    else:
+        EditJob.query.filter(EditJob.booking_id == b.id,
+                             EditJob.status != "delivered").delete(
+            synchronize_session=False)
     db.session.commit()
     extra = ""
     if new == "noshow" and b.pay_type == "package":
         extra = f" — {b.hours:g} soat balansdan kuydi (24 soat qoidasi)"
     elif new == "noshow":
         extra = " — soatbay to'lov qarz sifatida qoladi"
-    flash(f"Holat: {b.status_label()}{extra}", "success")
+    flash(f"Holat: {b.status_label()}{extra}{warn}", "success")
     return redirect(url_for("bookings.calendar", date=b.date))
 
 
@@ -365,13 +388,20 @@ def edit(bid):
     b.studio_id, b.date, b.start, b.end = studio.id, day, start, end
     b.operator = (f.get("operator") or b.operator or "").strip()[:120]
     b.reminded = False   # vaqt o'zgardi — eslatma qayta yuborilsin
-    # Soatbay: kutilayotgan to'lov summasi/izohi yangilanadi
+    # Soatbay: to'lov summasi/izohi yangilanadi — ALLAQACHON to'langan bo'lsa
+    # ham (aks holda 2 soatlik to'langan bron 4 soatga o'zgarsa, daromad eski
+    # summada qolib kam hisoblanardi).
+    pay_note = ""
     if b.pay_type == "hourly":
-        p = Payment.query.filter_by(booking_id=b.id, is_paid=False).first()
+        p = Payment.query.filter_by(booking_id=b.id).order_by(
+            Payment.is_paid.asc(), Payment.id.desc()).first()
         if p:
+            was_paid = p.is_paid
             p.amount = round(new_hours * (studio.hourly_rate or 0))
             p.date = day
             p.note = f"{studio.name} · {day} {start}–{end} ({new_hours:g} soat)"
+            if was_paid:
+                pay_note = " · 💵 to'langan summa qayta hisoblandi"
     db.session.commit()
 
     try:
@@ -379,5 +409,6 @@ def edit(bid):
         notify_teacher_booking(b, studio, teacher, created=False)
     except Exception:
         pass
-    flash(f"✏️ Bron ko'chirildi: {old_desc} → {day} {start}–{end}", "success")
+    flash(f"✏️ Bron ko'chirildi: {old_desc} → {day} {start}–{end}{pay_note}",
+          "success")
     return redirect(url_for("bookings.calendar", date=day))

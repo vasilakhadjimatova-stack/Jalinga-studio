@@ -41,7 +41,8 @@ class EditJob(db.Model):
         job = EditJob.query.filter_by(booking_id=b.id).first()
         if job:
             return job
-        due = (datetime.utcnow() + timedelta(days=SLA_DAYS)).strftime("%Y-%m-%d")
+        from core.timeutils import now_tashkent
+        due = (now_tashkent() + timedelta(days=SLA_DAYS)).strftime("%Y-%m-%d")
         job = EditJob(booking_id=b.id, teacher_id=b.teacher_id,
                       title=f"{teacher_name or 'Dars'} — {b.date} {b.start}",
                       due_date=due)

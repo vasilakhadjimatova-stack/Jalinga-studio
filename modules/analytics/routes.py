@@ -30,8 +30,10 @@ def index():
         Booking.date >= d90, Booking.date <= today,
         Booking.status.in_(("active", "done"))).all()
 
-    # ── Heatmap (oxirgi 30 kun): hafta kuni × soat → band soatlar soni ──
-    heat = [[0] * 13 for _ in range(7)]   # 7 kun × soat 9..21
+    # ── Heatmap (oxirgi 30 kun): hafta kuni × BOSHLANISH soati (9..20) →
+    # band soatlar soni. Boshlanish soati eng ko'pi 20:00 (21:00 gacha dars),
+    # shuning uchun 12 ustun (9..20). ──
+    heat = [[0] * 12 for _ in range(7)]
     max_heat = 0
     for b in rows:
         if b.date < d30:
@@ -42,7 +44,7 @@ def index():
             h1 = max(h0 + 1, int(b.end[:2]) + (1 if b.end[3:] > "00" else 0))
         except (ValueError, IndexError):
             continue
-        for h in range(max(9, h0), min(22, h1)):
+        for h in range(max(9, h0), min(21, h1)):
             heat[wd][h - 9] += 1
             max_heat = max(max_heat, heat[wd][h - 9])
 
@@ -78,4 +80,4 @@ def index():
     days_uz = ["Dush", "Sesh", "Chor", "Pay", "Jum", "Shan", "Yak"]
     return render_template(
         "analytics.html", heat=heat, max_heat=max_heat, days=days_uz,
-        hours=list(range(9, 22)), churn=churn, churn_days=CHURN_DAYS, top=top)
+        hours=list(range(9, 21)), churn=churn, churn_days=CHURN_DAYS, top=top)

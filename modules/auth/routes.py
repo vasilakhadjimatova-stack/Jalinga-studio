@@ -14,7 +14,10 @@ def login():
         if err:
             flash(err, "error")
             return render_template("login.html")
-        nxt = request.form.get("next") or url_for("dashboard.index")
+        # Ochiq-yo'naltirishдан himoya: faqat ichki yo'l qabul qilinadi
+        nxt = request.form.get("next") or ""
+        if not (nxt.startswith("/") and not nxt.startswith("//")):
+            nxt = url_for("dashboard.index")
         return redirect(nxt)
     return render_template("login.html")
 

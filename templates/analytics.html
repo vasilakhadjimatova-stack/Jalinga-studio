@@ -18,7 +18,7 @@
       {% for d in range(7) %}
       <tr>
         <td style="padding:3px 10px 3px 0;color:var(--txt2);font-weight:800">{{ days[d] }}</td>
-        {% for hi in range(13) %}
+        {% for hi in range(12) %}
         {% set v = heat[d][hi] %}
         {% set a = (v / max_heat) if max_heat else 0 %}
         <td title="{{ days[d] }} {{ hours[hi] }}:00 — {{ v }} marta band"

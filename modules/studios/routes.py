@@ -26,8 +26,11 @@ def save():
         db.session.add(s)
     s.name = (f.get("name") or "").strip()[:120] or "Studiya"
     s.description = (f.get("description") or "").strip()[:300]
+    import math
     try:
-        s.hourly_rate = max(0, float(f.get("hourly_rate") or 0))
+        rate = float((f.get("hourly_rate") or "0").replace(" ", "").replace(",", ""))
+        s.hourly_rate = rate if (math.isfinite(rate)
+                                 and 0 <= rate <= 1_000_000_000) else 0
     except (ValueError, TypeError):
         s.hourly_rate = 0
     s.color = (f.get("color") or "#6098F2").strip()[:10]

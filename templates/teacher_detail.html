@@ -51,9 +51,10 @@
   <div class="card" style="margin:0">
     <div class="card-hd"><div class="card-title"><i class="icon-package-plus"></i> Paket sotish / uzaytirish</div></div>
     <div class="card-bd">
-      <form method="POST" action="/teachers/{{ t.id }}/package">
+      <form method="POST" action="/teachers/{{ t.id }}/package"
+            onsubmit="var b=this.querySelector('button[type=submit]');setTimeout(function(){b.disabled=true;b.textContent='Saqlanmoqda…';},0);return true">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><label>Soat</label><input class="input" type="number" name="hours" min="1" step="0.5" value="10" required></div>
+          <div><label>Soat</label><input class="input" type="number" name="hours" min="1" max="1000" step="0.5" value="10" required></div>
           <div><label>Summa (so'm)</label><input class="input" type="number" name="amount" min="0" step="1000" required></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">

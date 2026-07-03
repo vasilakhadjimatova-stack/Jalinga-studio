@@ -13,10 +13,23 @@ bp = Blueprint("teachers", __name__)
 @bp.route("/teachers")
 @login_required
 def index():
-    rows = Teacher.query.order_by(Teacher.is_active.desc(),
-                                  Teacher.name.asc()).all()
+    q = (request.args.get("q") or "").strip()
+    show = (request.args.get("show") or "active").strip()  # active|all|archive
+    query = Teacher.query
+    if show == "active":
+        query = query.filter_by(is_active=True)
+    elif show == "archive":
+        query = query.filter_by(is_active=False)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(
+            Teacher.name.ilike(like), Teacher.phone.ilike(like),
+            Teacher.telegram.ilike(like), Teacher.subject.ilike(like)))
+    rows = query.order_by(Teacher.is_active.desc(),
+                          Teacher.name.asc()).all()
     return render_template("teachers.html",
-                           teachers=[t.to_dict() for t in rows])
+                           teachers=[t.to_dict() for t in rows],
+                           q=q, show=show, total=len(rows))
 
 
 @bp.route("/teachers/save", methods=["POST"])
@@ -126,16 +139,20 @@ def detail(tid):
 @login_required
 def buy_package(tid):
     """Paket sotish: N soat × narx → balans oshadi, to'lov yoziladi."""
+    import math
     u = current_user()
     t = Teacher.query.get_or_404(tid)
     f = request.form
     try:
-        hours = float(f.get("hours") or 0)
-        amount = float((f.get("amount") or "0").replace(" ", ""))
+        hours = float((f.get("hours") or "0").replace(" ", "").replace(",", ""))
+        amount = float((f.get("amount") or "0").replace(" ", "").replace(",", ""))
     except (ValueError, TypeError):
         hours = amount = 0
-    if hours <= 0 or amount <= 0:
-        flash("⛔ Soat va summa 0 dan katta bo'lsin", "error")
+    # inf/nan va haddan tashqari qiymatlarни rad etamiz (balans buzilmasin)
+    if not (math.isfinite(hours) and math.isfinite(amount)):
+        hours = amount = 0
+    if not (0 < hours <= 1000) or not (0 < amount <= 1_000_000_000):
+        flash("⛔ Soat (0–1000) va summa 0 dan katta, real qiymat bo'lsin", "error")
         return redirect(url_for("teachers.detail", tid=tid))
     db.session.add(Payment(
         teacher_id=tid, kind="package", hours=hours, amount=amount,

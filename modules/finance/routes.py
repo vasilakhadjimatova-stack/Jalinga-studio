@@ -10,6 +10,11 @@ from models.billing import Teacher, Payment
 bp = Blueprint("finance", __name__)
 
 
+def _safe_back(month=None):
+    """Ochiq-yo'naltirishдан himoya: faqat ichki /finance sahifasiga."""
+    return redirect(url_for("finance.index", month=month))
+
+
 @bp.route("/finance")
 @login_required
 def index():
@@ -29,21 +34,22 @@ def index():
 
 
 @bp.route("/finance/<int:pid>/toggle", methods=["POST"])
-@login_required
+@admin_required
 def toggle(pid):
     p = Payment.query.get_or_404(pid)
     p.is_paid = not p.is_paid
     db.session.commit()
     flash("✅ To'landi deb belgilandi" if p.is_paid else "↩️ Kutilmoqda holatiga qaytarildi",
           "success")
-    return redirect(request.referrer or url_for("finance.index"))
+    return _safe_back(p.date[:7] if p.date else None)
 
 
 @bp.route("/finance/<int:pid>/delete", methods=["POST"])
 @admin_required
 def delete(pid):
     p = Payment.query.get_or_404(pid)
+    month = p.date[:7] if p.date else None
     db.session.delete(p)
     db.session.commit()
     flash("🗑 To'lov o'chirildi", "success")
-    return redirect(request.referrer or url_for("finance.index"))
+    return _safe_back(month)

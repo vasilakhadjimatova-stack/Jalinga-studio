@@ -11,7 +11,21 @@
 <button class="btn btn-gold" onclick="document.getElementById('m-teacher').classList.add('open')">
   <i class="icon-user-plus"></i> Yangi mijoz</button></div>
 
+<form method="get" action="/teachers" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+  <input class="input" name="q" value="{{ q }}" placeholder="🔍 Ism, telefon, telegram yoki yo'nalish bo'yicha qidirish..."
+         style="flex:1;min-width:200px" onchange="this.form.submit()">
+  <select class="select" name="show" onchange="this.form.submit()" style="width:auto">
+    <option value="active" {% if show=='active' %}selected{% endif %}>Faol</option>
+    <option value="all" {% if show=='all' %}selected{% endif %}>Hammasi</option>
+    <option value="archive" {% if show=='archive' %}selected{% endif %}>Arxiv</option>
+  </select>
+  <button class="btn btn-out" type="submit"><i class="icon-search"></i> Qidirish</button>
+  {% if q or show != 'active' %}<a class="btn btn-ghost" href="/teachers">Tozalash</a>{% endif %}
+</form>
+
 <div class="card">
+  <div style="padding:9px 14px;font-size:12px;color:var(--txt3);border-bottom:1px solid var(--line)">
+    {{ total }} ta mijoz{% if q %} · «{{ q }}» bo'yicha{% endif %}</div>
   <div style="overflow-x:auto">
   <table class="tbl">
     <thead><tr><th>Mijoz</th><th>Yo'nalish</th><th>Aloqa</th><th class="r">Balans (soat)</th><th></th></tr></thead>

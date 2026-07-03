@@ -48,8 +48,8 @@ def save():
         flash("⛔ Ism kiritilishi shart", "error")
         return redirect(url_for("team.index"))
     if is_new or code:
-        if len(code) < 4 or not code.isdigit():
-            flash("⛔ Kod kamida 4 ta raqamdan iborat bo'lsin", "error")
+        if len(code) < 6 or not code.isdigit():
+            flash("⛔ Kod kamida 6 ta raqamdan iborat bo'lsin (xavfsizlik)", "error")
             return redirect(url_for("team.index"))
         dup = User.query.filter_by(code=code).first()
         if dup and (is_new or dup.id != u.id):

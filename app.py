@@ -19,7 +19,13 @@ logging.basicConfig(level=logging.INFO,
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    # Xavfsizlik: productionда SECRET_KEY majburiy (standart qiymat bilan
+    # sessiya-cookie soxtalashtirilishi mumkin) — yo'q bo'lsa ishga tushmaymiz.
     if Config.IS_PRODUCTION:
+        if app.config.get("SECRET_KEY") in ("", None, "dev-only-change-me"):
+            raise RuntimeError(
+                "SECRET_KEY o'rnatilmagan! Productionда haqiqiy maxfiy kalit "
+                "kerak (Railway → Variables → SECRET_KEY).")
         app.config["SESSION_COOKIE_SECURE"] = True
 
     init_db(app)

@@ -18,6 +18,23 @@ def init_db(app):
         import models  # noqa: F401 — barcha modellarni ro'yxatga oladi
         db.create_all()
         _auto_migrate()
+        _ensure_indexes()
+
+
+def _ensure_indexes():
+    """Konkurent double-booking backstop: bir studiya+sana+boshlanish vaqtiga
+    faqat bitta FAOL/YOZILGAN bron (qisman unikal indeks — SQLite/Postgres).
+    Commitдан oldingi konflikt tekshiruvi bilan birga ishlaydi: ikki so'rov
+    poyga qilsa, DB ikkinchisini rad etadi (ikki bron/arvoh bo'lmaydi)."""
+    ddl = ("CREATE UNIQUE INDEX IF NOT EXISTS ux_booking_slot "
+           "ON bookings (studio_id, date, start) "
+           "WHERE status IN ('active', 'done')")
+    try:
+        db.session.execute(text(ddl))
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.warning(f"slot unikal indeksi o'rnatilmadi: {exc}")
 
 
 def _column_default_sql(col):

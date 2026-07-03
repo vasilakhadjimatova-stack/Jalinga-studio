@@ -198,7 +198,7 @@
 <div class="modal-ov" id="m-book" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
     <div class="modal-title"><i class="icon-calendar-plus"></i> Yangi bron</div>
-    <form method="POST" action="/bookings/save">
+    <form method="POST" action="/bookings/save" onsubmit="return mcGuardSubmit(this)">
       <label>Studiya</label>
       <select class="select" name="studio_id" id="mb-studio" required>
         {% for s in studios %}
@@ -214,9 +214,13 @@
           style="flex:1;padding:9px;font-size:12.5px;font-weight:700;border:0;cursor:pointer">🆕 Yangi mijoz</button>
       </div>
       <div id="mb-existing">
+        {% if teachers|length > 6 %}
+        <input class="input" id="mb-search" placeholder="🔍 Mijoz qidirish (ism/telefon)..."
+               oninput="mcFilterClients(this.value)" style="margin-bottom:8px">
+        {% endif %}
         <select class="select" name="teacher_id" id="mb-teacher" required>
           <option value="">— mijozni tanlang —</option>
-          {% for t in teachers %}<option value="{{ t.id }}">{{ t.name }}{% if t.phone %} · {{ t.phone }}{% endif %} (balans: {{ t.balance_hours }} soat)</option>{% endfor %}
+          {% for t in teachers %}<option value="{{ t.id }}" data-bal="{{ t.balance_hours }}" data-search="{{ (t.name ~ ' ' ~ (t.phone or '') ~ ' ' ~ (t.telegram or ''))|lower }}">{{ t.name }}{% if t.phone %} · {{ t.phone }}{% endif %} (balans: {{ t.balance_hours }} soat)</option>{% endfor %}
         </select>
         {% if not teachers %}
         <div style="font-size:12px;color:var(--txt3);margin-top:6px">Baza bo'sh — «🆕 Yangi mijoz» orqali shu yerda qo'shing</div>
@@ -228,7 +232,8 @@
           <input class="input" name="new_phone" placeholder="Telefon" disabled>
           <input class="input" name="new_telegram" placeholder="@telegram" disabled>
         </div>
-        <div style="font-size:11px;color:var(--txt3);margin-top:6px">Mijoz kartasi avtomatik ochiladi — keyin paket sotib olishingiz mumkin</div>
+        <input class="input" name="new_subject" placeholder="Yo'nalish / soha (ixtiyoriy)" disabled style="margin-top:9px">
+        <div style="font-size:11px;color:var(--txt3);margin-top:6px">Mijoz kartasi avtomatik ochiladi — keyin paket sotib olishingiz mumkin (yangi mijoz balansi 0, shuning uchun soatbay tanlanadi)</div>
       </div>
       <label>Kunlar</label>
       <div id="mb-dates">
@@ -244,9 +249,9 @@
         <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
       </div>
       <label>To'lov turi</label>
-      <select class="select" name="pay_type">
+      <select class="select" name="pay_type" id="mb-pay">
         <option value="hourly">💵 Soatbay (to'lov yoziladi)</option>
-        <option value="package">📦 Paket balansidan</option>
+        <option value="package" id="mb-pay-pkg">📦 Paket balansidan</option>
       </select>
       <label>Operator (ixtiyoriy)</label>
       <input class="input" name="operator" placeholder="Kim yozib beradi">
@@ -255,7 +260,7 @@
       <div style="display:flex;gap:9px;margin-top:18px">
         <button type="button" class="btn btn-out" style="flex:1"
                 onclick="document.getElementById('m-book').classList.remove('open')">Bekor</button>
-        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Bron qilish</button>
+        <button type="submit" class="btn btn-gold" id="mb-submit" style="flex:2;justify-content:center">Bron qilish</button>
       </div>
     </form>
   </div>
@@ -314,7 +319,34 @@ function mcClientMode(m){
   document.querySelectorAll('#mb-new input').forEach(function(i){ i.disabled = !isNew; });
   nn.required = isNew;
   document.getElementById('mb-teacher').required = !isNew;
+  // Yangi mijoz balansi 0 → paket bo'lmaydi, majburan soatbay
+  var pkg = document.getElementById('mb-pay-pkg');
+  var pay = document.getElementById('mb-pay');
+  if(isNew){ pay.value = 'hourly'; pkg.disabled = true; }
+  else { pkg.disabled = false; }
   if(isNew) nn.focus();
+}
+
+/* Mavjud mijoz select'ini qidiruv bilan filtrlash */
+function mcFilterClients(q){
+  q = (q || '').toLowerCase().trim();
+  var sel = document.getElementById('mb-teacher');
+  var firstVisible = '';
+  Array.prototype.forEach.call(sel.options, function(o){
+    if(!o.value){ return; }               // "— tanlang —" doim ko'rinadi
+    var hay = o.getAttribute('data-search') || '';
+    var hit = !q || hay.indexOf(q) !== -1;
+    o.hidden = !hit;
+    if(hit && !firstVisible) firstVisible = o.value;
+  });
+  if(sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value = '';
+}
+
+/* Ikki marta bosilib ikki bron ketmasin */
+function mcGuardSubmit(form){
+  var b = document.getElementById('mb-submit');
+  if(b){ setTimeout(function(){ b.disabled = true; b.textContent = 'Saqlanmoqda…'; }, 0); }
+  return true;
 }
 
 /* + kun — yana bitta sana qatori */

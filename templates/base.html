@@ -267,8 +267,10 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
   .bn{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;
     background:rgba(15,17,23,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
     border-top:1px solid rgba(255,255,255,.08);
-    padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
-  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .bn::-webkit-scrollbar{display:none}
+  .bn-item{flex:0 0 auto;min-width:60px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 6px;
     color:var(--txt3);font-size:9.5px;font-weight:700;border-radius:10px;min-height:52px;justify-content:center}
   .bn-item i{font-size:19px}
   .bn-item.active{color:var(--brand)}
@@ -342,8 +344,13 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
   <a href="/" class="bn-item {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i>Panel</a>
   <a href="/calendar" class="bn-item {% if request.path.startswith('/calendar') %}active{% endif %}"><i class="icon-calendar-days"></i>Kalendar</a>
   <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Mijozlar</a>
+  <a href="/studios" class="bn-item {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i>Studiya</a>
   <a href="/montaj" class="bn-item {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i>Montaj</a>
-  <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}act{% endif %}"><i class="icon-wallet"></i>Moliya</a>
+  <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i>Moliya</a>
+  <a href="/analytics" class="bn-item {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i>Analitika</a>
+  {% if current_user and current_user.is_admin %}
+  <a href="/team" class="bn-item {% if request.path.startswith('/team') %}active{% endif %}"><i class="icon-users-round"></i>Jamoa</a>
+  {% endif %}
 </nav>
 {% else %}
 {% block anon %}{% endblock %}
