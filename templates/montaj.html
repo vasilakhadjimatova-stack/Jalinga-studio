@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Montaj{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="ph-title">✂️ Montaj oqimi</div>
+  <div class="ph-sub">{{ open_n }} ta ochiq karta{% if overdue_n %} · <span style="color:var(--red)">{{ overdue_n }} ta kechikkan</span>{% endif %}</div>
+</div>
+{% if workload %}
+<div style="display:flex;gap:7px;flex-wrap:wrap">
+  {% for nm, n in workload.items() %}
+  <span class="tag tag-blue" style="font-size:11px">✂️ {{ nm }}: {{ n }}</span>
+  {% endfor %}
+</div>
+{% endif %}</div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start">
+  {% for s in statuses %}
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title">{{ labels[s][0] }}</div>
+      <span class="tag tag-gray">{{ cols[s]|length }}</span></div>
+    <div class="card-bd" style="padding:10px;min-height:120px">
+      {% for j in cols[s] %}
+      <div style="background:var(--surface2);border-radius:11px;padding:11px 13px;margin-bottom:8px;
+           {% if j.overdue %}border:1px solid var(--red);{% else %}border:1px solid var(--line);{% endif %}">
+        <div style="font-weight:700;font-size:12.5px">{{ j.title }}</div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:3px">
+          👨‍🏫 {{ j.teacher_name }}
+          {% if j.assignee_name %} · ✂️ {{ j.assignee_name }}{% endif %}
+          {% if j.due_date %} · <span style="{% if j.overdue %}color:var(--red);font-weight:800{% endif %}">⏳ {{ j.due_date }}{% if j.overdue %} KECHIKDI{% endif %}</span>{% endif %}
+        </div>
+        {% if j.link %}<a href="{{ j.link }}" target="_blank" style="font-size:11px">🔗 Tayyor video</a>{% endif %}
+
+        <div style="display:flex;gap:5px;margin-top:9px;flex-wrap:wrap">
+          {% set idx = statuses.index(s) %}
+          {% if idx > 0 %}
+          <form method="POST" action="/montaj/{{ j.id }}/move" style="display:inline">
+            <input type="hidden" name="status" value="{{ statuses[idx-1] }}">
+            <button class="btn btn-sm btn-out" type="submit" title="Orqaga">←</button>
+          </form>
+          {% endif %}
+          {% if idx < statuses|length - 1 %}
+            {% if statuses[idx+1] == 'delivered' %}
+            <form method="POST" action="/montaj/{{ j.id }}/move" style="display:flex;gap:5px;flex:1">
+              <input type="hidden" name="status" value="delivered">
+              <input class="input" name="link" placeholder="🔗 video havolasi"
+                     value="{{ j.link }}" style="padding:6px 9px;font-size:11px;flex:1">
+              <button class="btn btn-sm btn-gold" type="submit">✅ Topshirish</button>
+            </form>
+            {% else %}
+            <form method="POST" action="/montaj/{{ j.id }}/move" style="display:inline">
+              <input type="hidden" name="status" value="{{ statuses[idx+1] }}">
+              <button class="btn btn-sm btn-gold" type="submit">{{ labels[statuses[idx+1]][0] }} →</button>
+            </form>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        {% if s != 'delivered' %}
+        <form method="POST" action="/montaj/{{ j.id }}/assign"
+              style="display:flex;gap:5px;margin-top:7px">
+          <select class="select" name="assignee_id" style="padding:6px 9px;font-size:11px;flex:1">
+            <option value="">— montajchi —</option>
+            {% for u in team %}
+            <option value="{{ u.id }}" {% if j.assignee_id==u.id %}selected{% endif %}>{{ u.name }}</option>
+            {% endfor %}
+          </select>
+          <input class="input" type="date" name="due_date" value="{{ j.due_date }}"
+                 style="padding:6px;font-size:11px;width:120px">
+          <button class="btn btn-sm btn-out" type="submit">✓</button>
+        </form>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="empty" style="padding:18px 8px">Bo'sh</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

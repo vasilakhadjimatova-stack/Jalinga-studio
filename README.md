@@ -17,8 +17,13 @@ uchun: bron, kalendar, ustozlar bazasi, paket/soatbay to'lovlar, boshliq paneli.
 - **✕ Bekor qilish siyosati** — darsdan ≥24 soat oldin (paket soatlari qaytadi)
 - **✈️ Telegram bot** — `/start <token>` bilan ulanish, bron tasdig'i, dars oldidan ~2 soat qolganda eslatma
 
+## 3-bosqich (tayyor)
+- **✂️ Montaj kanban** — yozildi → montajda → tekshiruvda → topshirildi; yozuv «done» bo'lgach karta avto-yaraladi
+- **⏳ SLA nazorati** — default 3 kun; kechikkanlar qizil, tepada
+- **👥 Jamoa ish yuki** — montajchiga biriktirish + ochiq kartalar soni
+- **🎉 Topshirilganda** ustozga Telegram xabar (video havolasi bilan)
+
 ## Keyingi bosqichlar
-3. Montaj kanban (yozildi → montajda → tekshiruvda → topshirildi) + operator jadvali
 4. Bandlik heatmap, churn radar, referral, onlayn to'lov (Payme/Click)
 
 ## Ishga tushirish

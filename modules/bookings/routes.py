@@ -134,6 +134,11 @@ def set_status(bid):
     if new == "cancelled":
         Payment.query.filter_by(booking_id=b.id, is_paid=False).delete(
             synchronize_session=False)
+    # Yozildi ✓ → montaj kartasi avto-yaraladi (kanbanда ko'rinadi)
+    if new == "done":
+        from models.montaj import EditJob
+        t = Teacher.query.get(b.teacher_id)
+        EditJob.for_booking(b, teacher_name=(t.name if t else ""))
     db.session.commit()
     flash(f"Holat: {b.status_label()}", "success")
     return redirect(url_for("bookings.calendar", date=b.date))
