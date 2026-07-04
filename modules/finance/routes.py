@@ -18,6 +18,7 @@ from database import db
 from models.billing import Teacher, Payment
 from models.finance import (FinWallet, FinCategory, FinTransaction,
                             FinDebt, FinSetting, FinRecurring, FinPlan)
+from models.audit import record
 from modules.finance.sheets_sync import ACTIVITY_LABELS
 
 logger = logging.getLogger(__name__)
@@ -205,6 +206,8 @@ def txn_add():
         purpose=(request.form.get("purpose") or "").strip()[:400],
         category=cat.name, direction=cat.direction, activity=cat.activity,
         source="manual"))
+    record("create", "transaction",
+           f"{cat.direction} {amount:.0f} — {cat.name} ({wallet})")
     db.session.commit()
     flash("✅ Tranzaksiya qo'shildi", "success")
     return redirect(url_for("finance.transactions", month=d[:7]))
@@ -250,6 +253,7 @@ def txn_edit(tid):
     t.counterparty = (request.form.get("counterparty") or "").strip()[:200]
     t.purpose = (request.form.get("purpose") or "").strip()[:400]
     t.category, t.direction, t.activity = cat.name, cat.direction, cat.activity
+    record("update", "transaction", f"#{t.id} → {amount:.0f} {cat.name}")
     db.session.commit()
     flash("✅ Tranzaksiya yangilandi", "success")
     return redirect(url_for("finance.transactions", month=d[:7]))
@@ -263,6 +267,8 @@ def txn_delete(tid):
         flash(LOCKED_MSG.get(t.source, "Bu yozuv o'chirilmaydi"), "error")
         return redirect(url_for("finance.transactions", month=t.date[:7]))
     month = t.date[:7]
+    record("delete", "transaction",
+           f"#{t.id} {t.amount:.0f} {t.category} ({t.date})")
     db.session.delete(t)
     db.session.commit()
     flash("🗑 Tranzaksiya o'chirildi", "success")
@@ -386,6 +392,7 @@ def debt_add():
         creditor=(request.form.get("creditor") or "").strip()[:120],
         reason=(request.form.get("reason") or "").strip()[:500],
         amount=amount, repaid=min(_num("repaid"), amount), source="manual"))
+    record("create", "debt", f"{amount:.0f} — {request.form.get('creditor','')}")
     db.session.commit()
     flash("✅ Qarz qo'shildi", "success")
     return redirect(url_for("finance.debts"))
@@ -405,6 +412,7 @@ def debt_edit(did):
     d.reason = (request.form.get("reason") or "").strip()[:500]
     d.amount = amount
     d.repaid = min(_num("repaid"), amount)
+    record("update", "debt", f"#{d.id} → {amount:.0f} {d.creditor}")
     db.session.commit()
     flash("✅ Qarz yangilandi", "success")
     return redirect(url_for("finance.debts"))
@@ -422,6 +430,7 @@ def debt_repay(did):
     d.repaid = min((d.repaid or 0) + add, d.amount or 0)
     if (request.form.get("date") or "").strip():
         d.repaid_date = request.form.get("date").strip()[:24]
+    record("repay", "debt", f"#{d.id} +{add:.0f} ({d.creditor})")
     db.session.commit()
     flash(f"✅ {add:,.0f} so'm qaytarildi belgilandi", "success")
     return redirect(url_for("finance.debts"))
@@ -430,7 +439,9 @@ def debt_repay(did):
 @bp.route("/finance/debts/<int:did>/delete", methods=["POST"])
 @admin_required
 def debt_delete(did):
-    db.session.delete(FinDebt.query.get_or_404(did))
+    d = FinDebt.query.get_or_404(did)
+    record("delete", "debt", f"#{d.id} {d.amount:.0f} {d.creditor}")
+    db.session.delete(d)
     db.session.commit()
     flash("🗑 Qarz o'chirildi", "success")
     return redirect(url_for("finance.debts"))
@@ -495,6 +506,8 @@ def wallet_save():
         db.session.add(FinWallet(name=name, opening_balance=opening,
                                  currency=cur, sort=mx + 1,
                                  opening_year=date.today().year))
+    record("update" if wid.isdigit() else "create", "wallet",
+           f"{name} — ochilish {opening:.0f}")
     db.session.commit()
     flash("✅ Hisob saqlandi", "success")
     return redirect(url_for("finance.settings"))
@@ -509,6 +522,7 @@ def wallet_delete(wid):
         flash(f"Bu hisobда {used} ta tranzaksiya bor — avval ularni "
               f"o'chiring yoki boshqa hisobga o'tkazing", "error")
         return redirect(url_for("finance.settings"))
+    record("delete", "wallet", w.name)
     db.session.delete(w)
     db.session.commit()
     flash("🗑 Hisob o'chirildi", "success")
@@ -532,6 +546,7 @@ def category_add():
     mx = db.session.query(db.func.max(FinCategory.sort)).scalar() or 0
     db.session.add(FinCategory(name=name, direction=direction,
                                activity=activity, sort=mx + 1))
+    record("create", "category", f"{direction} — {name}")
     db.session.commit()
     flash("✅ Statya qo'shildi", "success")
     return redirect(url_for("finance.settings"))
@@ -546,6 +561,7 @@ def category_delete(cid):
         flash(f"Bu statyaда {used} ta tranzaksiya bor — o'chirib bo'lmaydi",
               "error")
         return redirect(url_for("finance.settings"))
+    record("delete", "category", c.name)
     db.session.delete(c)
     db.session.commit()
     flash("🗑 Statya o'chirildi", "success")
@@ -918,6 +934,9 @@ def toggle(pid):
     # Tasdiqlanganда moliya jurnaliga kirim tushadi (bekor bo'lsa yo'qoladi)
     t = Teacher.query.get(p.teacher_id)
     sync_payment_to_finance(p, teacher_name=t.name if t else None)
+    record("toggle", "payment",
+           f"#{p.id} {(t.name if t else '?')} {p.amount:.0f} → "
+           f"{'to`landi' if p.is_paid else 'kutilmoqda'}")
     db.session.commit()
     flash("✅ To'landi — moliya jurnaliga tushdi" if p.is_paid
           else "↩️ Kutilmoqda — moliyadan olib tashlandi", "success")
@@ -931,6 +950,7 @@ def delete(pid):
     p = Payment.query.get_or_404(pid)
     month = p.date[:7] if p.date else None
     unlink_payment_finance(p.id)   # bog'langan moliya yozuvини ham o'chiramiz
+    record("delete", "payment", f"#{p.id} {p.amount:.0f} ({p.date})")
     db.session.delete(p)
     db.session.commit()
     flash("🗑 To'lov o'chirildi", "success")

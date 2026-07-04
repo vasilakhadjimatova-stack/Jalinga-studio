@@ -222,60 +222,54 @@ def apply_parsed(data, source="sheet"):
             "wallets": len(data.get("wallets", []))}
 
 
-def sync_from_sheets(spreadsheet_id, usd_rate=12000.0, timeout=45):
-    """Jonli sync: ochiq xlsx eksportini yuklab olib bazaga yozadi."""
-    import requests
-    url = (f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
-           f"/export?format=xlsx")
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
-    ctype = resp.headers.get("content-type", "")
-    if "spreadsheet" not in ctype and "octet-stream" not in ctype:
-        raise RuntimeError(
-            "Jadval yuklab bo'lmadi — havola ochiq (anyone with link) "
-            f"ekanini tekshiring (content-type: {ctype[:60]})")
-    data = parse_workbook(resp.content, usd_rate=usd_rate)
-    if not data["transactions"]:
-        raise RuntimeError("Jadvaldan birorta ham tranzaksiya o'qilmadi — "
-                           "«ДДС данные» varag'i tuzilishi o'zgarganga o'xshaydi")
-    stats = apply_parsed(data)
-    FinSetting.set("sync_source", "live")
+# Snapshot bo'lmaganда (dastur-native yangi o'rnatma) boshlang'ich seed —
+# hisoblar va ДДС statyalari. Shusiz foydalanuvchi tranzaksiya qo'sha olmaydi
+# (statya kerak). Admin keyin Sozlamalarда o'zgartiradi.
+# Nomlar studiya-ulash (studio_link.METHOD_WALLET) bilan mos — mijoz to'lovi
+# to'g'ri hisobga tushishi uchun.
+DEFAULT_WALLETS = [
+    ("РС Jalinga", "UZS"), ("карта 9933", "UZS"), ("Наличные", "UZS"),
+    ("$", "USD"),
+]
+DEFAULT_CATEGORIES = [
+    ("Поступление от клиента (запись)", "in", "operating"),
+    ("Поступление от клиента (Вебинар)", "in", "operating"),
+    ("Поступление от монтажа", "in", "operating"),
+    ("Прочие поступления", "in", "operating"),
+    ("зарплата", "out", "operating"),
+    ("премия", "out", "operating"),
+    ("аренда", "out", "operating"),
+    ("аренда студии", "out", "operating"),
+    ("налог АОС/дивиденд/Зп", "out", "operating"),
+    ("Комиссия Банк/ комиссия плат. систем", "out", "operating"),
+    ("Комунальные услуги", "out", "operating"),
+    ("Ремонт", "out", "operating"),
+    ("Абонентские подписки", "out", "operating"),
+    ("организационные расходы", "out", "operating"),
+    ("прочие расходы", "out", "operating"),
+    ("Продажа ОС", "in", "investing"),
+    ("Покупка ОС", "out", "investing"),
+    ("Займ от собственника", "in", "financing"),
+    ("Погашение тела кредита, займа", "out", "financing"),
+    ("Дивиденды", "out", "financing"),
+    ("Доход — Перевод между счетами", "in", "technical"),
+    ("Расход — Перевод между счетами", "out", "technical"),
+]
+
+
+def seed_default_finance():
+    """Bo'sh bazada (snapshot yo'q) boshlang'ich hisoblar + statyalar."""
+    from models.finance import FinWallet, FinCategory
+    if FinCategory.query.first() is None:
+        for i, (name, d, act) in enumerate(DEFAULT_CATEGORIES):
+            db.session.add(FinCategory(name=name, direction=d, activity=act,
+                                       sort=i))
+    if FinWallet.query.first() is None:
+        for i, (name, cur) in enumerate(DEFAULT_WALLETS):
+            db.session.add(FinWallet(name=name, currency=cur, sort=i,
+                                     opening_year=datetime.now().year))
     db.session.commit()
-    return stats
-
-
-def start_autosync(app, interval_minutes):
-    """Fon thread: har `interval_minutes` daqiqada Google Sheets'дан avto-sync.
-
-    Tarmoq/format xatosi jim (log bilan) — dastur to'xtamaydi, mavjud ma'lumot
-    saqlanadi. interval <= 0 bo'lsa o'chiq. Telegram bot bilan bir xil naqsh.
-    """
-    import threading
-    import time
-
-    interval = max(0, int(interval_minutes or 0))
-    if interval <= 0:
-        logger.info("Moliya avto-sync o'chiq (FINANCE_SYNC_INTERVAL=0)")
-        return
-
-    from config import Config
-
-    def _loop():
-        time.sleep(60)   # ishga tushish shovqini tinchisin
-        while True:
-            try:
-                with app.app_context():
-                    stats = sync_from_sheets(Config.FINANCE_SPREADSHEET_ID,
-                                             usd_rate=Config.USD_RATE)
-                    logger.info("Moliya avto-sync: %s", stats)
-            except Exception as exc:
-                logger.warning("Moliya avto-sync o'tmadi (mavjud ma'lumot "
-                               "saqlanadi): %s", exc)
-            time.sleep(interval * 60)
-
-    threading.Thread(target=_loop, daemon=True,
-                     name="jalinga-finance-sync").start()
-    logger.info("🔄 Moliya avto-sync ishga tushdi (har %d daqiqa)", interval)
+    logger.info("Moliya: boshlang'ich hisoblar va statyalar seed qilindi")
 
 
 def seed_default_recurring():
@@ -297,12 +291,21 @@ def seed_default_recurring():
 
 
 def import_snapshot_if_empty():
-    """Birinchi ishga tushish: baza bo'sh bo'lsa repo'dagi snapshotni yuklaydi."""
+    """Birinchi ishga tushish uchun boshlang'ich ma'lumot.
+
+    • Baza to'la bo'lsa — hech narsa qilmaydi (faqat recurring seed).
+    • Snapshot fayli bo'lsa (lokal dev / qo'lда tiklash) — undan yuklaydi.
+    • Aks holda — default hisoblar + statyalarni seed qiladi (dastur-native).
+
+    DIQQAT: snapshot fayli repoда SAQLANMAYDI (real moliya ma'lumot — maxfiy).
+    Prod ma'lumoti Postgres'да yashaydi; bu funksiya faqat bo'sh bazaда ishlaydi.
+    """
     if FinTransaction.query.first() is not None:
         seed_default_recurring()
         return None
     if not os.path.exists(SNAPSHOT_PATH):
-        logger.warning("finance_snapshot.json topilmadi — moliya bo'sh boshlanadi")
+        seed_default_finance()
+        seed_default_recurring()
         return None
     with open(SNAPSHOT_PATH, encoding="utf-8") as f:
         data = json.load(f)

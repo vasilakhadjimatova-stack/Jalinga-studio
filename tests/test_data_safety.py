@@ -28,3 +28,36 @@ def test_data_at_risk_flag_dev():
     # sqlite bo'lsa-da, production bo'lmagani uchun xavf yo'q
     if not Config.IS_PRODUCTION:
         assert Config.DATA_AT_RISK is False
+
+
+# ── Healthz + Audit-log ──
+
+def test_healthz(client):
+    import json
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    d = json.loads(r.data)
+    assert d["status"] == "ok" and "db" in d
+
+
+def test_audit_records_finance_action(app, admin_client, post):
+    from models.finance import FinCategory, FinWallet
+    from models.audit import AuditLog
+    with app.app_context():
+        cat = FinCategory.query.filter_by(direction="out").first().name
+        w = FinWallet.query.first().name
+        before = AuditLog.query.count()
+    post(admin_client, "/finance/transactions/add",
+         date="2026-07-04", amount="500000", wallet=w, category=cat,
+         purpose="audit test")
+    with app.app_context():
+        assert AuditLog.query.count() == before + 1
+        last = AuditLog.query.order_by(AuditLog.id.desc()).first()
+        assert last.action == "create" and last.entity == "transaction"
+        assert last.user_name  # kim qilgani yozilgan
+
+
+def test_audit_page_admin_only(app, client, admin_client):
+    assert admin_client.get("/team/audit").status_code == 200
+    r = client.get("/team/audit")
+    assert r.status_code in (302, 303, 403)

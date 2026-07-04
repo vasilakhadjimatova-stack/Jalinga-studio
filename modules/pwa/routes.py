@@ -79,6 +79,21 @@ def offline():
     return render_template("offline.html")
 
 
+@bp.route("/healthz")
+def healthz():
+    """Liveness/readiness — monitoring va Railway uchun. Baza ulanishini
+    tekshiradi; DB yiqilsa 503 qaytaradi (sabab bilan)."""
+    from sqlalchemy import text
+    from database import db
+    try:
+        db.session.execute(text("SELECT 1"))
+        return {"status": "ok",
+                "db": "sqlite" if Config.DB_IS_SQLITE else "postgres",
+                "data_at_risk": Config.DATA_AT_RISK}, 200
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)[:200]}, 503
+
+
 # iOS/qurilmalar ba'zan ildizдаги ikonни avtomatik qidiradi (link teg bo'lsa
 # ham). Static faylga yo'naltiramiz — ikonка har doim topiladi.
 @bp.route("/apple-touch-icon.png")

@@ -133,16 +133,37 @@ def _reminder_loop(app):
         time.sleep(300)
 
 
+# Leader-lock: gunicorn bir necha worker ishga tushiradi. Bot polling/eslatma
+# faqat BITTA workerда yurishi kerak (aks holda getUpdates poyga qiladi va
+# eslatmalar takrorlanadi). OS fayl-qulfi bilan bitta «yetakchi» tanlanadi.
+_LOCK_FH = None
+
+
+def _acquire_leader():
+    """Faqat birinchi worker True oladi (fayl-qulfi konteyner ichида umumiy)."""
+    global _LOCK_FH
+    try:
+        import fcntl
+        _LOCK_FH = open("/tmp/jalinga_bot.lock", "w")
+        fcntl.flock(_LOCK_FH, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except Exception:
+        return False
+
+
 def start_bot(app):
-    """Polling + eslatma threadlari (token bo'lsa)."""
+    """Polling + eslatma threadlari (token bo'lsa, faqat yetakchi workerда)."""
     if not TOKEN:
         logger.info("Telegram bot o'chiq (TELEGRAM_BOT_TOKEN yo'q)")
+        return
+    if not _acquire_leader():
+        logger.info("Telegram bot: bu worker yetakchi emas — o'tkazib yuborildi")
         return
     threading.Thread(target=_poll_loop, args=(app,), daemon=True,
                      name="jalinga-tg-poll").start()
     threading.Thread(target=_reminder_loop, args=(app,), daemon=True,
                      name="jalinga-tg-remind").start()
-    logger.info("🤖 Telegram bot ishga tushdi")
+    logger.info("🤖 Telegram bot ishga tushdi (yetakchi worker)")
 
 
 def bot_username():
