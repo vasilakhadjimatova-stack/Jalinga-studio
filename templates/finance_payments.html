@@ -42,7 +42,7 @@
             <button class="btn btn-sm {{ 'btn-ghost' if p.is_paid else 'btn-gold' }}" type="submit">
               {{ '↩︎' if p.is_paid else "✓ To'landi" }}</button>
           </form>
-          {% if current_user.is_admin %}
+          {% if current_user.can_finance %}
           <form method="POST" action="/finance/{{ p.id }}/delete" style="display:inline"
                 onsubmit="return confirm('To\'lov o\'chirilsinmi?')">
             <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>

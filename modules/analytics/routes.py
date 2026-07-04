@@ -55,7 +55,9 @@ def _capacity_hours(year, month, active_studios):
 @bp.route("/analytics")
 @login_required
 def index():
-    is_admin = bool(current_user() and current_user().is_admin)
+    # Pul ko'rsatkichlarini rahbar VA buxgalter ko'radi (operator ko'rmaydi).
+    # (o'zgaruvchi nomi `is_admin` — tarixiy; ma'nosi «pulni ko'ra oladi».)
+    is_admin = bool(current_user() and current_user().can_finance)
     today = today_iso()
     t0 = now_tashkent().date()
 

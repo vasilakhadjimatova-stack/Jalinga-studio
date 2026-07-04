@@ -95,3 +95,19 @@ def admin_required(f):
             check_csrf()
         return f(*args, **kwargs)
     return wrapper
+
+
+def finance_required(f):
+    """Moliya bo'limiga kirish: rahbar YOKI buxgalter."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        u = current_user()
+        if not u:
+            return redirect(url_for("auth.login", next=request.path))
+        if not u.can_finance:
+            flash("Bu bo'lim faqat rahbar va buxgalter uchun", "error")
+            return redirect(url_for("dashboard.index"))
+        if request.method == "POST":
+            check_csrf()
+        return f(*args, **kwargs)
+    return wrapper

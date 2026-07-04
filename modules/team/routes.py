@@ -61,7 +61,7 @@ def backup():
         "Content-Disposition": f'attachment; filename="jalinga-backup-{stamp}.json"'})
 
 ROLE_LABELS = {"admin": "👑 Rahbar", "operator": "🎥 Operator",
-               "montaj": "✂️ Montajchi"}
+               "montaj": "✂️ Montajchi", "buxgalter": "🧮 Buxgalter"}
 
 
 def _last_active_admin(u):

@@ -17,7 +17,7 @@
   <div class="ph-title">Tranzaksiyalar jurnali</div>
   <div class="ph-sub">{% if month %}{{ month }}{% else %}Barcha davr{% endif %} — {{ rows|length }} ta yozuv</div>
 </div>
-{% if current_user.is_admin %}
+{% if current_user.can_finance %}
 <button class="btn btn-gold" onclick="txReset();document.getElementById('addMod').classList.add('open')">
   <i class="icon-plus"></i> Tranzaksiya</button>
 {% endif %}
@@ -91,7 +91,7 @@
           <span class="src-lock" title="Studiya to'loviga bog'langan — «Studiya to'lovlari» sahifasidan boshqaring"><i class="icon-clapperboard"></i> Studiya</span>
           {% elif t.source in ('plan', 'recurring') %}
           <span class="src-lock" title="To'lov kalendari boshqaradi"><i class="icon-calendar-clock"></i> Kalendar</span>
-          {% elif current_user.is_admin %}
+          {% elif current_user.can_finance %}
           <button class="btn btn-sm btn-ghost" title="Tahrirlash"
             onclick='txEdit({{ t.id }}, {{ t.date|tojson }}, {{ t.category|tojson }}, {{ t.wallet|tojson }}, {{ t.amount }}, {{ (t.counterparty or "")|tojson }}, {{ (t.purpose or "")|tojson }})'><i class="icon-pencil"></i></button>
           <form method="POST" action="/finance/transactions/{{ t.id }}/delete" style="display:inline"
@@ -110,7 +110,7 @@
 </div>
 
 <!-- Qo'shish/tahrirlash modali -->
-{% if current_user.is_admin %}
+{% if current_user.can_finance %}
 <div class="modal-ov" id="addMod" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
     <div class="modal-title"><i class="icon-plus-circle"></i> <span id="txTitle">Yangi tranzaksiya</span></div>
