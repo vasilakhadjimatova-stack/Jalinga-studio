@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Audit-log{% endblock %}
+{% block page_title %}Audit-log{% endblock %}
+{% block page_crumb %}Kim, qachon, nima qilgani{% endblock %}
+{% block extra_css %}
+<style>
+.al-act{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;
+  padding:3px 9px;border-radius:99px;white-space:nowrap}
+.al-create{background:var(--green-bg);color:var(--green)}
+.al-update{background:var(--blue-bg);color:var(--blue)}
+.al-delete{background:var(--red-bg);color:var(--red)}
+.al-pay,.al-toggle,.al-repay{background:var(--gold-bg);color:var(--gold)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Audit-log</div>
+  <div class="ph-sub">Moliya va jamoadagi barcha o'zgarishlar izi — kim, qachon, nima</div>
+</div>
+<a href="/team" class="btn btn-out"><i class="icon-arrow-left"></i> Jamoa</a>
+</div>
+
+<div class="card"><div class="card-bd">
+<form method="get" action="/team/audit" style="display:flex;gap:9px;flex-wrap:wrap;align-items:end">
+  <div><label>Amal</label>
+    <select class="select" name="action" onchange="this.form.submit()" style="width:auto">
+      <option value="">Barchasi</option>
+      {% for a in ['create','update','delete','pay','toggle','repay'] %}
+      <option value="{{ a }}" {% if a==action %}selected{% endif %}>{{ a }}</option>{% endfor %}
+    </select></div>
+  <div><label>Obyekt</label>
+    <select class="select" name="entity" onchange="this.form.submit()" style="width:auto">
+      <option value="">Barchasi</option>
+      {% for e in ['transaction','debt','wallet','category','payment','user'] %}
+      <option value="{{ e }}" {% if e==entity %}selected{% endif %}>{{ e }}</option>{% endfor %}
+    </select></div>
+  {% if action or entity %}<a href="/team/audit" class="btn btn-ghost btn-sm">✕ Tozalash</a>{% endif %}
+</form>
+</div></div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr><th>Vaqt (UTC)</th><th>Kim</th><th>Amal</th><th>Obyekt</th><th>Tafsilot</th><th>IP</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td style="white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px">{{ r.at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><b>{{ r.user_name }}</b></td>
+        <td><span class="al-act al-{{ r.action }}">{{ r.action }}</span></td>
+        <td style="font-size:12px;color:var(--txt2)">{{ r.entity }}</td>
+        <td style="font-size:12.5px">{{ r.summary }}</td>
+        <td style="font-size:11px;color:var(--txt3)">{{ r.ip }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6"><div class="empty"><i class="icon-history"></i>Yozuvlar yo'q</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

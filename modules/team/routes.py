@@ -12,8 +12,25 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from core.auth import admin_required, current_user
 from database import db
 from models.user import User, ROLES
+from models.audit import AuditLog, record
 
 bp = Blueprint("team", __name__)
+
+
+@bp.route("/team/audit")
+@admin_required
+def audit():
+    """Audit-log: kim, qachon, nima qilgani (moliya + jamoa amallari)."""
+    action = (request.args.get("action") or "").strip()
+    entity = (request.args.get("entity") or "").strip()
+    q = AuditLog.query
+    if action:
+        q = q.filter_by(action=action)
+    if entity:
+        q = q.filter_by(entity=entity)
+    rows = q.order_by(AuditLog.id.desc()).limit(300).all()
+    return render_template("audit.html", rows=rows, action=action,
+                           entity=entity)
 
 
 @bp.route("/team/backup.json")
@@ -91,6 +108,7 @@ def save():
     if is_new:
         u = User(name=name, code=code, role=role, is_active=True)
         db.session.add(u)
+        record("create", "user", f"{name} ({role})")
         db.session.commit()
         flash(f"✅ {name} qo'shildi ({ROLE_LABELS.get(role, role)}). "
               f"Kirish kodi: {code}", "success")
@@ -109,6 +127,9 @@ def save():
         u.code = code
     u.role = role
     u.is_active = active
+    record("update", "user",
+           f"{u.name} → {role}{' (kod o‘zgardi)' if code else ''}"
+           f"{'' if active else ' — nofaol'}")
     db.session.commit()
     flash(f"✅ {u.name} yangilandi", "success")
     return redirect(url_for("team.index"))

@@ -11,40 +11,49 @@ def _ctx(app):
         yield
 
 
-def test_snapshot_imported(app):
-    """App startida repo'dagi Sheets snapshoti yuklanadi."""
-    assert FinTransaction.query.count() >= 200
-    assert FinWallet.query.count() >= 5
-    assert FinCategory.query.count() >= 30
-    # Sheet yozuvlari sheet manbali
-    assert FinTransaction.query.filter_by(source="sheet").count() >= 200
+def test_default_finance_seeded(app):
+    """Snapshot yo'q — bo'sh baza default hisoblar + statyalar bilan boshlanadi
+    (dastur-native, sheet'siz ishlashi uchun)."""
+    assert FinWallet.query.count() >= 4
+    assert FinCategory.query.count() >= 15
+    # Studiya-ulash uchun kerakli hisoblar mavjud
+    assert FinWallet.query.filter_by(name="карта 9933").first() is not None
+    assert FinWallet.query.filter_by(name="Наличные").first() is not None
 
 
-def test_dds_matches_google_sheet(app):
-    """ДДС hisoboti Sheets'dagi ДДС_2026 bilan 1:1 mos kelishi shart."""
+def _mk_txn(date, amount, cat_name, wallet, source="sheet"):
+    from models.finance import FinTransaction, FinCategory
+    c = FinCategory.query.filter_by(name=cat_name).first()
+    t = FinTransaction(date=date, year=int(date[:4]), month=int(date[5:7]),
+                       amount=amount, wallet=wallet, category=c.name,
+                       direction=c.direction, activity=c.activity, source=source)
+    db.session.add(t)
+    db.session.commit()
+    return t
+
+
+def test_dds_invariant(app):
+    """ДДС mantig'i: har oy yopilish = ochilish + sof oqim + texnik o'tkazma.
+    Sinovga bog'liq emas (invariant) — sintetik yozuvlar bilan ham to'g'ri."""
     from modules.finance.routes import build_dds
+    _mk_txn("2026-01-05", 5_000_000, "Поступление от клиента (запись)", "карта 9933")
+    _mk_txn("2026-01-20", 2_000_000, "аренда", "карта 9933")
     r = build_dds(2026)
-    assert r["opening"][1] == pytest.approx(39509626.20, abs=0.02)
-    assert r["closing"][1] == pytest.approx(44080957.39, abs=0.02)
-    assert r["closing"][2] == pytest.approx(121797855.23, abs=0.02)
-    ops = r["sections"][0]
-    assert ops["key"] == "operating"
-    assert ops["in"][1] == pytest.approx(50150000.00, abs=0.02)
-    assert ops["out"][3] == pytest.approx(97480419.47, abs=0.02)
-    # Moliyaviy faoliyat: yanvar dividend 10 mln chiqim
-    fin = r["sections"][2]
-    assert fin["out"][1] == pytest.approx(10000000.00, abs=0.02)
+    for m in range(1, 13):
+        expected = (r["opening"][m] + r["net_flow"][m]
+                    + r["transfer_in"][m] - r["transfer_out"][m])
+        assert r["closing"][m] == pytest.approx(expected, abs=0.01), m
+        if m < 12:
+            assert r["opening"][m + 1] == pytest.approx(r["closing"][m], abs=0.01)
 
 
-def test_wallet_balances(app):
-    """Sheets manbali balans = ochilish + Sheets harakatlari; iyun oxiri
-    qoldig'iga teng. (Studiya/qo'lda yozuvlar alohida — bu yerda hisobga
-    olinmaydi, chunki test bazasi boshqa testlar bilan bo'lishiladi.)"""
+def test_wallet_balance_invariant(app):
+    """Jami balans = ochilish + barcha imzolangan harakatlar (invariant)."""
+    from modules.finance.routes import _wallet_balances
+    total = sum(b["balance"] for b in _wallet_balances())
     opening = sum(w.opening_balance or 0 for w in FinWallet.query.all())
-    flow = sum(t.signed for t in
-               FinTransaction.query.filter_by(source="sheet").all())
-    # ДДС_2026 iyun: Чистый денежный поток = 19 162 414.52
-    assert opening + flow == pytest.approx(19162414.52, abs=0.05)
+    flow = sum(t.signed for t in FinTransaction.query.all())
+    assert total == pytest.approx(opening + flow, abs=0.02)
 
 
 def test_finance_pages_load(admin_client):
@@ -72,7 +81,8 @@ def test_txn_add_and_delete(admin_client, post):
 
 def test_sheet_txn_now_editable(admin_client, post):
     """Sheets tarixi endi dastur-native — tahrirlanadi va o'chiriladi."""
-    t = FinTransaction.query.filter_by(source="sheet").first()
+    t = (FinTransaction.query.filter_by(source="sheet").first()
+         or _mk_txn("2026-03-03", 1_000_000, "аренда", "карта 9933"))
     tid, cat, wallet = t.id, t.category, t.wallet
     post(admin_client, f"/finance/transactions/{tid}/edit",
          date="2026-06-10", category=cat, wallet=wallet, amount="123456",
@@ -280,11 +290,11 @@ def test_recurring_reconciled_by_category(app):
     from modules.finance.routes import _recurring_paid
     r = FinRecurring.query.filter_by(category="аренда").first()
     assert r is not None
-    # Sheets'да 2026 mart oyида «аренда» chiqimi bor → qoplangan
-    covered = _recurring_paid(r.id, 2026, 3, r.category)
-    assert covered is True
-    # Uzoq kelajak oyида hech narsa yo'q → qoplanmagan
+    # Kelajak oyида hech narsa yo'q → qoplanmagan
     assert _recurring_paid(r.id, 2026, 11, r.category) is False
+    # Shu oyда «аренда» chiqimi paydo bo'lsa → qoplangan (ikki marta sanamaslik)
+    _mk_txn("2026-11-04", 6_000_000, "аренда", "карта 9933")
+    assert _recurring_paid(r.id, 2026, 11, r.category) is True
 
 
 # ── Dastur-native moliya: sync yo'q, to'liq CRUD ──

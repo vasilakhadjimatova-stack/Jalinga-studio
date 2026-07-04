@@ -5,3 +5,4 @@ from models.montaj import EditJob       # noqa: F401
 from models.finance import (            # noqa: F401
     FinWallet, FinCategory, FinTransaction, FinDebt, FinSetting,
     FinRecurring, FinPlan)
+from models.audit import AuditLog       # noqa: F401

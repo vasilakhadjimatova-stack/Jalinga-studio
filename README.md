@@ -133,6 +133,18 @@ Himoyalar:
 - Baza sxemasi hech qachon o'chirilmaydi: `create_all` faqat yangi jadval
   yaratadi, migratsiya faqat ustun qo'shadi — kod ma'lumotni o'chirmaydi.
 
+## Sifat va operatsion (professional)
+- **CI**: `.github/workflows/ci.yml` — har push/PR'да pytest avtomatik yuguradi.
+- **Versiyalar qotirilgan**: `requirements.txt`да yuqori chegara (masalan
+  `Flask<4`) — katta yangilanish deploy'ni buzmaydi.
+- **Salomatlik**: `GET /healthz` — baza ulanishini tekshiradi (monitoring
+  uchun; DB yiqilsa 503).
+- **Audit-log**: moliya va jamoadagi har o'zgarish (kim/qachon/nima/IP)
+  yoziladi — Jamoa → «Audit-log» (faqat rahbar).
+- **Fon ishlar**: Telegram bot faqat bitta gunicorn workerда yuradi
+  (fayl-qulf yetakchisi) — takroriy poller yo'q.
+- **Maxfiylik**: real moliya ma'lumot repoда saqlanmaydi (snapshot gitignore).
+
 ## Deploy (Railway)
 `railway.json` + `Procfile` tayyor — repo'ni ulasangiz avto-deploy bo'ladi.
 Majburiy env'lar: `SECRET_KEY`, `ADMIN_CODE`, va **`DATABASE_URL` (PostgreSQL)**.
