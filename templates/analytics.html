@@ -1,15 +1,118 @@
 {% extends "base.html" %}
 {% block title %}Analitika{% endblock %}
 {% block page_title %}Analitika{% endblock %}
-{% block page_crumb %}Bandlik xaritasi · churn radar · top mijozlar{% endblock %}
+{% block page_crumb %}{{ month_label }} — KPI · trend · segmentlar · SLA{% endblock %}
+{% block extra_css %}
+<style>
+.delta{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.delta.up{background:var(--green-bg);color:var(--green)}
+.delta.dn{background:var(--red-bg);color:var(--red)}
+.delta.zz{background:var(--surface2);color:var(--txt3)}
+.ins{display:flex;gap:11px;padding:11px 20px;border-bottom:1px solid var(--line);align-items:flex-start;
+  text-decoration:none;color:inherit}
+.ins:last-child{border-bottom:0}
+.ins i{font-size:17px;margin-top:1px}
+.ins.ok i{color:var(--green)}.ins.warn i{color:var(--amber)}.ins.info i{color:var(--blue)}
+.ins-txt{font-size:12.5px;line-height:1.55;color:var(--txt2)}
+.segrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.segc{border-radius:13px;padding:12px 14px;text-align:center;border:1px solid var(--line);background:var(--surface2)}
+.segc b{display:block;font-size:21px;font-variant-numeric:tabular-nums}
+.segc span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.wkc{border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;background:var(--surface2)}
+.wkc .l{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--txt3)}
+.wkc .h{font-size:15px;font-weight:800;margin:3px 0;font-variant-numeric:tabular-nums}
+.wkbar{height:4px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
+.wkbar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--brand),#FBBF24)}
+.chartbox{position:relative;height:260px}
+.shbar{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:4px}
+.shbar i{display:block;height:100%;border-radius:3px;background:var(--brand)}
+@media(max-width:820px){.segrow{grid-template-columns:repeat(2,1fr)}.wk{grid-template-columns:repeat(4,1fr)}}
+</style>
+{% endblock %}
 {% block content %}
 <div class="ph"><div>
   <div class="gold-bar"></div>
   <div class="ph-title">Analitika</div>
-  <div class="ph-sub">Strategik ko'rinish — qaysi soat bo'sh, kim uzoqlashdi, kim yetakchi</div>
+  <div class="ph-sub">{{ month_label }} — biznes qayoqqa ketyapti: KPI, trend, segmentlar, xavflar</div>
 </div></div>
 
+<!-- KPI + delta -->
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Yozuv soatlari (oy)</div>
+    <div class="kpi-val" style="font-size:22px">{{ kpi.hours }}</div>
+  </div><div class="kpi-ico gold"><i class="icon-clock"></i></div></div>
+    {% if kpi.hours_d is not none %}<span class="delta {{ 'up' if kpi.hours_d>=0 else 'dn' }}" title="O'tgan oyning shu kunigacha bo'lgan davriga nisbatan (MTD)">{{ '+' if kpi.hours_d>=0 }}{{ kpi.hours_d }}% MTD</span>{% endif %}</div>
+  {% if is_admin %}
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Tushum (oy)</div>
+    <div class="kpi-val" style="font-size:22px;color:var(--green)">{{ kpi.revenue|som }}</div>
+  </div><div class="kpi-ico green"><i class="icon-banknote"></i></div></div>
+    {% if kpi.revenue_d is not none %}<span class="delta {{ 'up' if kpi.revenue_d>=0 else 'dn' }}" title="O'tgan oyning shu kunigacha bo'lgan davriga nisbatan (MTD)">{{ '+' if kpi.revenue_d>=0 }}{{ kpi.revenue_d }}% MTD</span>{% endif %}
+    {% if kpi.avg_check %}<span class="delta zz">o'rt. chek {{ kpi.avg_check|som }}</span>{% endif %}</div>
+  {% endif %}
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Faol mijozlar (oy)</div>
+    <div class="kpi-val" style="font-size:22px">{{ kpi.clients }}</div>
+  </div><div class="kpi-ico blue"><i class="icon-users"></i></div></div>
+    {% if kpi.clients_d is not none %}<span class="delta {{ 'up' if kpi.clients_d>=0 else 'dn' }}" title="O'tgan oyning shu kunigacha bo'lgan davriga nisbatan (MTD)">{{ '+' if kpi.clients_d>=0 }}{{ kpi.clients_d }}% MTD</span>{% endif %}
+    <span class="delta zz">+{{ kpi.new }} yangi</span></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Bekor / kelmadi</div>
+    <div class="kpi-val" style="font-size:22px;color:{{ 'var(--red)' if kpi.bad_pct>10 else 'var(--txt)' }}">{{ kpi.bad_pct }}%</div>
+  </div><div class="kpi-ico {{ 'red' if kpi.bad_pct>10 else 'gold' }}"><i class="icon-user-x"></i></div></div>
+    <span class="delta zz">o'tgan oy: {{ kpi.bad_pct_prev }}%</span></div>
+</div>
+
+<!-- Aqlli xulosalar -->
 <div class="card">
+  <div class="card-hd"><div class="card-title"><i class="icon-lightbulb"></i> Aqlli xulosalar</div>
+    <span class="tag tag-amber">{{ insights|length }} ta signal</span></div>
+  {% for s in insights %}
+  {% if s.link %}<a href="{{ s.link }}" class="ins {{ s.level }}">{% else %}<div class="ins {{ s.level }}">{% endif %}
+    <i class="icon-{{ s.icon }}"></i><div class="ins-txt">{{ s.text }}</div>
+  {% if s.link %}</a>{% else %}</div>{% endif %}
+  {% endfor %}
+</div>
+
+<div class="grid g2">
+  <!-- 6 oylik trend -->
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-trending-up"></i> 6 oylik trend</div>
+      <span class="tag tag-gray">soat{% if is_admin %} + tushum{% endif %} + bandlik %</span></div>
+    <div class="card-bd"><div class="chartbox"><canvas id="trendChart"></canvas></div></div>
+  </div>
+
+  <!-- Kelgusi 7 kun + segmentlar -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="card" style="margin:0">
+      <div class="card-hd"><div class="card-title"><i class="icon-calendar-range"></i> Kelgusi 7 kun yuklama</div></div>
+      <div class="card-bd"><div class="wk">
+        {% for d in week_ahead %}
+        <div class="wkc" title="{{ d.date }} — {{ d.hours }} soat">
+          <div class="l">{{ d.label }}</div>
+          <div class="h">{{ d.hours }}</div>
+          <div class="wkbar"><i style="width:{{ d.pct }}%"></i></div>
+        </div>
+        {% endfor %}
+      </div></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-hd"><div class="card-title"><i class="icon-users-round"></i> Mijoz segmentlari</div>
+        {% if lead_avg is not none %}<span class="tag tag-gray">bron o'rt. {{ lead_avg }} kun oldin</span>{% endif %}</div>
+      <div class="card-bd"><div class="segrow">
+        <div class="segc"><b style="color:var(--green)">{{ seg.active }}</b><span>Faol ≤14k</span></div>
+        <div class="segc"><b style="color:var(--amber)">{{ seg.cooling }}</b><span>Sovumoqda</span></div>
+        <div class="segc"><b style="color:#FB923C">{{ seg.sleeping }}</b><span>Uxlagan</span></div>
+        <div class="segc"><b style="color:var(--red)">{{ seg.lost }}</b><span>Yo'qotilgan</span></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bandlik xaritasi -->
+<div class="card" style="margin-top:16px">
   <div class="card-hd"><div class="card-title"><i class="icon-flame"></i> Bandlik xaritasi — oxirgi 30 kun</div>
     <span style="font-size:11.5px;color:var(--txt3)">To'q rang = band · oqish soatlarga chegirma o'ylang</span></div>
   <div class="card-bd" style="overflow-x:auto">
@@ -33,8 +136,9 @@
   </div>
 </div>
 
-<div class="grid g2">
-  <div class="card" style="margin:0">
+<div class="grid g2" style="margin-top:16px">
+  <!-- Churn radar -->
+  <div class="card" style="margin:0" id="churn">
     <div class="card-hd"><div class="card-title"><i class="icon-radar"></i> Churn radar — {{ churn_days }}+ kun yozilmagan</div>
       <span class="tag tag-{{ 'red' if churn else 'green' }}">{{ churn|length }} ta</span></div>
     <div style="padding:0;max-height:440px;overflow-y:auto">
@@ -42,7 +146,8 @@
       <a href="/teachers/{{ c.t.id }}" class="feed-item">
         <div class="sb-av" style="width:34px;height:34px;font-size:13px">{{ c.t.name[0]|upper }}</div>
         <div style="flex:1;min-width:0"><b>{{ c.t.name }}</b>
-          <div style="font-size:11px;color:var(--txt3)">{{ c.t.subject or '—' }} · {{ c.t.phone or '' }}</div></div>
+          <div style="font-size:11px;color:var(--txt3)">{{ c.t.subject or '—' }} · {{ c.t.phone or '' }}
+            {% if c.t.balance_hours %} · balans {{ c.t.balance_hours }} soat{% endif %}</div></div>
         <span class="tag tag-red">{{ c.days }}{{ ' kun' if c.days != 'hech' else '' }}</span>
       </a>
       {% else %}
@@ -51,21 +156,97 @@
     </div>
   </div>
 
+  <!-- Top mijozlar + kontsentratsiya -->
   <div class="card" style="margin:0">
-    <div class="card-hd"><div class="card-title"><i class="icon-trophy"></i> Top mijozlar — 90 kun</div></div>
+    <div class="card-hd"><div class="card-title"><i class="icon-trophy"></i> Top mijozlar — 90 kun</div>
+      {% if top|length >= 3 %}<span class="tag tag-{{ 'red' if top3_share>=40 else 'gray' }}"
+        title="Top-3 mijoz ulushi — 40%+ bo'lsa kontsentratsiya xavfi">top-3: {{ top3_share }}%</span>{% endif %}</div>
     <div style="padding:0">
       {% for x in top %}
-      <div class="feed-item">
+      <a href="/teachers/{{ x.id }}" class="feed-item">
         <span style="width:26px;height:26px;border-radius:8px;background:{% if loop.index==1 %}var(--gold-bg){% else %}var(--surface2){% endif %};
           color:{% if loop.index==1 %}var(--gold){% else %}var(--txt3){% endif %};font-weight:800;font-size:12px;
           display:flex;align-items:center;justify-content:center;flex:0 0 auto">{{ loop.index }}</span>
-        <span style="flex:1;font-weight:700">{{ x.name }}</span>
-        <b>{{ x.hours }} soat</b>
-      </div>
+        <div style="flex:1;min-width:0">
+          <b>{{ x.name }}</b>
+          <div class="shbar"><i style="width:{{ x.share }}%"></i></div>
+        </div>
+        <div style="text-align:right;white-space:nowrap">
+          <b>{{ x.hours }} soat</b>
+          {% if is_admin and x.revenue %}<div style="font-size:10.5px;color:var(--green)">{{ x.revenue|som }}</div>{% endif %}
+        </div>
+      </a>
       {% else %}
       <div class="empty"><i class="icon-trophy"></i>Hali yozuvlar yo'q</div>
       {% endfor %}
     </div>
   </div>
 </div>
+
+<!-- Montaj SLA -->
+<div class="grid g4" style="margin-top:16px">
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Montaj — ochiq kartalar</div>
+    <div class="kpi-val" style="font-size:20px">{{ sla.open }}</div>
+  </div><div class="kpi-ico blue"><i class="icon-scissors"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Muddati o'tgan</div>
+    <div class="kpi-val" style="font-size:20px;color:{{ 'var(--red)' if sla.overdue else 'var(--green)' }}">{{ sla.overdue }}</div>
+  </div><div class="kpi-ico {{ 'red' if sla.overdue else 'green' }}"><i class="icon-timer-off"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">O'rtacha topshirish (90k)</div>
+    <div class="kpi-val" style="font-size:20px">{{ sla.avg_days if sla.avg_days is not none else '—' }}{% if sla.avg_days is not none %} kun{% endif %}</div>
+  </div><div class="kpi-ico gold"><i class="icon-gauge"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Topshirildi (90 kun)</div>
+    <div class="kpi-val" style="font-size:20px">{{ sla.delivered_90 }}</div>
+  </div><div class="kpi-ico green"><i class="icon-check-circle"></i></div></div></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  var css = getComputedStyle(document.documentElement);
+  var txt3 = css.getPropertyValue('--txt3').trim() || '#8A93A8';
+  var line = 'rgba(140,150,170,.14)';
+  var mln = function(v){ return Math.abs(v) >= 1e6 ? (v/1e6).toFixed(1).replace(/\.0$/,'')+' mln'
+                        : Math.abs(v) >= 1e3 ? (v/1e3).toFixed(0)+' ming' : v; };
+  var IS_ADMIN = {{ 'true' if is_admin else 'false' }};
+  var labels = {{ trend|map(attribute='label')|list|tojson }};
+  var hoursD = {{ trend|map(attribute='hours')|list|tojson }};
+  var utilD  = {{ trend|map(attribute='util')|list|tojson }};
+  var revD   = {{ trend|map(attribute='revenue')|list|tojson }};
+  var ds = [
+    {type:'bar', label:'Soat', data:hoursD, yAxisID:'y',
+     backgroundColor:'rgba(240,168,49,.75)', borderRadius:6, maxBarThickness:26},
+    {type:'line', label:'Bandlik %', data:utilD, yAxisID:'y1',
+     borderColor:'#60A5FA', backgroundColor:'rgba(96,165,250,.12)',
+     tension:.35, borderWidth:2, pointRadius:3}
+  ];
+  if(IS_ADMIN) ds.push({type:'line', label:'Tushum', data:revD, yAxisID:'y2',
+     borderColor:'#7CBFA0', backgroundColor:'rgba(124,191,160,.1)',
+     tension:.35, borderWidth:2, pointRadius:3, hidden:false});
+  new Chart(document.getElementById('trendChart'), {
+    data:{labels:labels, datasets:ds},
+    options:{responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{labels:{color:txt3, boxWidth:11, boxHeight:11, borderRadius:3,
+        useBorderRadius:true, font:{family:'Inter',weight:'700',size:10.5}}},
+        tooltip:{callbacks:{label:function(c){
+          if(c.dataset.label==='Tushum') return ' Tushum: '+c.raw.toLocaleString('ru-RU').replace(/,/g,' ')+" so'm";
+          if(c.dataset.label==='Bandlik %') return ' Bandlik: '+c.raw+'%';
+          return ' Soat: '+c.raw;}}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:txt3, font:{family:'Inter',size:10.5}}},
+        y:{position:'left', grid:{color:line}, border:{display:false},
+           ticks:{color:txt3, font:{size:10}}},
+        y1:{position:'right', min:0, max:100, grid:{display:false},
+            border:{display:false}, ticks:{color:'#60A5FA', font:{size:10},
+            callback:function(v){return v+'%';}}},
+        y2:{display:false}
+      }}
+  });
+})();
+</script>
 {% endblock %}
