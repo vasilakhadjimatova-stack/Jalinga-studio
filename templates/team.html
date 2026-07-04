@@ -36,6 +36,32 @@
   </div>
 </div>
 
+<!-- Ma'lumot zaxirasi (backup) -->
+<div class="card" id="backup">
+  <div class="card-hd"><div class="card-title"><i class="icon-database-backup"></i> Ma'lumot zaxirasi</div>
+    {% if data_at_risk %}<span class="tag tag-red">Postgres ulanmagan!</span>
+    {% else %}<span class="tag tag-green">baza doimiy</span>{% endif %}</div>
+  <div class="card-bd">
+    {% if data_at_risk %}
+    <div style="background:var(--red-bg);border:1px solid rgba(251,113,133,.3);border-radius:12px;
+         padding:13px 16px;margin-bottom:14px;font-size:12.5px;line-height:1.6;color:var(--txt2)">
+      <b style="color:var(--red)">⚠️ Diqqat:</b> hozir ma'lumot vaqtinchalik bazada (SQLite).
+      Server yangilanganда yoki qayta ishga tushganда <b>hammasi yo'qolishi mumkin</b>.
+      Doimiy saqlash uchun Railway'да <b>PostgreSQL</b> ulang (New → Database → PostgreSQL —
+      <code>DATABASE_URL</code> avtomatik ulanadi). Ungacha muntazam zaxira nusxa oling.
+    </div>
+    {% endif %}
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <a href="/team/backup.json" class="btn btn-gold" download>
+        <i class="icon-download"></i> Butun bazani yuklab olish (.json)</a>
+      <div style="font-size:11.5px;color:var(--txt3);line-height:1.5">
+        Mijozlar, bronlar, to'lovlar, moliya, montaj va jamoa — bitta faylда.<br>
+        Telefon/kompyuterга saqlang; SQLite→Postgres ko'chirishда ham asqotadi.
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov" id="m-team" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
     <div class="modal-title" id="mt-title"><i class="icon-user-plus"></i> Xodim</div>

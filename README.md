@@ -109,9 +109,32 @@ ADMIN_CODE=123456 python app.py        # http://localhost:5060
 python -m pytest tests/ -q
 ```
 
+## ⚠️ Ma'lumot xavfsizligi (MUHIM)
+**Productionда doimiy PostgreSQL ulang** — aks holda ma'lumot yo'qoladi.
+Railway (va shunga o'xshash platformalar) konteyneri fayl tizimi
+**vaqtinchalik**: agar `DATABASE_URL` o'rnatilmasa, ilova `sqlite:///jalinga.db`
+faylga yozadi va **har deploy/restart'да butun baza (mijozlar, bronlar,
+to'lovlar, moliya) o'chib ketadi**.
+
+**Yechim (5 daqiqa):**
+1. Railway → **New → Database → PostgreSQL** qo'shing.
+2. Railway `DATABASE_URL`ni avtomatik ulaydi — qo'shimcha sozlash shart emas
+   (kod `postgres://` → `postgresql://` ni o'zi to'g'rilaydi, `psycopg2`
+   drayveri `requirements.txt`да bor).
+3. Deploy'дан keyin ilova Postgres'ga yozadi; jadvallar avto-yaraladi.
+
+Himoyalar:
+- Production + SQLite aniqlansa — startда **CRITICAL log** va panelда rahbarга
+  **qizil ogohlantirish banneri** chiqadi.
+- **Zaxira nusxa**: Jamoa sahifasida «Butun bazani yuklab olish (.json)» —
+  rahbar istagan payt hamma ma'lumotni faylga saqlaydi (off-platforma backup,
+  SQLite→Postgres ko'chirishда ham asqotadi).
+- Baza sxemasi hech qachon o'chirilmaydi: `create_all` faqat yangi jadval
+  yaratadi, migratsiya faqat ustun qo'shadi — kod ma'lumotni o'chirmaydi.
+
 ## Deploy (Railway)
 `railway.json` + `Procfile` tayyor — repo'ni ulasangiz avto-deploy bo'ladi.
-`SECRET_KEY` va `ADMIN_CODE` env'larini qo'ying.
+Majburiy env'lar: `SECRET_KEY`, `ADMIN_CODE`, va **`DATABASE_URL` (PostgreSQL)**.
 
 ---
 Arxitektura Impulse ERP'da sinalgan yondashuvga asoslangan:

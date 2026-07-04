@@ -384,6 +384,15 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
       <button class="tb-theme" onclick="jlTheme()" title="Mavzu">🌗</button>
     </div>
   </div>
+  {% if data_at_risk and current_user and current_user.is_admin %}
+  <a href="/team#backup" style="display:block;background:linear-gradient(90deg,rgba(251,113,133,.22),rgba(251,113,133,.10));
+     border-bottom:1px solid rgba(251,113,133,.4);color:#FFDDE3;padding:11px 28px;
+     font-size:12.5px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:9px">
+    <i class="icon-alert-triangle" style="color:#FB7185;font-size:16px"></i>
+    <span>Ma'lumot xavf ostida: doimiy baza (PostgreSQL) ulanmagan — har yangilanishда yo'qolishi mumkin.
+      Zaxira nusxa oling va Railway'да Postgres ulang →</span>
+  </a>
+  {% endif %}
   <div class="content">{% block content %}{% endblock %}</div>
 </div>
 
