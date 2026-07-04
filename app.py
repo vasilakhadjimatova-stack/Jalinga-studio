@@ -28,6 +28,19 @@ def create_app():
                 "kerak (Railway → Variables → SECRET_KEY).")
         app.config["SESSION_COOKIE_SECURE"] = True
 
+    # Ma'lumot XAVFI ogohlantirishi: productionда SQLite = har deploy'да
+    # baza yo'qoladi. Ishga tushishga to'sqinlik qilmaymiz (sayt yiqilib
+    # qolmasin), lekin baland CRITICAL log + UI banner beramiz.
+    if Config.DATA_AT_RISK:
+        logging.critical(
+            "═══════════════════════════════════════════════════════════\n"
+            "  MA'LUMOT XAVF OSTIDA: production'да SQLite ishlatilmoqda!\n"
+            "  Railway konteyneri vaqtinchalik — HAR DEPLOY'ДА BAZA "
+            "YO'QOLADI.\n"
+            "  Yechim: Railway → New → Database → PostgreSQL qo'shing va\n"
+            "  DATABASE_URL o'zgaruvchisi avtomatik ulanadi.\n"
+            "═══════════════════════════════════════════════════════════")
+
     init_db(app)
 
     from modules.auth.routes import bp as auth_bp
@@ -56,7 +69,8 @@ def create_app():
     @app.context_processor
     def inject_globals():
         return {"current_user": current_user(), "csrf_token": csrf_token,
-                "company": Config.COMPANY_NAME}
+                "company": Config.COMPANY_NAME,
+                "data_at_risk": Config.DATA_AT_RISK}
 
     @app.template_filter("som")
     def som(v):

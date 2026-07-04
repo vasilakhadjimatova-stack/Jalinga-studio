@@ -15,6 +15,13 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
 
+    # Ma'lumot XAVFI: productionда SQLite ishlatilsa, Railway konteyneri
+    # fayl tizimi vaqtinchalik bo'lgani uchun HAR DEPLOY/RESTART'да butun baza
+    # yo'qoladi. Doimiy Postgres ulash SHART (DATABASE_URL). Bu bayroq UI'да
+    # qizil ogohlantirish va startда CRITICAL log chiqarish uchun ishlatiladi.
+    DB_IS_SQLITE = SQLALCHEMY_DATABASE_URI.startswith("sqlite")
+    DATA_AT_RISK = IS_PRODUCTION and DB_IS_SQLITE
+
     COMPANY_NAME = "Jalinga Studio"
     # Ish vaqti (kalendar to'ri)
     WORK_START = 9    # 09:00

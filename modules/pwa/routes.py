@@ -14,8 +14,9 @@ from config import Config
 
 bp = Blueprint("pwa", __name__)
 
-# SW versiyasi — o'zgarsa eski kesh tozalanadi (sw.js ichида ishlatiladi)
-CACHE_VERSION = "jalinga-v2"
+# SW versiyasi — o'zgarsa eski kesh tozalanadi (sw.js ichида ishlatiladi).
+# v3: HTML sahifalar keshdan chiqarildi (CSRF token xato bug'ini tuzatadi).
+CACHE_VERSION = "jalinga-v3"
 
 
 @bp.route("/manifest.webmanifest")
@@ -90,7 +91,10 @@ def apple_touch_icon():
 
 # ── Service worker manbasi ───────────────────────────────────────────────────
 # Strategiya:
-#  • navigatsiya (sahifa) so'rovlari — network-first, xato bo'lsa oflayn sahifa
+#  • navigatsiya (HTML sahifa) — FAQAT tarmoq (network-only), xato bo'lsa
+#    oflayn sahifa. HTML KESHLANMAYDI: har sahifada sessiyaga bog'liq CSRF
+#    tokeni bor — keshlangan eski token «CSRF token xato» (400) beradi.
+#    Shuning uchun sahifalar doim serverdan yangi olinadi.
 #  • /static/ resurslari — cache-first (tez, kam trafik)
 #  • boshqa GET (shriftlar, CDN) — network, imkoni bo'lsa keshga oladi
 #  • faqat GET keshlanadi; POST/boshqalar to'g'ridan-to'g'ri tarmoqqa
@@ -127,18 +131,15 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;                    // faqat GET
   const url = new URL(req.url);
 
-  // Sahifa navigatsiyasi: preload/network-first → cache → oflayn
+  // Sahifa navigatsiyasi: FAQAT tarmoq (HTML hech qachon keshlanmaydi —
+  // CSRF tokeni har sessiyada yangi). Tarmoq yo'q bo'lsagina oflayn sahifa.
   if (req.mode === 'navigate') {
     e.respondWith((async () => {
       try {
         const preload = await e.preloadResponse;
-        const res = preload || await fetch(req);
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
+        return preload || await fetch(req);
       } catch (_) {
-        const cached = await caches.match(req);
-        return cached || caches.match('/offline');
+        return (await caches.match('/offline')) || Response.error();
       }
     })());
     return;
