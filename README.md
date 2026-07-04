@@ -50,11 +50,13 @@ Google Sheets «Jalinga 2026» jadvali asosida to'liq moliya boshqaruvi
 - **📉 Yig'ma qoldiq grafigi** — panelда oy oxiri kassa qoldig'i chizig'i
 - **🤝 Qarzlar** — DOLG varag'i: kimga, qancha, qaytish foizi
 - **👑 Dividendlar** — ta'sischi to'lovlari tarixi
-- **🔄 Sync** — 1 tugma: jadval ochiq havola orqali (kredensialsiz) xlsx
-  eksportdan o'qiladi; repo'da `data/finance_snapshot.json` zaxira nusxa —
-  birinchi ishga tushishda internetsiz ham ma'lumot bor. Qo'lda kiritilgan
-  yozuvlar sync'da saqlanadi. `FINANCE_SYNC_INTERVAL` bilan avto-sync
-  yoqiladi (fon thread, masalan har 120 daqiqa).
+- **⚙️ Dastur-native** — moliya to'liq dastur ichida yuritiladi (Google
+  Sheets bog'liqligi yo'q). Sozlamalar sahifasida hisoblar (ochilish
+  qoldig'i) va ДДС statyalarini boshqarasiz; tranzaksiyalarni qo'sh/tahrir/
+  o'chirasiz; qarzlarni to'liq yuritasiz (qo'shish/qaytarish/o'chirish).
+  Jadvaldan olingan tarix (yanvar–iyun) endi to'liq tahrirlanadi.
+  `data/finance_snapshot.json` faqat birinchi ishga tushishда boshlang'ich
+  ma'lumot uchun (keyin ishlatilmaydi).
 - **🔗 Studiya to'lovi → moliya** — mijoz to'lovi «To'landi» deb
   tasdiqlanганda moliya jurnalida avtomatik «Поступление от клиента (запись)»
   kirim paydo bo'ladi (bekor/o'chirilса — yo'qoladi). Studiya operatsiyalari
@@ -101,7 +103,6 @@ ADMIN_CODE=123456 python app.py        # http://localhost:5060
 | `TELEGRAM_BOT_TOKEN` | Bot tokeni (@BotFather) — bo'lmasa bot jim o'chiq |
 | `FINANCE_SPREADSHEET_ID` | Google Sheets ID (default: Jalinga 2026 jadvali) |
 | `USD_RATE` | $ kassa uchun so'm kursi (default: 12000) |
-| `FINANCE_SYNC_INTERVAL` | Avto-sync intervali, daqiqa (default: 0 = o'chiq) |
 | `CASH_SAFETY_BUFFER` | To'lov kalendari minimal kassa zaxirasi (default: 20 mln) |
 
 ## Test

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Qarzlar{% endblock %}
 {% block page_title %}Moliya — qarzlar{% endblock %}
-{% block page_crumb %}Qarz daftari (DOLG){% endblock %}
+{% block page_crumb %}Qarz daftari{% endblock %}
 {% block extra_css %}
 <style>
 .pbar{height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;min-width:110px}
@@ -14,8 +14,10 @@
 <div class="ph"><div>
   <div class="gold-bar"></div>
   <div class="ph-title">Qarz daftari</div>
-  <div class="ph-sub">Google Sheets «DOLG» varag'i — kim kimga, qancha, qancha qaytdi</div>
-</div></div>
+  <div class="ph-sub">Kim kimga, qancha bergan — qancha qaytdi</div>
+</div>
+<button class="btn btn-gold" onclick="dEdit()"><i class="icon-plus"></i> Qarz qo'shish</button>
+</div>
 
 <div class="grid g4" style="margin-bottom:16px">
   <div class="kpi"><div class="kpi-top"><div>
@@ -37,7 +39,7 @@
   <table class="tbl">
     <thead><tr>
       <th>Sana</th><th>Kimga</th><th>Sabab</th>
-      <th class="r">Summa</th><th class="r">Qaytdi</th><th class="r">Qoldiq</th><th>Holat</th>
+      <th class="r">Summa</th><th class="r">Qaytdi</th><th class="r">Qoldiq</th><th>Holat</th><th></th>
     </tr></thead>
     <tbody>
       {% for d in rows %}
@@ -45,11 +47,11 @@
         <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ d.date or '—' }}</td>
         <td><b>{{ d.creditor or '—' }}</b>
           {% if d.debtor %}<div style="font-size:11px;color:var(--txt3)">{{ d.debtor }} bergan</div>{% endif %}</td>
-        <td style="max-width:380px"><div style="white-space:normal;font-size:12px;color:var(--txt2)">{{ d.reason or '—' }}</div></td>
+        <td style="max-width:340px"><div style="white-space:normal;font-size:12px;color:var(--txt2)">{{ d.reason or '—' }}</div></td>
         <td class="r"><b>{{ d.amount|som }}</b></td>
         <td class="r" style="color:var(--green)">{{ d.repaid|som }}</td>
         <td class="r"><b style="color:{{ 'var(--amber)' if d.remainder > 0 else 'var(--txt3)' }}">{{ d.remainder|som }}</b></td>
-        <td style="min-width:130px">
+        <td style="min-width:120px">
           {% set pct = (d.repaid / d.amount * 100)|round if d.amount else 100 %}
           {% if d.remainder <= 0 %}
           <span class="tag tag-green">✓ Yopilgan</span>
@@ -58,12 +60,85 @@
           <div style="font-size:10.5px;color:var(--txt3);margin-top:3px">{{ pct }}% qaytdi</div>
           {% endif %}
         </td>
+        <td class="r" style="white-space:nowrap">
+          {% if d.remainder > 0 %}
+          <button class="btn btn-sm btn-gold" title="Qaytarish"
+            onclick='dRepay({{ d.id }}, {{ d.creditor|tojson }}, {{ d.remainder }})'>↩︎</button>
+          {% endif %}
+          <button class="btn btn-sm btn-ghost"
+            onclick='dEdit({{ d.id }}, {{ (d.date or "")|tojson }}, {{ d.creditor|tojson }}, {{ d.debtor|tojson }}, {{ (d.reason or "")|tojson }}, {{ d.amount or 0 }}, {{ d.repaid or 0 }})'><i class="icon-pencil"></i></button>
+          <form method="POST" action="/finance/debts/{{ d.id }}/delete" style="display:inline" onsubmit="return confirm('Qarz o\'chirilsinmi?')">
+            <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
+          </form>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="7"><div class="empty"><i class="icon-hand-coins"></i>Qarzlar yo'q</div></td></tr>
+      <tr><td colspan="8"><div class="empty"><i class="icon-hand-coins"></i>Qarzlar yo'q — qo'shing</div></td></tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
 </div>
+
+<!-- Qarz qo'shish/tahrirlash modali -->
+<div class="modal-ov" id="dMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-hand-coins"></i> <span id="dTitle">Qarz</span></div>
+    <form method="POST" id="dForm" action="/finance/debts/add">
+      <label>Sana</label><input class="input" name="date" id="dDate" placeholder="masalan 2026-07-04">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Kimga (kreditor)</label><input class="input" name="creditor" id="dCred" placeholder="MBM / Impulse..."></div>
+        <div><label>Kim bergan (debitor)</label><input class="input" name="debtor" id="dDebt" placeholder="Jalinga"></div>
+      </div>
+      <label>Sabab / izoh</label><input class="input" name="reason" id="dReason" maxlength="500">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Summa (so'm)</label><input class="input" type="number" name="amount" id="dAmount" step="0.01" required></div>
+        <div><label>Qaytarilgan (so'm)</label><input class="input" type="number" name="repaid" id="dRepaid" step="0.01" value="0"></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Saqlash</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('dMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Qaytarish modali -->
+<div class="modal-ov" id="rMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-check-circle"></i> Qarzni qaytarish</div>
+    <div id="rInfo" style="font-size:13px;color:var(--txt2);margin-bottom:6px"></div>
+    <form method="POST" id="rForm">
+      <label>Qaytarilgan summa (so'm)</label><input class="input" type="number" name="amount" id="rAmount" step="0.01" required>
+      <label>Sana (ixtiyoriy)</label><input class="input" name="date" placeholder="2026-07-04">
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Belgilash</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('rMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function dEdit(id, date, cred, debt, reason, amount, repaid){
+  var f = document.getElementById('dForm');
+  f.action = id ? ('/finance/debts/'+id+'/edit') : '/finance/debts/add';
+  document.getElementById('dTitle').textContent = id ? 'Qarzni tahrirlash' : 'Yangi qarz';
+  document.getElementById('dDate').value = date || '';
+  document.getElementById('dCred').value = cred || '';
+  document.getElementById('dDebt').value = debt || 'Jalinga';
+  document.getElementById('dReason').value = reason || '';
+  document.getElementById('dAmount').value = (amount != null ? amount : '');
+  document.getElementById('dRepaid').value = (repaid != null ? repaid : 0);
+  document.getElementById('dMod').classList.add('open');
+}
+function dRepay(id, cred, remainder){
+  document.getElementById('rForm').action = '/finance/debts/'+id+'/repay';
+  document.getElementById('rInfo').innerHTML = (cred||'Qarz') +
+    ' — qoldiq <b>' + remainder.toLocaleString('ru-RU').replace(/,/g,' ') + " so'm</b>";
+  document.getElementById('rAmount').value = remainder;
+  document.getElementById('rMod').classList.add('open');
+}
+</script>
 {% endblock %}
