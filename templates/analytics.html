@@ -136,6 +136,79 @@
   </div>
 </div>
 
+<!-- SIG'IM va DAROMAD (yield management) -->
+<div class="card" style="margin-top:16px">
+  <div class="card-hd"><div class="card-title"><i class="icon-gauge"></i> Sig'im va daromad — bo'sh vaqtni pulga aylantirish</div>
+    <span class="tag tag-{{ 'red' if capacity.util30 < 55 else 'green' }}">bandlik {{ capacity.util30 }}%</span></div>
+  <div class="card-bd">
+    <!-- Sig'im KPI -->
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="segc" style="text-align:left;padding:13px 15px">
+        <span>Bandlik (30 kun)</span>
+        <b style="color:{{ 'var(--red)' if capacity.util30 < 55 else 'var(--green)' }}">{{ capacity.util30 }}%</b>
+        <div style="font-size:10.5px;color:var(--txt3)">{{ capacity.booked30 }} / {{ capacity.cap30 }} soat</div>
+      </div>
+      <div class="segc" style="text-align:left;padding:13px 15px">
+        <span>Bo'sh sig'im (30 kun)</span>
+        <b style="color:var(--amber)">{{ capacity.empty30 }}</b>
+        <div style="font-size:10.5px;color:var(--txt3)">studiya-soati sotilmadi</div>
+      </div>
+      {% if is_admin %}
+      <div class="segc" style="text-align:left;padding:13px 15px">
+        <span>Yo'qotilgan potentsial</span>
+        <b style="color:var(--red)">{{ capacity.lost_rev_30|som }}</b>
+        <div style="font-size:10.5px;color:var(--txt3)">to'la sig'imgacha (30 kun)</div>
+      </div>
+      <div class="segc" style="text-align:left;padding:13px 15px">
+        <span>Tiklash mumkin / oy</span>
+        <b style="color:var(--green)">+{{ capacity.recover_month|som }}</b>
+        <div style="font-size:10.5px;color:var(--txt3)">{{ capacity.discount }}% chegirma, yarmini to'ldirsa</div>
+      </div>
+      {% else %}
+      <div class="segc" style="text-align:left;padding:13px 15px">
+        <span>Ish kuni kunduzi bo'sh</span>
+        <b>{{ capacity.offpeak_empty_week }}</b>
+        <div style="font-size:10.5px;color:var(--txt3)">soat / hafta (09–17)</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid g2">
+      <!-- Eng top vaqtlar → premium -->
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--txt2);margin-bottom:8px">
+          <i class="icon-flame" style="color:var(--red)"></i> Eng top vaqtlar — premium narx qo'ying</div>
+        {% for s in capacity.peak %}
+        <div class="an-row">
+          <span class="an-dot" style="background:rgba(251,113,133,{{ 0.4 + loop.revindex0*0.12 }})"></span>
+          <span class="an-name">{{ s.label }}</span>
+          <span class="an-val">{{ s.util }}% band</span>
+        </div>
+        {% else %}<div class="empty" style="padding:18px"><i class="icon-flame"></i>Ma'lumot yig'ilmoqda</div>{% endfor %}
+        <div style="font-size:11px;color:var(--txt3);margin-top:8px;line-height:1.5">
+          💡 Kechqurun/dam olish kunlari talab yuqori — bu oynalarga <b>+10–15%</b>
+          «prime-time» narx real, mijoz sezmaydi.</div>
+      </div>
+      <!-- O'lik vaqtlar → chegirma -->
+      <div>
+        <div style="font-size:12px;font-weight:800;color:var(--txt2);margin-bottom:8px">
+          <i class="icon-moon" style="color:var(--blue)"></i> O'lik vaqtlar — chegirma bilan to'ldiring</div>
+        {% for s in capacity.dead %}
+        <div class="an-row">
+          <span class="an-dot" style="background:rgba(96,165,250,.6)"></span>
+          <span class="an-name">{{ s.label }}</span>
+          <span class="an-val" style="color:{{ 'var(--red)' if s.cnt==0 else 'var(--txt3)' }}">
+            {{ s.cnt if s.cnt else 'bo`sh' }}{{ '×' if s.cnt }}</span>
+        </div>
+        {% else %}<div class="empty" style="padding:18px"><i class="icon-moon"></i>Bo'sh oyna yo'q — zo'r!</div>{% endfor %}
+        <div style="font-size:11px;color:var(--txt3);margin-top:8px;line-height:1.5">
+          💡 Ish kunlari kunduzi (09–17) tabiiy bo'sh. <b>«Kunduzgi paket» −{{ capacity.discount }}%</b>
+          taklif qiling; churn va paketi tugagan mijozlarga aynan shu oynani bering.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="grid g2" style="margin-top:16px">
   <!-- Churn radar -->
   <div class="card" style="margin:0" id="churn">

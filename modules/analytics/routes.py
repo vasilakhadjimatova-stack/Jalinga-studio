@@ -173,9 +173,81 @@ def index():
             heat[wd][h - 9] += 1
             max_heat = max(max_heat, heat[wd][h - 9])
 
-    # ── Kelgusi 7 kun pipeline ───────────────────────────────────────────
     days_uz_full = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba",
                     "Juma", "Shanba", "Yakshanba"]
+
+    # ── SIG'IM va DAROMAD (yield management) ─────────────────────────────
+    # Falsafa: bo'sh studiya-soati = yo'qotilgan pul. Uni pulда o'lchaymiz,
+    # top vaqtlarni premium, o'lik vaqtlarni chegirma bilan to'ldirishга
+    # aniq yechim beramiz (aviakompaniya/mehmonxona modeli).
+    WORK_H = 12                       # 09:00–21:00
+    studio_objs = Studio.query.filter_by(is_active=True).all()
+    rates = [s.hourly_rate for s in studio_objs if (s.hourly_rate or 0) > 0]
+    avg_rate = round(sum(rates) / len(rates)) if rates else 0
+
+    cap30 = n_studios * WORK_H * 30
+    booked30 = sum(b.hours for b in all_bookings
+                   if d30 <= b.date <= today and b.status in done_like)
+    empty30 = max(cap30 - booked30, 0)
+    util30 = round(booked30 / cap30 * 100, 1) if cap30 else 0
+
+    # 8 haftalik slot statistikasi (barqaror namuna): kun × soat → band ulush
+    d56 = (t0 - timedelta(days=55)).strftime("%Y-%m-%d")
+    slot = [[0] * 12 for _ in range(7)]      # necha marta band bo'lgan
+    weeks_span = 8
+    for b in Booking.query.filter(
+            Booking.date >= d56, Booking.date <= today,
+            Booking.status.in_(done_like)).all():
+        try:
+            wd = datetime.strptime(b.date, "%Y-%m-%d").weekday()
+            h0 = int(b.start[:2])
+            h1 = max(h0 + 1, int(b.end[:2]) + (1 if b.end[3:] > "00" else 0))
+        except (ValueError, IndexError):
+            continue
+        for h in range(max(9, h0), min(21, h1)):
+            slot[wd][h - 9] += 1
+
+    cap_per_slot = n_studios * weeks_span     # 8 hafta × studiyalar = maks
+    slots = []
+    for wd in range(7):
+        for hi in range(12):
+            slots.append({"wd": wd, "h": hi + 9, "cnt": slot[wd][hi],
+                          "util": round(slot[wd][hi] / cap_per_slot * 100)
+                          if cap_per_slot else 0})
+    # Eng top vaqtlar (premium nomzodlari)
+    peak = sorted([s for s in slots if s["cnt"] > 0],
+                  key=lambda s: -s["cnt"])[:5]
+    for s in peak:
+        s["label"] = f"{days_uz_full[s['wd']]} {s['h']:02d}:00"
+    # O'lik vaqtlar — ish kunlari kunduzi (Du–Ju, 09–17) eng bo'shlari
+    dead_pool = [s for s in slots if s["wd"] <= 4 and 9 <= s["h"] <= 17]
+    dead = sorted(dead_pool, key=lambda s: (s["cnt"], s["h"]))[:6]
+    for s in dead:
+        s["label"] = f"{days_uz_full[s['wd']]} {s['h']:02d}:00"
+
+    # Off-peak (ish kuni kunduzi 09–17) bo'sh sig'im — haftalik
+    offpeak_cap_week = n_studios * 5 * 8      # 5 kun × 8 soat
+    offpeak_booked_week = sum(
+        slot[wd][h - 9] for wd in range(5) for h in range(9, 17)
+    ) / weeks_span
+    offpeak_empty_week = max(offpeak_cap_week - offpeak_booked_week, 0)
+
+    DISCOUNT = 20                              # tavsiya etilgan off-peak chegirma
+    FILL = 0.5                                 # real: bo'shning yarmini to'ldirish
+    # Oyiga tiklanadigan daromad (chegirmali narxda, ~4 hafta)
+    recover_month = round(offpeak_empty_week * FILL * 4
+                          * avg_rate * (1 - DISCOUNT / 100)) if avg_rate else 0
+    lost_rev_30 = round(empty30 * avg_rate) if avg_rate else 0
+
+    capacity = {
+        "util30": util30, "booked30": round(booked30),
+        "empty30": round(empty30), "cap30": cap30, "avg_rate": avg_rate,
+        "lost_rev_30": lost_rev_30, "peak": peak, "dead": dead,
+        "offpeak_empty_week": round(offpeak_empty_week),
+        "discount": DISCOUNT, "recover_month": recover_month,
+    }
+
+    # ── Kelgusi 7 kun pipeline ───────────────────────────────────────────
     week_ahead = []
     for i in range(7):
         d = t0 + timedelta(days=i)
@@ -273,18 +345,29 @@ def index():
         insights.append({"icon": icon, "level": level, "text": text,
                          "link": link})
 
-    if max_heat:
-        best = max(((wd, h) for wd in range(7) for h in range(12)),
-                   key=lambda x: heat[x[0]][x[1]])
+    # Sig'im/yield — eng qimmatli signal (pul yo'qotilyapti)
+    if capacity["peak"]:
+        p0 = capacity["peak"][0]
         add("flame", "ok",
-            f"Eng band vaqt: {days_uz_full[best[0]]} {best[1] + 9}:00 — bu "
-            f"oynani premium narxlash mumkin.")
-        empty = min(((wd, h) for wd in range(5) for h in range(1, 9)),
-                    key=lambda x: heat[x[0]][x[1]])
-        if heat[empty[0]][empty[1]] == 0:
-            add("moon", "info",
-                f"{days_uz_full[empty[0]]} {empty[1] + 9}:00 deyarli bo'sh — "
-                f"off-peak chegirma bilan to'ldirsa bo'ladi.")
+            f"Eng top vaqt: {p0['label']} (band ulush {p0['util']}%) — bu "
+            f"oynaga premium narx qo'yish mumkin.")
+    if capacity["cap30"]:
+        msg = (f"Oxirgi 30 kun bandlik {capacity['util30']}% — "
+               f"{capacity['empty30']} studiya-soati bo'sh turdi")
+        if is_admin and capacity["lost_rev_30"]:
+            msg += (f" (to'la sig'imда ≈{capacity['lost_rev_30'] / 1e6:.1f} "
+                    f"mln so'm potentsial)")
+        add("gauge", "warn" if capacity["util30"] < 55 else "info", msg + ".")
+    if capacity["dead"] and capacity["dead"][0]["cnt"] == 0:
+        d0 = capacity["dead"][0]
+        rec = ""
+        if is_admin and capacity["recover_month"]:
+            rec = (f" Ish kunlari kunduzi ~{capacity['offpeak_empty_week']} "
+                   f"soat/hafta bo'sh — {capacity['discount']}% chegirma "
+                   f"(«kunduzgi paket») bilan yarmini to'ldirsangiz oyiga "
+                   f"≈{capacity['recover_month'] / 1e6:.1f} mln so'm qo'shimcha.")
+        add("moon", "info",
+            f"{d0['label']} deyarli bo'sh — off-peak chegirma uchun ideal.{rec}")
     if kpi["hours_d"] is not None:
         if kpi["hours_d"] >= 10:
             add("trending-up", "ok",
@@ -345,4 +428,5 @@ def index():
         churn=churn, churn_days=CHURN_DAYS,
         top=top, top3_share=top3_share,
         sla=sla, lead_avg=lead_avg, insights=insights,
+        capacity=capacity, days_full=days_uz_full,
         month_label=f"{MONTH_UZ[t0.month]} {t0.year}")
