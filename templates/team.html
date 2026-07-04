@@ -76,17 +76,16 @@
           <input class="input" name="code" id="mt-code" inputmode="numeric" placeholder="masalan 4729"></div>
         <div><label>Rol</label>
           <select class="select" name="role" id="mt-role">
-            <option value="operator">🎥 Operator</option>
-            <option value="montaj">✂️ Montajchi</option>
-            <option value="admin">👑 Rahbar</option>
+            {% for r in roles %}<option value="{{ r }}">{{ role_labels.get(r, r) }}</option>{% endfor %}
           </select></div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;margin-top:13px;cursor:pointer" id="mt-active-w">
         <input type="checkbox" name="is_active" id="mt-active" value="1" checked style="width:17px;height:17px"> Faol
       </label>
       <div style="font-size:11.5px;color:var(--txt3);margin-top:10px">
-        Xodim shu kod bilan kiradi. Rollar: Rahbar — hammasi; Operator/Montajchi —
-        kalendar, mijozlar, montaj (moliya va jamoa faqat rahbarda).</div>
+        Xodim shu kod bilan kiradi. Rollar: <b>Rahbar</b> — hammasi ·
+        <b>Buxgalter</b> — faqat moliya · <b>Operator/Montajchi</b> — kalendar,
+        mijozlar, montaj (moliya va jamoa yo'q).</div>
       <div style="display:flex;gap:9px;margin-top:16px">
         <button type="button" class="btn btn-out" style="flex:1"
                 onclick="document.getElementById('m-team').classList.remove('open')">Bekor</button>
