@@ -18,7 +18,7 @@
   <div class="ph-sub">{% if month %}{{ month }}{% else %}Barcha davr{% endif %} — {{ rows|length }} ta yozuv</div>
 </div>
 {% if current_user.is_admin %}
-<button class="btn btn-gold" onclick="document.getElementById('addMod').classList.add('open')">
+<button class="btn btn-gold" onclick="txReset();document.getElementById('addMod').classList.add('open')">
   <i class="icon-plus"></i> Tranzaksiya</button>
 {% endif %}
 </div>
@@ -87,11 +87,13 @@
         <td><span class="tag {{ {'operating':'tag-blue','investing':'tag-amber','financing':'tag-gray','technical':'tag-gray'}[t.activity] }}">
           {{ {'operating':'Operatsion','investing':'Investitsion','financing':'Moliyaviy','technical':'O\'tkazma'}[t.activity] }}</span></td>
         <td class="r" style="white-space:nowrap">
-          {% if t.source == 'sheet' %}
-          <span class="src-lock" title="Google Sheets'dan — jadvalda o'zgartiriladi"><i class="icon-cloud"></i> Sheets</span>
-          {% elif t.source == 'studio' %}
+          {% if t.source == 'studio' %}
           <span class="src-lock" title="Studiya to'loviga bog'langan — «Studiya to'lovlari» sahifasidan boshqaring"><i class="icon-clapperboard"></i> Studiya</span>
+          {% elif t.source in ('plan', 'recurring') %}
+          <span class="src-lock" title="To'lov kalendari boshqaradi"><i class="icon-calendar-clock"></i> Kalendar</span>
           {% elif current_user.is_admin %}
+          <button class="btn btn-sm btn-ghost" title="Tahrirlash"
+            onclick='txEdit({{ t.id }}, {{ t.date|tojson }}, {{ t.category|tojson }}, {{ t.wallet|tojson }}, {{ t.amount }}, {{ (t.counterparty or "")|tojson }}, {{ (t.purpose or "")|tojson }})'><i class="icon-pencil"></i></button>
           <form method="POST" action="/finance/transactions/{{ t.id }}/delete" style="display:inline"
                 onsubmit="return confirm('Tranzaksiya o\'chirilsinmi?')">
             <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
@@ -107,17 +109,15 @@
   </div>
 </div>
 
-<!-- Qo'shish modali -->
+<!-- Qo'shish/tahrirlash modali -->
 {% if current_user.is_admin %}
 <div class="modal-ov" id="addMod" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal">
-    <div class="modal-title"><i class="icon-plus-circle"></i> Yangi tranzaksiya</div>
-    <div style="font-size:11.5px;color:var(--txt3);margin-bottom:8px">
-      Qo'lda kiritilgan yozuv Sheets sync'da o'chirilmaydi</div>
-    <form method="POST" action="/finance/transactions/add">
-      <label>Sana</label><input class="input" type="date" name="date" required>
+    <div class="modal-title"><i class="icon-plus-circle"></i> <span id="txTitle">Yangi tranzaksiya</span></div>
+    <form method="POST" id="txForm" action="/finance/transactions/add">
+      <label>Sana</label><input class="input" type="date" name="date" id="txDate" required>
       <label>Statya</label>
-      <select class="select" name="category" required>
+      <select class="select" name="category" id="txCat" required>
         <optgroup label="Kirim">
           {% for c in cats %}{% if c.direction=='in' %}<option value="{{ c.name }}">{{ c.name }}</option>{% endif %}{% endfor %}
         </optgroup>
@@ -126,12 +126,12 @@
         </optgroup>
       </select>
       <label>Hisob</label>
-      <select class="select" name="wallet" required>
+      <select class="select" name="wallet" id="txWallet" required>
         {% for w in wallets %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}
       </select>
-      <label>Summa (so'm)</label><input class="input" type="number" name="amount" min="1" step="0.01" required placeholder="1 000 000">
-      <label>Kontragent (ixtiyoriy)</label><input class="input" type="text" name="counterparty" maxlength="200">
-      <label>Izoh (ixtiyoriy)</label><input class="input" type="text" name="purpose" maxlength="400">
+      <label>Summa (so'm)</label><input class="input" type="number" name="amount" id="txAmount" min="1" step="0.01" required placeholder="1 000 000">
+      <label>Kontragent (ixtiyoriy)</label><input class="input" type="text" name="counterparty" id="txCtr" maxlength="200">
+      <label>Izoh (ixtiyoriy)</label><input class="input" type="text" name="purpose" id="txPurpose" maxlength="400">
       <div style="display:flex;gap:9px;margin-top:18px">
         <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Saqlash</button>
         <button class="btn btn-out" type="button" onclick="document.getElementById('addMod').classList.remove('open')">Bekor</button>
@@ -139,5 +139,23 @@
     </form>
   </div>
 </div>
+<script>
+function txReset(){
+  document.getElementById('txForm').action = '/finance/transactions/add';
+  document.getElementById('txTitle').textContent = 'Yangi tranzaksiya';
+  document.getElementById('txForm').reset();
+}
+function txEdit(id, date, cat, wallet, amount, ctr, purpose){
+  document.getElementById('txForm').action = '/finance/transactions/'+id+'/edit';
+  document.getElementById('txTitle').textContent = 'Tranzaksiyani tahrirlash';
+  document.getElementById('txDate').value = date || '';
+  document.getElementById('txCat').value = cat || '';
+  document.getElementById('txWallet').value = wallet || '';
+  document.getElementById('txAmount').value = (amount != null ? amount : '');
+  document.getElementById('txCtr').value = ctr || '';
+  document.getElementById('txPurpose').value = purpose || '';
+  document.getElementById('addMod').classList.add('open');
+}
+</script>
 {% endif %}
 {% endblock %}

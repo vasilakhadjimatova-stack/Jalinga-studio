@@ -210,17 +210,57 @@ def txn_add():
     return redirect(url_for("finance.transactions", month=d[:7]))
 
 
+# Foydalanuvchi qo'lда tahrirlashi/o'chirishi mumkin bo'lgan manbalar.
+# 'studio' — studiya to'loviга bog'langan (Studiya to'lovlari sahifasi);
+# 'plan'/'recurring' — to'lov kalendari boshqaradi.
+EDITABLE_SOURCES = ("sheet", "manual")
+LOCKED_MSG = {
+    "studio": "Bu yozuv studiya to'loviга bog'langan — «Studiya to'lovlari» "
+              "sahifasidan boshqaring",
+    "plan": "Bu yozuv to'lov kalendari rejasiга bog'langan — «To'lov "
+            "kalendari» sahifasidan boshqaring",
+    "recurring": "Bu yozuv doimiy to'lovga bog'langan — «To'lov kalendari» "
+                 "sahifasidan boshqaring",
+}
+
+
+@bp.route("/finance/transactions/<int:tid>/edit", methods=["POST"])
+@admin_required
+def txn_edit(tid):
+    t = FinTransaction.query.get_or_404(tid)
+    if t.source not in EDITABLE_SOURCES:
+        flash(LOCKED_MSG.get(t.source, "Bu yozuv tahrirlanmaydi"), "error")
+        return redirect(url_for("finance.transactions", month=t.date[:7]))
+    d = (request.form.get("date") or "").strip()[:10]
+    cat = FinCategory.query.filter_by(
+        name=(request.form.get("category") or "").strip()).first()
+    try:
+        amount = float((request.form.get("amount") or "0").replace(" ", "")
+                       .replace(",", "."))
+    except ValueError:
+        amount = 0
+    wallet = (request.form.get("wallet") or "").strip()
+    if len(d) != 10 or amount <= 0 or cat is None or not wallet:
+        flash("Sana, summa (>0), hamyon va statya to'g'ri bo'lishi shart",
+              "error")
+        return redirect(url_for("finance.transactions", month=t.date[:7]))
+    t.date, t.year, t.month = d, int(d[:4]), int(d[5:7])
+    t.amount = amount
+    t.wallet = wallet
+    t.counterparty = (request.form.get("counterparty") or "").strip()[:200]
+    t.purpose = (request.form.get("purpose") or "").strip()[:400]
+    t.category, t.direction, t.activity = cat.name, cat.direction, cat.activity
+    db.session.commit()
+    flash("✅ Tranzaksiya yangilandi", "success")
+    return redirect(url_for("finance.transactions", month=d[:7]))
+
+
 @bp.route("/finance/transactions/<int:tid>/delete", methods=["POST"])
 @admin_required
 def txn_delete(tid):
     t = FinTransaction.query.get_or_404(tid)
-    if t.source == "sheet":
-        flash("Sheets'dan kelgan yozuv o'chirilmaydi — Google Jadvalda "
-              "o'zgartiring va sinxronlang", "error")
-        return redirect(url_for("finance.transactions", month=t.date[:7]))
-    if t.source == "studio":
-        flash("Bu yozuv studiya to'loviга bog'langan — «Studiya to'lovlari» "
-              "sahifasidan boshqaring", "error")
+    if t.source not in EDITABLE_SOURCES:
+        flash(LOCKED_MSG.get(t.source, "Bu yozuv o'chirilmaydi"), "error")
         return redirect(url_for("finance.transactions", month=t.date[:7]))
     month = t.date[:7]
     db.session.delete(t)
@@ -312,17 +352,88 @@ def dds():
                            sync=_sync_info())
 
 
-# ── Qarzlar (DOLG) ───────────────────────────────────────────────────────────
+# ── Qarzlar (DOLG) — to'liq boshqaruv ────────────────────────────────────────
 
 @bp.route("/finance/debts")
 @admin_required
 def debts():
-    rows = FinDebt.query.all()
+    rows = FinDebt.query.order_by(FinDebt.id.desc()).all()
     total = sum(d.amount or 0 for d in rows)
     repaid = sum(d.repaid or 0 for d in rows)
     return render_template("finance_debts.html", rows=rows, total=total,
                            repaid=repaid, outstanding=total - repaid,
                            sync=_sync_info())
+
+
+def _num(field, default=0.0):
+    try:
+        return float((request.form.get(field) or "0").replace(" ", "")
+                     .replace(",", "."))
+    except ValueError:
+        return default
+
+
+@bp.route("/finance/debts/add", methods=["POST"])
+@admin_required
+def debt_add():
+    amount = _num("amount")
+    if amount <= 0:
+        flash("Summa 0 dan katta bo'lishi shart", "error")
+        return redirect(url_for("finance.debts"))
+    db.session.add(FinDebt(
+        date=(request.form.get("date") or "").strip()[:24],
+        debtor=(request.form.get("debtor") or "").strip()[:120],
+        creditor=(request.form.get("creditor") or "").strip()[:120],
+        reason=(request.form.get("reason") or "").strip()[:500],
+        amount=amount, repaid=min(_num("repaid"), amount), source="manual"))
+    db.session.commit()
+    flash("✅ Qarz qo'shildi", "success")
+    return redirect(url_for("finance.debts"))
+
+
+@bp.route("/finance/debts/<int:did>/edit", methods=["POST"])
+@admin_required
+def debt_edit(did):
+    d = FinDebt.query.get_or_404(did)
+    amount = _num("amount")
+    if amount <= 0:
+        flash("Summa 0 dan katta bo'lishi shart", "error")
+        return redirect(url_for("finance.debts"))
+    d.date = (request.form.get("date") or "").strip()[:24]
+    d.debtor = (request.form.get("debtor") or "").strip()[:120]
+    d.creditor = (request.form.get("creditor") or "").strip()[:120]
+    d.reason = (request.form.get("reason") or "").strip()[:500]
+    d.amount = amount
+    d.repaid = min(_num("repaid"), amount)
+    db.session.commit()
+    flash("✅ Qarz yangilandi", "success")
+    return redirect(url_for("finance.debts"))
+
+
+@bp.route("/finance/debts/<int:did>/repay", methods=["POST"])
+@admin_required
+def debt_repay(did):
+    """Qisman/to'liq qaytarishni qo'shish (qaytarilgan summani oshiradi)."""
+    d = FinDebt.query.get_or_404(did)
+    add = _num("amount")
+    if add <= 0:
+        flash("Qaytarilgan summa 0 dan katta bo'lsin", "error")
+        return redirect(url_for("finance.debts"))
+    d.repaid = min((d.repaid or 0) + add, d.amount or 0)
+    if (request.form.get("date") or "").strip():
+        d.repaid_date = request.form.get("date").strip()[:24]
+    db.session.commit()
+    flash(f"✅ {add:,.0f} so'm qaytarildi belgilandi", "success")
+    return redirect(url_for("finance.debts"))
+
+
+@bp.route("/finance/debts/<int:did>/delete", methods=["POST"])
+@admin_required
+def debt_delete(did):
+    db.session.delete(FinDebt.query.get_or_404(did))
+    db.session.commit()
+    flash("🗑 Qarz o'chirildi", "success")
+    return redirect(url_for("finance.debts"))
 
 
 # ── Dividendlar ──────────────────────────────────────────────────────────────
@@ -341,22 +452,104 @@ def dividends():
                            sync=_sync_info())
 
 
-# ── Sinxronizatsiya ──────────────────────────────────────────────────────────
+# ── Sozlamalar: hisoblar (ochilish qoldig'i) + statyalar ─────────────────────
 
-@bp.route("/finance/sync", methods=["POST"])
+@bp.route("/finance/settings")
 @admin_required
-def sync():
-    from modules.finance.sheets_sync import sync_from_sheets
-    try:
-        stats = sync_from_sheets(Config.FINANCE_SPREADSHEET_ID,
-                                 usd_rate=Config.USD_RATE)
-        flash(f"✅ Sinxronlandi: {stats['transactions']} tranzaksiya, "
-              f"{stats['wallets']} hisob, {stats['debts']} qarz", "success")
-    except Exception as exc:
-        logger.exception("Sheets sync xatosi")
-        db.session.rollback()
-        flash(f"Sync xatosi: {exc}", "error")
-    return redirect(request.referrer or url_for("finance.index"))
+def settings():
+    wallets = FinWallet.query.order_by(FinWallet.sort).all()
+    # Joriy balansni ham ko'rsatamiz (ochilish + harakatlar)
+    bal = {b["name"]: b["balance"] for b in _wallet_balances()}
+    wal = [{"row": w, "balance": bal.get(w.name, w.opening_balance or 0)}
+           for w in wallets]
+    cats = FinCategory.query.order_by(FinCategory.direction.desc(),
+                                      FinCategory.sort).all()
+    return render_template("finance_settings.html", wallets=wal, cats=cats,
+                           activity_labels=ACTIVITY_LABELS, sync=_sync_info())
+
+
+@bp.route("/finance/wallets/save", methods=["POST"])
+@admin_required
+def wallet_save():
+    wid = (request.form.get("id") or "").strip()
+    name = (request.form.get("name") or "").strip()[:120]
+    if not name:
+        flash("Hisob nomi kiritilishi shart", "error")
+        return redirect(url_for("finance.settings"))
+    opening = _num("opening_balance")
+    cur = (request.form.get("currency") or "UZS").strip()[:8]
+    if wid.isdigit():
+        w = FinWallet.query.get(int(wid))
+        if w:
+            other = FinWallet.query.filter(FinWallet.name == name,
+                                           FinWallet.id != w.id).first()
+            if other:
+                flash("Bu nomli hisob allaqachon bor", "error")
+                return redirect(url_for("finance.settings"))
+            w.name, w.opening_balance, w.currency = name, opening, cur
+    else:
+        if FinWallet.query.filter_by(name=name).first():
+            flash("Bu nomli hisob allaqachon bor", "error")
+            return redirect(url_for("finance.settings"))
+        mx = db.session.query(db.func.max(FinWallet.sort)).scalar() or 0
+        db.session.add(FinWallet(name=name, opening_balance=opening,
+                                 currency=cur, sort=mx + 1,
+                                 opening_year=date.today().year))
+    db.session.commit()
+    flash("✅ Hisob saqlandi", "success")
+    return redirect(url_for("finance.settings"))
+
+
+@bp.route("/finance/wallets/<int:wid>/delete", methods=["POST"])
+@admin_required
+def wallet_delete(wid):
+    w = FinWallet.query.get_or_404(wid)
+    used = FinTransaction.query.filter_by(wallet=w.name).count()
+    if used:
+        flash(f"Bu hisobда {used} ta tranzaksiya bor — avval ularni "
+              f"o'chiring yoki boshqa hisobga o'tkazing", "error")
+        return redirect(url_for("finance.settings"))
+    db.session.delete(w)
+    db.session.commit()
+    flash("🗑 Hisob o'chirildi", "success")
+    return redirect(url_for("finance.settings"))
+
+
+@bp.route("/finance/categories/add", methods=["POST"])
+@admin_required
+def category_add():
+    name = (request.form.get("name") or "").strip()[:200]
+    direction = "in" if request.form.get("direction") == "in" else "out"
+    activity = (request.form.get("activity") or "operating").strip()
+    if activity not in ("operating", "investing", "financing", "technical"):
+        activity = "operating"
+    if not name:
+        flash("Statya nomi kiritilishi shart", "error")
+        return redirect(url_for("finance.settings"))
+    if FinCategory.query.filter_by(name=name).first():
+        flash("Bu statya allaqachon bor", "error")
+        return redirect(url_for("finance.settings"))
+    mx = db.session.query(db.func.max(FinCategory.sort)).scalar() or 0
+    db.session.add(FinCategory(name=name, direction=direction,
+                               activity=activity, sort=mx + 1))
+    db.session.commit()
+    flash("✅ Statya qo'shildi", "success")
+    return redirect(url_for("finance.settings"))
+
+
+@bp.route("/finance/categories/<int:cid>/delete", methods=["POST"])
+@admin_required
+def category_delete(cid):
+    c = FinCategory.query.get_or_404(cid)
+    used = FinTransaction.query.filter_by(category=c.name).count()
+    if used:
+        flash(f"Bu statyaда {used} ta tranzaksiya bor — o'chirib bo'lmaydi",
+              "error")
+        return redirect(url_for("finance.settings"))
+    db.session.delete(c)
+    db.session.commit()
+    flash("🗑 Statya o'chirildi", "success")
+    return redirect(url_for("finance.settings"))
 
 
 # ── To'lov kalendari (kassa bashorati) ──────────────────────────────────────

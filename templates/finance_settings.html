@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Moliya sozlamalari{% endblock %}
+{% block page_title %}Moliya — sozlamalar{% endblock %}
+{% block page_crumb %}Hisoblar (ochilish qoldig'i) va statyalar{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Moliya sozlamalari</div>
+  <div class="ph-sub">Hisoblar, ochilish qoldiqlari va ДДС statyalarini boshqaring</div>
+</div></div>
+
+<div class="grid g2">
+  <!-- Hisoblar -->
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-wallet"></i> Hisoblar (kassa/karta/hisob raqam)</div>
+      <button class="btn btn-gold btn-sm" onclick="wEdit()"><i class="icon-plus"></i> Hisob</button></div>
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr><th>Nomi</th><th class="r">Ochilish qoldig'i</th><th class="r">Joriy balans</th><th></th></tr></thead>
+      <tbody>
+        {% for w in wallets %}
+        <tr>
+          <td><b>{{ w.row.name }}</b>{% if w.row.currency != 'UZS' %} <span class="tag tag-gray">{{ w.row.currency }}</span>{% endif %}</td>
+          <td class="r" style="font-variant-numeric:tabular-nums">{{ w.row.opening_balance|som }}</td>
+          <td class="r"><b style="color:{{ 'var(--txt)' if w.balance >= 0 else 'var(--red)' }}">{{ w.balance|som }}</b></td>
+          <td class="r" style="white-space:nowrap">
+            <button class="btn btn-sm btn-ghost" onclick='wEdit({{ w.row.id }}, {{ w.row.name|tojson }}, {{ w.row.opening_balance or 0 }}, {{ w.row.currency|tojson }})'><i class="icon-pencil"></i></button>
+            <form method="POST" action="/finance/wallets/{{ w.row.id }}/delete" style="display:inline" onsubmit="return confirm('Hisob o\'chirilsinmi?')">
+              <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4"><div class="empty"><i class="icon-wallet"></i>Hisob yo'q — qo'shing</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="card-bd" style="font-size:11.5px;color:var(--txt3);line-height:1.5">
+      💡 <b>Ochilish qoldig'i</b> — yil boshidagi (yoki hisob ochilgandagi) summa.
+      Joriy balans = ochilish + barcha kirim − chiqim.
+    </div>
+  </div>
+
+  <!-- Statyalar -->
+  <div class="card" style="margin:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-tags"></i> ДДС statyalari</div>
+      <button class="btn btn-gold btn-sm" onclick="document.getElementById('catMod').classList.add('open')"><i class="icon-plus"></i> Statya</button></div>
+    <div style="padding:0;max-height:520px;overflow-y:auto">
+      {% for c in cats %}
+      <div class="feed-item">
+        <span class="tag tag-{{ 'green' if c.direction=='in' else 'red' }}">{{ 'Kirim' if c.direction=='in' else 'Chiqim' }}</span>
+        <div style="flex:1;min-width:0"><b style="font-size:13px">{{ c.name }}</b>
+          <div style="font-size:10.5px;color:var(--txt3)">{{ activity_labels.get(c.activity, c.activity) }}</div></div>
+        <form method="POST" action="/finance/categories/{{ c.id }}/delete" onsubmit="return confirm('Statya o\'chirilsinmi?')">
+          <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
+        </form>
+      </div>
+      {% else %}
+      <div class="empty"><i class="icon-tags"></i>Statya yo'q</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Hisob modali -->
+<div class="modal-ov" id="walMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-wallet"></i> <span id="wTitle">Hisob</span></div>
+    <form method="POST" action="/finance/wallets/save">
+      <input type="hidden" name="id" id="wId">
+      <label>Nomi</label><input class="input" name="name" id="wName" required placeholder="masalan: РС Jalinga / карта 9933 / Наличные">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+        <div><label>Ochilish qoldig'i (so'm)</label><input class="input" type="number" name="opening_balance" id="wOpen" step="0.01" value="0"></div>
+        <div><label>Valyuta</label>
+          <select class="select" name="currency" id="wCur">
+            <option value="UZS">so'm</option><option value="USD">$ (so'm ekv.)</option>
+          </select></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Saqlash</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('walMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Statya modali -->
+<div class="modal-ov" id="catMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-tags"></i> Yangi statya</div>
+    <form method="POST" action="/finance/categories/add">
+      <label>Nomi</label><input class="input" name="name" required maxlength="200" placeholder="masalan: Reklama xarajati">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Yo'nalish</label>
+          <select class="select" name="direction"><option value="out">Chiqim</option><option value="in">Kirim</option></select></div>
+        <div><label>Faoliyat turi</label>
+          <select class="select" name="activity">
+            <option value="operating">Operatsion</option>
+            <option value="investing">Investitsion</option>
+            <option value="financing">Moliyaviy</option>
+            <option value="technical">Texnik (o'tkazma)</option>
+          </select></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Qo'shish</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('catMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function wEdit(id, name, opening, cur){
+  document.getElementById('wTitle').textContent = id ? 'Hisobni tahrirlash' : 'Yangi hisob';
+  document.getElementById('wId').value = id || '';
+  document.getElementById('wName').value = name || '';
+  document.getElementById('wOpen').value = (opening != null ? opening : 0);
+  document.getElementById('wCur').value = cur || 'UZS';
+  document.getElementById('walMod').classList.add('open');
+}
+</script>
+{% endblock %}

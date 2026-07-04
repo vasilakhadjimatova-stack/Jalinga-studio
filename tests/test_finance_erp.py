@@ -70,11 +70,35 @@ def test_txn_add_and_delete(admin_client, post):
     assert FinTransaction.query.filter_by(purpose="pytest xarajat").first() is None
 
 
-def test_sheet_txn_delete_blocked(admin_client, post):
-    """Sheets'dan kelgan yozuv o'chirilmaydi — sync'da baribir qaytadi."""
+def test_sheet_txn_now_editable(admin_client, post):
+    """Sheets tarixi endi dastur-native — tahrirlanadi va o'chiriladi."""
     t = FinTransaction.query.filter_by(source="sheet").first()
-    post(admin_client, f"/finance/transactions/{t.id}/delete")
-    assert FinTransaction.query.get(t.id) is not None
+    tid, cat, wallet = t.id, t.category, t.wallet
+    post(admin_client, f"/finance/transactions/{tid}/edit",
+         date="2026-06-10", category=cat, wallet=wallet, amount="123456",
+         purpose="tahrirlandi")
+    ed = FinTransaction.query.get(tid)
+    assert ed.amount == 123456 and ed.purpose == "tahrirlandi"
+    post(admin_client, f"/finance/transactions/{tid}/delete")
+    assert FinTransaction.query.get(tid) is None
+
+
+def test_studio_and_calendar_txn_locked(app, admin_client, post):
+    """Studio/plan/recurring yozuvlari jurnaldan o'chirilmaydi (bog'langan)."""
+    from models.billing import Teacher, Payment
+    from modules.finance.studio_link import sync_payment_to_finance
+    t = Teacher(name="Locked Test")
+    db.session.add(t)
+    db.session.commit()
+    p = Payment(teacher_id=t.id, kind="hourly", amount=90000, hours=0,
+                method="karta", date="2026-06-09", is_paid=True)
+    db.session.add(p)
+    db.session.commit()
+    sync_payment_to_finance(p, teacher_name=t.name)
+    db.session.commit()
+    ft = FinTransaction.query.filter_by(source="studio", payment_id=p.id).first()
+    post(admin_client, f"/finance/transactions/{ft.id}/delete")
+    assert FinTransaction.query.get(ft.id) is not None   # bloklangan
 
 
 def test_txn_add_validation(admin_client, post):
@@ -261,3 +285,59 @@ def test_recurring_reconciled_by_category(app):
     assert covered is True
     # Uzoq kelajak oyида hech narsa yo'q → qoplanmagan
     assert _recurring_paid(r.id, 2026, 11, r.category) is False
+
+
+# ── Dastur-native moliya: sync yo'q, to'liq CRUD ──
+
+def test_sync_route_removed(client):
+    """Sheets sync butunlay olib tashlangan."""
+    assert client.post("/finance/sync").status_code in (404, 405)
+
+
+def test_settings_page(admin_client):
+    r = admin_client.get("/finance/settings")
+    assert r.status_code == 200
+    assert "Hisoblar".encode() in r.data and "statyalar".encode() in r.data
+
+
+def test_wallet_crud(app, admin_client, post):
+    from models.finance import FinWallet
+    post(admin_client, "/finance/wallets/save",
+         name="Yangi kassa", opening_balance="7500000", currency="UZS")
+    w = FinWallet.query.filter_by(name="Yangi kassa").first()
+    assert w is not None and w.opening_balance == 7500000
+    # tahrirlash
+    post(admin_client, "/finance/wallets/save",
+         id=str(w.id), name="Yangi kassa", opening_balance="8000000",
+         currency="UZS")
+    assert FinWallet.query.get(w.id).opening_balance == 8000000
+    # bo'sh hisob o'chiriladi
+    post(admin_client, f"/finance/wallets/{w.id}/delete")
+    assert FinWallet.query.get(w.id) is None
+
+
+def test_category_crud(app, admin_client, post):
+    from models.finance import FinCategory
+    post(admin_client, "/finance/categories/add",
+         name="Reklama xarajati", direction="out", activity="operating")
+    c = FinCategory.query.filter_by(name="Reklama xarajati").first()
+    assert c is not None and c.direction == "out"
+    post(admin_client, f"/finance/categories/{c.id}/delete")
+    assert FinCategory.query.get(c.id) is None
+
+
+def test_debt_full_crud(app, admin_client, post):
+    from models.finance import FinDebt
+    post(admin_client, "/finance/debts/add", creditor="MBM", debtor="Jalinga",
+         amount="10000000", reason="test qarz", repaid="0")
+    d = FinDebt.query.filter_by(creditor="MBM", source="manual").first()
+    assert d is not None and d.remainder == 10000000
+    # qisman qaytarish
+    post(admin_client, f"/finance/debts/{d.id}/repay", amount="4000000")
+    assert FinDebt.query.get(d.id).remainder == 6000000
+    # to'liq qaytarishдан oshib ketmaydi
+    post(admin_client, f"/finance/debts/{d.id}/repay", amount="99999999")
+    assert FinDebt.query.get(d.id).remainder == 0
+    # o'chirish
+    post(admin_client, f"/finance/debts/{d.id}/delete")
+    assert FinDebt.query.get(d.id) is None
