@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Tahlil{% endblock %}
+{% block page_title %}Moliya — tahlil{% endblock %}
+{% block page_crumb %}{{ year }} — statya strukturasi va kontragentlar{% endblock %}
+{% block extra_css %}
+<style>
+.an-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line)}
+.an-row:last-child{border-bottom:0}
+.an-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.an-name{font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.an-share{font-size:10.5px;color:var(--txt3);margin-left:6px}
+.an-val{margin-left:auto;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.an-bar{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:4px}
+.an-bar i{display:block;height:100%;border-radius:3px}
+.donutbox{position:relative;height:230px}
+</style>
+{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Tahlil</div>
+  <div class="ph-sub">{{ year }} — statyalar kesimi va kontragentlar (texnik o'tkazmalarsiz)</div>
+</div>
+<form method="get" action="/finance/analysis">
+  <select class="select" name="year" onchange="this.form.submit()" style="width:auto">
+    {% for y in years %}<option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+  </select>
+</form></div>
+
+{% set palette = ['#F0A831','#FB7185','#60A5FA','#7CBFA0','#FBBF24','#C084FC','#F472B6','#34D399','#93C5FD','#FCD34D','#A78BFA','#8A93A8'] %}
+
+<div class="grid g2">
+  <!-- Xarajat donut -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-chart-pie"></i> Xarajat strukturasi</div>
+      <span class="tag tag-red">{{ exp_total|som }}</span></div>
+    <div class="card-bd"><div class="donutbox"><canvas id="expDonut"></canvas></div></div>
+  </div>
+  <!-- Tushum donut -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-chart-pie"></i> Tushum strukturasi</div>
+      <span class="tag tag-green">{{ inc_total|som }}</span></div>
+    <div class="card-bd"><div class="donutbox"><canvas id="incDonut"></canvas></div></div>
+  </div>
+</div>
+
+<div class="grid g2" style="margin-top:16px">
+  <!-- Xarajat statyalari -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-arrow-up-right"></i> Xarajat statyalari</div></div>
+    <div class="card-bd">
+      {% for r in exp_rows %}
+      <div class="an-row"><div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="an-dot" style="background:{{ palette[loop.index0 % 12] }}"></span>
+          <span class="an-name">{{ r.name }}</span><span class="an-share">{{ r.share|round(1) }}%</span>
+          <span class="an-val">{{ r.total|som }}</span>
+        </div>
+        <div class="an-bar"><i style="width:{{ r.share|round(1) }}%;background:{{ palette[loop.index0 % 12] }}"></i></div>
+      </div></div>
+      {% else %}<div class="empty"><i class="icon-inbox"></i>Xarajat yo'q</div>{% endfor %}
+    </div>
+  </div>
+  <!-- Tushum statyalari -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-arrow-down-left"></i> Tushum statyalari</div></div>
+    <div class="card-bd">
+      {% for r in inc_rows %}
+      <div class="an-row"><div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="an-dot" style="background:{{ palette[loop.index0 % 12] }}"></span>
+          <span class="an-name">{{ r.name }}</span><span class="an-share">{{ r.share|round(1) }}%</span>
+          <span class="an-val">{{ r.total|som }}</span>
+        </div>
+        <div class="an-bar"><i style="width:{{ r.share|round(1) }}%;background:{{ palette[loop.index0 % 12] }}"></i></div>
+      </div></div>
+      {% else %}<div class="empty"><i class="icon-inbox"></i>Tushum yo'q</div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Kontragentlar -->
+<div class="card" style="margin-top:16px">
+  <div class="card-hd"><div class="card-title"><i class="icon-users"></i> Kontragentlar (eng faol 20)</div></div>
+  {% if counterparties %}
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr><th>Kontragent</th><th class="r">Tushum</th><th class="r">To'lov</th><th class="r">Sof</th></tr></thead>
+    <tbody>
+      {% for c in counterparties %}
+      <tr>
+        <td><b>{{ c.name }}</b></td>
+        <td class="r" style="color:var(--green)">{{ c.in|som }}</td>
+        <td class="r" style="color:var(--red)">{{ c.out|som }}</td>
+        <td class="r"><b style="color:{{ 'var(--green)' if c.net >= 0 else 'var(--red)' }}">{{ c.net|som }}</b></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="card-bd"><div class="empty"><i class="icon-users"></i>
+    Kontragent ma'lumoti yo'q — Google Jadvalда «Контрагент» ustunini to'ldiring,
+    sinxronlaganда shu yerda tahlil paydo bo'ladi</div></div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  var css = getComputedStyle(document.documentElement);
+  var txt3 = css.getPropertyValue('--txt3').trim() || '#8A93A8';
+  var pal = ['#F0A831','#FB7185','#60A5FA','#7CBFA0','#FBBF24','#C084FC','#F472B6','#34D399','#93C5FD','#FCD34D','#A78BFA','#8A93A8'];
+  var fmt = function(v){ return v.toLocaleString('ru-RU').replace(/,/g,' '); };
+  function donut(id, labels, data){
+    var el = document.getElementById(id); if(!el || !data.length) return;
+    new Chart(el, { type:'doughnut',
+      data:{ labels:labels, datasets:[{ data:data, backgroundColor:pal, borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false, cutout:'62%',
+        plugins:{ legend:{ position:'right', labels:{ color:txt3, boxWidth:11, boxHeight:11,
+          borderRadius:3, useBorderRadius:true, font:{family:'Inter',size:10.5}, padding:8 }},
+          tooltip:{ callbacks:{ label:function(c){ return ' ' + c.label + ': ' + fmt(c.raw) + " so'm"; }}}}}});
+  }
+  donut('expDonut', {{ exp_rows[:12]|map(attribute='name')|list|tojson }}, {{ exp_rows[:12]|map(attribute='total')|list|tojson }});
+  donut('incDonut', {{ inc_rows[:12]|map(attribute='name')|list|tojson }}, {{ inc_rows[:12]|map(attribute='total')|list|tojson }});
+})();
+</script>
+{% endblock %}

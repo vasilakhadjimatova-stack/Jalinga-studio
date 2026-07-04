@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}To'lov kalendari{% endblock %}
+{% block page_title %}Moliya — to'lov kalendari{% endblock %}
+{% block page_crumb %}{{ month_names[month] }} {{ year }} — kassa bashorati{% endblock %}
+{% block extra_css %}
+<style>
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.cal-wd{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--txt3);text-align:center;padding:4px 0}
+.cell{min-height:104px;border-radius:12px;border:1px solid var(--line);padding:7px 8px;
+  background:var(--surface2);display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.cell.empty{background:transparent;border:0}
+.cell.ok{border-left:3px solid var(--green)}
+.cell.warn{border-left:3px solid var(--amber);background:rgba(251,191,36,.06)}
+.cell.gap{border-left:3px solid var(--red);background:rgba(251,113,133,.08)}
+.cell.today{box-shadow:0 0 0 2px var(--brand) inset}
+.cell-d{font-size:12px;font-weight:800;color:var(--txt2)}
+.cell-bal{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;margin-left:auto}
+.cell-bal.ok{color:var(--green)}.cell-bal.warn{color:var(--amber)}.cell-bal.gap{color:var(--red)}
+.ev{font-size:10.5px;font-weight:600;padding:3px 6px;border-radius:7px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.ev.out{background:var(--red-bg);color:var(--red)}
+.ev.in{background:var(--green-bg);color:var(--green)}
+.ev.paid{opacity:.5;text-decoration:line-through}
+.ev-amt{font-variant-numeric:tabular-nums}
+.rec-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.rec-row:last-child{border-bottom:0}
+@media(max-width:820px){.cell{min-height:80px}.ev{font-size:9.5px}}
+</style>
+{% endblock %}
+{% block content %}
+{% include "_finance_tabs.html" %}
+
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">To'lov kalendari</div>
+  <div class="ph-sub">{{ month_names[month] }} {{ year }} — doimiy + rejali to'lovlar, kunlik kassa bashorati</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+  <a href="/finance/calendar?year={{ prev_y }}&month={{ prev_m }}" class="btn btn-out btn-sm"><i class="icon-chevron-left"></i></a>
+  <span style="font-weight:800;min-width:130px;text-align:center">{{ month_names[month] }} {{ year }}</span>
+  <a href="/finance/calendar?year={{ next_y }}&month={{ next_m }}" class="btn btn-out btn-sm"><i class="icon-chevron-right"></i></a>
+  <button class="btn btn-gold btn-sm" onclick="document.getElementById('planMod').classList.add('open')"><i class="icon-plus"></i> Reja</button>
+</div>
+</div>
+
+<!-- Xavf ogohlantirishi -->
+{% if at_risk %}
+<div class="card" style="border-left:3px solid var(--red);margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:12px">
+  <i class="icon-alert-triangle" style="font-size:22px;color:var(--red)"></i>
+  <div><b style="color:var(--red)">Likvidlik xavfi!</b> Oy davomida kassa qoldig'i manfiyga tushadi
+    (minimal: <b>{{ min_proj|som }}</b>). Rejali to'lovlarni qayta ko'rib chiqing.</div>
+</div></div>
+{% elif below_buffer %}
+<div class="card" style="border-left:3px solid var(--amber);margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:12px">
+  <i class="icon-shield-alert" style="font-size:22px;color:var(--amber)"></i>
+  <div><b style="color:var(--amber)">Zaxiradan past.</b> Minimal qoldiq <b>{{ min_proj|som }}</b>
+    — xavfsizlik buferidan ({{ buffer|som }}) past.</div>
+</div></div>
+{% endif %}
+
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Oy boshidagi qoldiq</div>
+    <div class="kpi-val" style="font-size:19px">{{ opening_balance|som }}</div>
+  </div><div class="kpi-ico gold"><i class="icon-wallet"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Kutilgan tushum</div>
+    <div class="kpi-val" style="font-size:19px;color:var(--green)">{{ planned_in|som }}</div>
+  </div><div class="kpi-ico green"><i class="icon-arrow-down-left"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Kutilgan to'lov</div>
+    <div class="kpi-val" style="font-size:19px;color:var(--red)">{{ planned_out|som }}</div>
+  </div><div class="kpi-ico red"><i class="icon-arrow-up-right"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Minimal bashorat qoldig'i</div>
+    <div class="kpi-val" style="font-size:19px;color:{{ 'var(--red)' if at_risk else 'var(--amber)' if below_buffer else 'var(--green)' }}">{{ min_proj|som }}</div>
+  </div><div class="kpi-ico {{ 'red' if at_risk else 'amber' if below_buffer else 'green' }}"><i class="icon-trending-down"></i></div></div></div>
+</div>
+
+<!-- Kalendar to'ri -->
+<div class="card"><div class="card-bd">
+  <div class="cal" style="margin-bottom:7px">
+    {% for wd in ['Du','Se','Ch','Pa','Ju','Sh','Ya'] %}<div class="cal-wd">{{ wd }}</div>{% endfor %}
+  </div>
+  {% for week in weeks %}
+  <div class="cal" style="margin-bottom:7px">
+    {% for cell in week %}
+    {% if cell %}
+    <div class="cell {{ cell.level }}{% if cell.is_today %} today{% endif %}">
+      <div style="display:flex;align-items:center">
+        <span class="cell-d">{{ cell.day }}</span>
+        <span class="cell-bal {{ cell.level }}" title="Bashorat qoldig'i">{{ (cell.running/1000000)|round(1) }}M</span>
+      </div>
+      {% for e in cell.events %}
+      <div class="ev {{ 'in' if e.is_in else 'out' }}{% if e.paid %} paid{% endif %}"
+           {% if not e.paid %}onclick='openPay({{ e.kind|tojson }}, {{ e.id }}, {{ e.title|tojson }}, {{ e.amount }}, {{ (e.wallet or '')|tojson }}, {{ cell.day }})'{% endif %}
+           title="{{ e.title }} · {{ e.meta }}">
+        {{ e.title }}<br><span class="ev-amt">{{ '+' if e.is_in else '−' }}{{ e.amount|som }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="cell empty"></div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div></div>
+
+<!-- Doimiy to'lovlar boshqaruvi -->
+<div class="card">
+  <div class="card-hd"><div class="card-title"><i class="icon-repeat"></i> Doimiy oylik to'lovlar</div>
+    <button class="btn btn-out btn-sm" onclick="document.getElementById('recMod').classList.add('open')"><i class="icon-plus"></i> Qo'shish</button></div>
+  <div class="card-bd">
+    {% for r in recs %}
+    <div class="rec-row">
+      <div class="wal-ico" style="width:34px;height:34px;font-size:15px;background:var(--red-bg);color:var(--red)"><i class="icon-repeat"></i></div>
+      <div style="min-width:0;flex:1">
+        <div style="font-weight:700;font-size:13px">{{ r.name }}</div>
+        <div style="font-size:11px;color:var(--txt3)">Har oy {{ r.pay_day }}-kuni{% if r.category %} · {{ r.category }}{% endif %}{% if not r.is_active %} · ⏸ nofaol{% endif %}</div>
+      </div>
+      <div style="font-weight:800;font-variant-numeric:tabular-nums;color:var(--red)">{{ r.amount|som }}</div>
+      <form method="POST" action="/finance/calendar/recurring/{{ r.id }}/delete" onsubmit="return confirm('O\'chirilsinmi?')">
+        <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
+      </form>
+    </div>
+    {% else %}
+    <div class="empty"><i class="icon-repeat"></i>Doimiy to'lovlar yo'q — ijara, obunalar qo'shing</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Reja qo'shish modali -->
+<div class="modal-ov" id="planMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-calendar-plus"></i> Rejali to'lov / tushum</div>
+    <form method="POST" action="/finance/calendar/plan/add">
+      <label>Sana</label><input class="input" type="date" name="date" value="{{ year }}-{{ '%02d'|format(month) }}-01" required>
+      <label>Yo'nalish</label>
+      <select class="select" name="direction">
+        <option value="out">Chiqim (to'lov)</option>
+        <option value="in">Kirim (tushum)</option>
+      </select>
+      <label>Tavsif</label><input class="input" type="text" name="description" maxlength="300" required placeholder="masalan: uskuna xaridi">
+      <label>Summa (so'm)</label><input class="input" type="number" name="amount" min="1" step="0.01" required>
+      <label>Statya (ixtiyoriy)</label>
+      <select class="select" name="category">
+        <option value="">— tanlanmagan —</option>
+        {% for c in cats %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+      </select>
+      <label>Hisob (ixtiyoriy)</label>
+      <select class="select" name="wallet">
+        <option value="">— tanlanmagan —</option>
+        {% for w in wallets %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}
+      </select>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Rejaga qo'shish</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('planMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Doimiy to'lov qo'shish modali -->
+<div class="modal-ov" id="recMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-repeat"></i> Doimiy oylik to'lov</div>
+    <form method="POST" action="/finance/calendar/recurring/add">
+      <label>Nom</label><input class="input" type="text" name="name" maxlength="200" required placeholder="masalan: Ofis ijarasi">
+      <label>Summa (so'm)</label><input class="input" type="number" name="amount" min="1" step="0.01" required>
+      <label>Oyning kuni (1–31)</label><input class="input" type="number" name="pay_day" min="1" max="31" value="1" required>
+      <label>Statya (ixtiyoriy)</label>
+      <select class="select" name="category">
+        <option value="">— tanlanmagan —</option>
+        {% for c in cats %}{% if c.direction=='out' %}<option value="{{ c.name }}">{{ c.name }}</option>{% endif %}{% endfor %}
+      </select>
+      <label>Hisob (ixtiyoriy)</label>
+      <select class="select" name="wallet">
+        <option value="">— tanlanmagan —</option>
+        {% for w in wallets %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}
+      </select>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> Saqlash</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('recMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- To'lash modali -->
+<div class="modal-ov" id="payMod" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-check-circle"></i> To'lovni bajarish</div>
+    <div id="payTitle" style="font-size:13px;color:var(--txt2);margin-bottom:6px"></div>
+    <form method="POST" action="/finance/calendar/pay">
+      <input type="hidden" name="kind" id="payKind">
+      <input type="hidden" name="item_id" id="payItem">
+      <label>Sana</label><input class="input" type="date" name="date" id="payDate" required>
+      <label>Hisob (qaysi kassadan)</label>
+      <select class="select" name="wallet" id="payWallet" required>
+        {% for w in wallets %}<option value="{{ w.name }}">{{ w.name }}</option>{% endfor %}
+      </select>
+      <div style="font-size:11.5px;color:var(--txt3);margin-top:8px">
+        Tasdiqlangач moliya jurnaliga tranzaksiya sifatida tushadi.</div>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button class="btn btn-gold" type="submit" style="flex:1"><i class="icon-check"></i> To'landi</button>
+        <button class="btn btn-out" type="button" onclick="document.getElementById('payMod').classList.remove('open')">Bekor</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function openPay(kind, id, title, amount, wallet, day){
+  document.getElementById('payKind').value = kind;
+  document.getElementById('payItem').value = id;
+  document.getElementById('payTitle').innerHTML = title +
+    ' — <b>' + amount.toLocaleString('ru-RU').replace(/,/g,' ') + " so'm</b>";
+  var d = '{{ year }}-{{ '%02d'|format(month) }}-' + ('0'+day).slice(-2);
+  document.getElementById('payDate').value = d;
+  if(wallet){ var sel=document.getElementById('payWallet');
+    for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===wallet){sel.selectedIndex=i;break;} } }
+  document.getElementById('payMod').classList.add('open');
+}
+</script>
+{% endblock %}

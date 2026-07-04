@@ -40,6 +40,7 @@ def create_app():
     from modules.montaj.routes import bp as montaj_bp
     from modules.analytics.routes import bp as analytics_bp
     from modules.team.routes import bp as team_bp
+    from modules.pwa.routes import bp as pwa_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dash_bp)
     app.register_blueprint(studios_bp)
@@ -50,6 +51,7 @@ def create_app():
     app.register_blueprint(montaj_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(team_bp)
+    app.register_blueprint(pwa_bp)
 
     @app.context_processor
     def inject_globals():
@@ -66,6 +68,21 @@ def create_app():
     with app.app_context():
         from seed import seed_all
         seed_all()
+        # Moliya: baza bo'sh bo'lsa repo'dagi Sheets snapshotini yuklaymiz
+        # (birinchi ishga tushishda internetsiz ham ma'lumot bo'lsin)
+        try:
+            from modules.finance.sheets_sync import import_snapshot_if_empty
+            import_snapshot_if_empty()
+        except Exception:
+            logging.exception("Moliya snapshotini yuklab bo'lmadi")
+
+    # Moliya avto-sync (fon thread; test/DISABLE_BOT'да o'chiq)
+    if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):
+        try:
+            from modules.finance.sheets_sync import start_autosync
+            start_autosync(app, Config.FINANCE_SYNC_INTERVAL)
+        except Exception:
+            logging.exception("Moliya avto-sync ishga tushmadi")
 
     # Telegram bot (token bo'lsa; testda o'chiq)
     if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):

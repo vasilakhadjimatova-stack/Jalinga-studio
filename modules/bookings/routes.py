@@ -402,6 +402,10 @@ def edit(bid):
             p.note = f"{studio.name} · {day} {start}–{end} ({new_hours:g} soat)"
             if was_paid:
                 pay_note = " · 💵 to'langan summa qayta hisoblandi"
+                # Moliya jurnalidagi bog'langan kirim ham yangilansin
+                from modules.finance.studio_link import sync_payment_to_finance
+                sync_payment_to_finance(p, teacher_name=teacher.name
+                                        if teacher else None)
     db.session.commit()
 
     try:

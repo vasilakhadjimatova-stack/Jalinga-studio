@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="jalinga">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ulanish yo'q — Jalinga</title>
+<meta name="theme-color" content="#0B0C11">
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,'Segoe UI',sans-serif;min-height:100vh;display:flex;
+  align-items:center;justify-content:center;padding:24px;color:#F4F5F9;
+  background:radial-gradient(1000px 600px at 80% -10%,rgba(240,168,49,.14),transparent 55%),
+    linear-gradient(165deg,#0E0F15,#0B0C11 60%,#08090D)}
+.card{max-width:360px;text-align:center}
+.logo{width:84px;height:84px;margin:0 auto 22px;opacity:.95;
+  filter:drop-shadow(0 4px 16px rgba(240,168,49,.3))}
+.logo img{width:100%;height:100%}
+h1{font-size:22px;font-weight:800;margin-bottom:10px}
+p{font-size:14px;line-height:1.6;color:#AEB6C8;margin-bottom:22px}
+button{font:inherit;font-weight:700;font-size:14px;padding:13px 26px;border:0;
+  border-radius:13px;cursor:pointer;color:#151004;
+  background:linear-gradient(135deg,#F0A831,#D98A1B);
+  box-shadow:0 6px 18px rgba(240,168,49,.28)}
+button:active{transform:translateY(1px)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#FB7185;
+  margin-right:7px;vertical-align:middle;animation:b 1.4s ease-in-out infinite}
+@keyframes b{0%,100%{opacity:.4}50%{opacity:1}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><img src="/static/logo.png" alt="Jalinga"></div>
+  <h1><span class="dot"></span>Ulanish yo'q</h1>
+  <p>Internet aloqasi uzilgan. Jalinga boshqaruv paneli ma'lumotlari server
+     bilan yangilanadi — ulanish tiklangач qayta urinib ko'ring.</p>
+  <button onclick="location.reload()">↻ Qayta urinish</button>
+</div>
+<script>
+// Ulanish tiklansa avtomatik qayta yuklaymiz
+window.addEventListener('online', function(){ location.reload(); });
+</script>
+</body>
+</html>

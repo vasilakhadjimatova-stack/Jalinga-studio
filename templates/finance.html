@@ -1,59 +1,211 @@
 {% extends "base.html" %}
 {% block title %}Moliya{% endblock %}
 {% block page_title %}Moliya{% endblock %}
-{% block page_crumb %}{{ month }} — to'lovlar jurnali{% endblock %}
+{% block page_crumb %}{{ month_names[month] }} {{ year }} — pul oqimi paneli{% endblock %}
+{% block extra_css %}
+<style>
+.wal{display:flex;align-items:center;gap:13px;padding:15px 17px}
+.wal-ico{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;
+  justify-content:center;font-size:19px;flex:0 0 auto;background:var(--gold-bg);color:var(--gold)}
+.wal-name{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt3)}
+.wal-val{font-size:17.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px;margin-top:2px}
+.chartbox{position:relative;height:280px}
+.exp-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.exp-row:last-child{border-bottom:0}
+.exp-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.exp-name{font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-val{margin-left:auto;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.exp-bar{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:4px}
+.exp-bar i{display:block;height:100%;border-radius:3px}
+</style>
+{% endblock %}
 {% block content %}
+{% include "_finance_tabs.html" %}
+
 <div class="ph"><div>
   <div class="gold-bar"></div>
-  <div class="ph-title">Moliya</div>
-  <div class="ph-sub">{{ month }} — to'lovlar jurnali va tasdiqlash</div>
+  <div class="ph-title">Moliya paneli</div>
+  <div class="ph-sub">Google Sheets «Jalinga 2026» jurnali asosida — {{ month_names[month] }} {{ year }}</div>
 </div>
-<form method="get" action="/finance">
-  <input class="input" type="month" name="month" value="{{ month }}" onchange="this.form.submit()" style="width:auto">
+<form method="get" action="/finance" style="display:flex;gap:8px">
+  <select class="select" name="month" onchange="this.form.submit()" style="width:auto">
+    {% for i in range(1,13) %}<option value="{{ i }}" {% if i==month %}selected{% endif %}>{{ month_names[i] }}</option>{% endfor %}
+  </select>
+  <select class="select" name="year" onchange="this.form.submit()" style="width:auto">
+    {% for y in years %}<option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+  </select>
 </form></div>
 
+<!-- KPI -->
 <div class="grid g4" style="margin-bottom:16px">
   <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">To'langan</div>
-    <div class="kpi-val" style="font-size:20px;color:var(--green)">{{ paid|som }}</div>
-  </div><div class="kpi-ico green"><i class="icon-check-circle"></i></div></div></div>
+    <div class="kpi-label">Jami qoldiq (barcha hisoblar)</div>
+    <div class="kpi-val" style="color:var(--gold)">{{ total_balance|som }}</div>
+  </div><div class="kpi-ico gold"><i class="icon-vault"></i></div></div></div>
   <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">Kutilmoqda</div>
-    <div class="kpi-val" style="font-size:20px;color:{% if pending %}var(--amber){% else %}var(--txt3){% endif %}">{{ pending|som }}</div>
-  </div><div class="kpi-ico amber"><i class="icon-hourglass"></i></div></div></div>
+    <div class="kpi-label">{{ month_names[month] }} tushumi</div>
+    <div class="kpi-val" style="color:var(--green)">{{ month_in|som }}</div>
+  </div><div class="kpi-ico green"><i class="icon-arrow-down-left"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">{{ month_names[month] }} xarajati</div>
+    <div class="kpi-val" style="color:var(--red)">{{ month_out|som }}</div>
+  </div><div class="kpi-ico red"><i class="icon-arrow-up-right"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Sof oqim ({{ month_names[month] }})</div>
+    <div class="kpi-val" style="color:{{ 'var(--green)' if month_net >= 0 else 'var(--red)' }}">
+      {{ '+' if month_net > 0 }}{{ month_net|som }}</div>
+  </div><div class="kpi-ico {{ 'green' if month_net >= 0 else 'red' }}"><i class="icon-activity"></i></div></div></div>
 </div>
 
-<div class="card">
-  <div style="overflow-x:auto">
-  <table class="tbl">
-    <thead><tr><th>Sana</th><th>Mijoz</th><th>Turi</th><th class="r">Summa</th><th>Holat</th><th></th></tr></thead>
-    <tbody>
-      {% for p in items %}
-      <tr>
-        <td style="font-variant-numeric:tabular-nums">{{ p.date }}</td>
-        <td><a href="/teachers/{{ p.teacher_id }}" style="font-weight:700">{{ p.teacher_name }}</a>
-          {% if p.note %}<div style="font-size:11px;color:var(--txt3)">{{ p.note }}</div>{% endif %}</td>
-        <td>{{ p.kind_label }}{% if p.hours %} ({{ p.hours|round(1) }} soat){% endif %}</td>
-        <td class="r"><b>{{ p.amount|som }}</b></td>
-        <td><span class="tag tag-{{ 'green' if p.is_paid else 'amber' }}">{{ "To'landi" if p.is_paid else 'Kutilmoqda' }}</span></td>
-        <td class="r" style="white-space:nowrap">
-          <form method="POST" action="/finance/{{ p.id }}/toggle" style="display:inline">
-            <button class="btn btn-sm {{ 'btn-ghost' if p.is_paid else 'btn-gold' }}" type="submit">
-              {{ '↩︎' if p.is_paid else "✓ To'landi" }}</button>
-          </form>
-          {% if current_user.is_admin %}
-          <form method="POST" action="/finance/{{ p.id }}/delete" style="display:inline"
-                onsubmit="return confirm('To\'lov o\'chirilsinmi?')">
-            <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6"><div class="empty"><i class="icon-receipt"></i>Bu oyda to'lov yo'q</div></td></tr>
+<!-- Hisoblar -->
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:16px">
+  {% for b in balances %}
+  <div class="kpi wal" style="padding:14px 16px">
+    <div class="wal-ico">
+      {% if 'РС' in b.name %}<i class="icon-landmark"></i>
+      {% elif 'карта' in b.name %}<i class="icon-credit-card"></i>
+      {% elif b.name == '$' %}<i class="icon-dollar-sign"></i>
+      {% else %}<i class="icon-banknote"></i>{% endif %}
+    </div>
+    <div style="min-width:0">
+      <div class="wal-name">{{ b.name }}{% if b.currency=='USD' %} · so'm ekv.{% endif %}</div>
+      <div class="wal-val" style="color:{{ 'var(--txt)' if b.balance >= 0 else 'var(--red)' }}">{{ b.balance|som }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% if debt_out > 0 %}
+  <a href="/finance/debts" class="kpi wal" style="padding:14px 16px">
+    <div class="wal-ico" style="background:var(--amber-bg);color:var(--amber)"><i class="icon-hand-coins"></i></div>
+    <div style="min-width:0">
+      <div class="wal-name">Qarzdorlik (bizga)</div>
+      <div class="wal-val" style="color:var(--amber)">{{ debt_out|som }}</div>
+    </div>
+  </a>
+  {% endif %}
+</div>
+
+<div class="grid g2">
+  <!-- Oylik oqim grafigi -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-bar-chart-3"></i> Tushum va xarajat — {{ year }}</div>
+      <span class="tag tag-gray">texnik o'tkazmalarsiz</span></div>
+    <div class="card-bd"><div class="chartbox"><canvas id="flowChart"></canvas></div></div>
+  </div>
+
+  <!-- Xarajat strukturasi -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-hd"><div class="card-title"><i class="icon-pie-chart"></i> Xarajat strukturasi — {{ month_names[month] }}</div>
+      <span class="tag tag-red">{{ month_out|som }}</span></div>
+    <div class="card-bd">
+      {% if top_exp %}
+      {% set palette = ['#F0A831','#FB7185','#60A5FA','#7CBFA0','#FBBF24','#C084FC','#8A93A8'] %}
+      {% for name, val in top_exp %}
+      <div class="exp-row"><div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="exp-dot" style="background:{{ palette[loop.index0] }}"></span>
+          <span class="exp-name">{{ name }}</span>
+          <span class="exp-val">{{ val|som }}</span>
+        </div>
+        <div class="exp-bar"><i style="width:{{ (val / (top_exp[0][1] or 1) * 100)|round(1) }}%;background:{{ palette[loop.index0] }}"></i></div>
+      </div></div>
       {% endfor %}
-    </tbody>
-  </table>
+      {% else %}
+      <div class="empty"><i class="icon-pie-chart"></i>Bu oyda xarajat yo'q</div>
+      {% endif %}
+    </div>
   </div>
 </div>
+
+<!-- Yig'ma qoldiq dinamikasi -->
+<div class="card" style="margin-top:16px">
+  <div class="card-hd"><div class="card-title"><i class="icon-line-chart"></i> Kassa qoldig'i dinamikasi — {{ year }}</div>
+    <span class="tag tag-amber">joriy: {{ total_balance|som }}</span></div>
+  <div class="card-bd"><div class="chartbox" style="height:240px"><canvas id="balChart"></canvas></div></div>
+</div>
+
+<!-- So'nggi tranzaksiyalar -->
+<div class="card" style="margin-top:16px">
+  <div class="card-hd"><div class="card-title"><i class="icon-history"></i> So'nggi harakatlar</div>
+    <a href="/finance/transactions" class="btn btn-out btn-sm">Jurnal <i class="icon-arrow-right"></i></a></div>
+  {% for t in recent %}
+  <div class="feed-item">
+    <div class="wal-ico" style="width:36px;height:36px;font-size:16px;
+      background:{{ 'var(--green-bg)' if t.direction=='in' else 'var(--red-bg)' }};
+      color:{{ 'var(--green)' if t.direction=='in' else 'var(--red)' }}">
+      <i class="icon-arrow-{{ 'down-left' if t.direction=='in' else 'up-right' }}"></i>
+    </div>
+    <div style="min-width:0;flex:1">
+      <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ t.category }}</div>
+      <div style="font-size:11px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        {{ t.date }} · {{ t.wallet }}{% if t.purpose %} · {{ t.purpose }}{% endif %}</div>
+    </div>
+    <div style="font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;
+      color:{{ 'var(--green)' if t.direction=='in' else 'var(--red)' }}">
+      {{ '+' if t.direction=='in' else '−' }}{{ t.amount|som }}</div>
+  </div>
+  {% else %}
+  <div class="empty"><i class="icon-database"></i>Ma'lumot yo'q — Sync tugmasini bosing</div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  var css = getComputedStyle(document.documentElement);
+  var txt3 = css.getPropertyValue('--txt3').trim() || '#8A93A8';
+  var line = 'rgba(140,150,170,.14)';
+  var mln = function(v){ return Math.abs(v) >= 1e6 ? (v/1e6).toFixed(1).replace(/\.0$/,'') + ' mln'
+                        : Math.abs(v) >= 1e3 ? (v/1e3).toFixed(0) + ' ming' : v; };
+  var fmt = function(v){ return v.toLocaleString('ru-RU').replace(/,/g,' '); };
+  new Chart(document.getElementById('flowChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'],
+      datasets: [
+        {label:'Tushum', data: {{ inc_series|tojson }}, backgroundColor:'rgba(124,191,160,.85)',
+         borderRadius:6, maxBarThickness:22},
+        {label:'Xarajat', data: {{ exp_series|tojson }}, backgroundColor:'rgba(251,113,133,.8)',
+         borderRadius:6, maxBarThickness:22}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{
+        legend:{labels:{color:txt3, boxWidth:12, boxHeight:12, borderRadius:3, useBorderRadius:true, font:{family:'Inter',weight:'700',size:11}}},
+        tooltip:{callbacks:{label:function(c){return ' ' + c.dataset.label + ': ' + fmt(c.raw) + " so'm";}}}
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{color:txt3, font:{family:'Inter',size:10.5}}},
+        y:{grid:{color:line}, border:{display:false},
+           ticks:{color:txt3, font:{family:'Inter',size:10.5}, callback:function(v){return mln(v);}}}
+      }
+    }
+  });
+
+  // Yig'ma kassa qoldig'i (faqat ma'lumot bor oygacha)
+  var lastM = {{ last_month or 0 }};
+  var balRaw = {{ bal_series|tojson }};
+  var balData = balRaw.map(function(v,i){ return (i < lastM) ? v : null; });
+  var gold = css.getPropertyValue('--gold').trim() || '#F0A831';
+  new Chart(document.getElementById('balChart'), {
+    type:'line',
+    data:{ labels:['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'],
+      datasets:[{ label:'Kassa qoldigi', data:balData, spanGaps:false,
+        borderColor:gold, backgroundColor:'rgba(240,168,49,.12)', fill:true,
+        tension:.32, borderWidth:2.5, pointRadius:3, pointBackgroundColor:gold,
+        pointHoverRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false},
+        tooltip:{callbacks:{label:function(c){return ' ' + fmt(c.raw) + " so'm";}}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:txt3, font:{family:'Inter',size:10.5}}},
+        y:{grid:{color:line}, border:{display:false},
+           ticks:{color:txt3, font:{family:'Inter',size:10.5}, callback:function(v){return mln(v);}}}
+      }}
+  });
+})();
+</script>
 {% endblock %}
