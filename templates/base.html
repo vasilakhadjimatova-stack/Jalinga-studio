@@ -190,8 +190,7 @@ a{color:inherit;text-decoration:none}
 .kpi:hover::after{opacity:.9}
 .kpi-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .kpi-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--txt3)}
-.kpi-val{font-size:25px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.4px;
-  text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.kpi-val{font-size:25px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.4px}
 .kpi-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
   font-size:18px;flex:0 0 auto}
 .kpi-ico.gold{background:var(--gold-bg);color:var(--gold)}
@@ -345,6 +344,12 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
     <div class="logo-sub">VIDEO STUDIO</div>
   </div>
   <nav class="sb-nav">
+    {% if current_user.is_buxgalter %}
+    {# Buxgalter — faqat moliya bo'limi #}
+    <div class="sb-sec">Moliya</div>
+    <a href="/finance" class="sb-a {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i> Moliya</a>
+    <a href="/analytics" class="sb-a {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i> Analitika</a>
+    {% else %}
     <div class="sb-sec">Asosiy</div>
     <a href="/" class="sb-a {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i> Boshqaruv paneli</a>
     <a href="/calendar" class="sb-a {% if request.path.startswith('/calendar') or request.path.startswith('/bookings') %}active{% endif %}"><i class="icon-calendar-days"></i> Kalendar / Bron</a>
@@ -354,12 +359,13 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
     <a href="/montaj" class="sb-a {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i> Montaj oqimi</a>
     <a href="/studios" class="sb-a {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i> Studiyalar</a>
     <div class="sb-sec">Boshqaruv</div>
-    {% if current_user.is_admin %}
+    {% if current_user.can_finance %}
     <a href="/finance" class="sb-a {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i> Moliya</a>
     {% endif %}
     <a href="/analytics" class="sb-a {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i> Analitika</a>
     {% if current_user.is_admin %}
     <a href="/team" class="sb-a {% if request.path.startswith('/team') %}active{% endif %}"><i class="icon-users-round"></i> Jamoa</a>
+    {% endif %}
     {% endif %}
   </nav>
   <div class="sb-foot">
@@ -367,7 +373,7 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
       <div class="sb-av">{{ current_user.name[0]|upper }}</div>
       <div style="min-width:0">
         <div class="sb-uname">{{ current_user.name }}</div>
-        <div class="sb-urole">{{ 'Rahbar' if current_user.is_admin else 'Operator' }}</div>
+        <div class="sb-urole">{{ {'admin':'Rahbar','buxgalter':'Buxgalter','montaj':'Montajchi','operator':'Operator'}.get(current_user.role, 'Operator') }}</div>
       </div>
       <a href="/logout" class="sb-logout" title="Chiqish"><i class="icon-log-out"></i></a>
     </div>
@@ -398,17 +404,22 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
 
 <!-- Mobil pastki navigatsiya -->
 <nav class="bn">
+  {% if current_user.is_buxgalter %}
+  <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i>Moliya</a>
+  <a href="/analytics" class="bn-item {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i>Analitika</a>
+  {% else %}
   <a href="/" class="bn-item {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i>Panel</a>
   <a href="/calendar" class="bn-item {% if request.path.startswith('/calendar') %}active{% endif %}"><i class="icon-calendar-days"></i>Kalendar</a>
   <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Mijozlar</a>
   <a href="/studios" class="bn-item {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i>Studiya</a>
   <a href="/montaj" class="bn-item {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i>Montaj</a>
-  {% if current_user and current_user.is_admin %}
+  {% if current_user and current_user.can_finance %}
   <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i>Moliya</a>
   {% endif %}
   <a href="/analytics" class="bn-item {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i>Analitika</a>
   {% if current_user and current_user.is_admin %}
   <a href="/team" class="bn-item {% if request.path.startswith('/team') %}active{% endif %}"><i class="icon-users-round"></i>Jamoa</a>
+  {% endif %}
   {% endif %}
 </nav>
 {% else %}

@@ -1,10 +1,10 @@
 """Boshliq paneli — biznes bir ekranda: bugun, bandlik, tushum, balanslar."""
 from datetime import timedelta
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 from sqlalchemy import func
 
-from core.auth import login_required
+from core.auth import login_required, current_user
 from core.timeutils import now_tashkent, today_iso, current_month_iso
 from database import db
 from models.studio import Studio, Booking
@@ -16,6 +16,10 @@ bp = Blueprint("dashboard", __name__)
 @bp.route("/")
 @login_required
 def index():
+    # Buxgalter uchun bosh sahifa — Moliya (studiya paneli kerak emas)
+    u = current_user()
+    if u and u.is_buxgalter:
+        return redirect(url_for("finance.index"))
     today = today_iso()
     month = current_month_iso()
 

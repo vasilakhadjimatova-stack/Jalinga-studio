@@ -12,7 +12,7 @@ from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash)
 
 from config import Config
-from core.auth import admin_required
+from core.auth import finance_required
 from core.timeutils import current_month_iso
 from database import db
 from models.billing import Teacher, Payment
@@ -75,7 +75,7 @@ def _sync_info():
 # ── Dashboard ────────────────────────────────────────────────────────────────
 
 @bp.route("/finance")
-@admin_required
+@finance_required
 def index():
     year = _pick_year()
     try:
@@ -139,7 +139,7 @@ def index():
 # ── Tranzaksiyalar jurnali ───────────────────────────────────────────────────
 
 @bp.route("/finance/transactions")
-@admin_required
+@finance_required
 def transactions():
     month = (request.args.get("month") or "").strip()[:7]   # YYYY-MM yoki ''
     wallet = (request.args.get("wallet") or "").strip()
@@ -184,7 +184,7 @@ def transactions():
 
 
 @bp.route("/finance/transactions/add", methods=["POST"])
-@admin_required
+@finance_required
 def txn_add():
     d = (request.form.get("date") or "").strip()[:10]
     cat_name = (request.form.get("category") or "").strip()
@@ -228,7 +228,7 @@ LOCKED_MSG = {
 
 
 @bp.route("/finance/transactions/<int:tid>/edit", methods=["POST"])
-@admin_required
+@finance_required
 def txn_edit(tid):
     t = FinTransaction.query.get_or_404(tid)
     if t.source not in EDITABLE_SOURCES:
@@ -260,7 +260,7 @@ def txn_edit(tid):
 
 
 @bp.route("/finance/transactions/<int:tid>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def txn_delete(tid):
     t = FinTransaction.query.get_or_404(tid)
     if t.source not in EDITABLE_SOURCES:
@@ -349,7 +349,7 @@ def build_dds(year):
 
 
 @bp.route("/finance/dds")
-@admin_required
+@finance_required
 def dds():
     year = _pick_year()
     report = build_dds(year)
@@ -361,7 +361,7 @@ def dds():
 # ── Qarzlar (DOLG) — to'liq boshqaruv ────────────────────────────────────────
 
 @bp.route("/finance/debts")
-@admin_required
+@finance_required
 def debts():
     rows = FinDebt.query.order_by(FinDebt.id.desc()).all()
     total = sum(d.amount or 0 for d in rows)
@@ -380,7 +380,7 @@ def _num(field, default=0.0):
 
 
 @bp.route("/finance/debts/add", methods=["POST"])
-@admin_required
+@finance_required
 def debt_add():
     amount = _num("amount")
     if amount <= 0:
@@ -399,7 +399,7 @@ def debt_add():
 
 
 @bp.route("/finance/debts/<int:did>/edit", methods=["POST"])
-@admin_required
+@finance_required
 def debt_edit(did):
     d = FinDebt.query.get_or_404(did)
     amount = _num("amount")
@@ -419,7 +419,7 @@ def debt_edit(did):
 
 
 @bp.route("/finance/debts/<int:did>/repay", methods=["POST"])
-@admin_required
+@finance_required
 def debt_repay(did):
     """Qisman/to'liq qaytarishni qo'shish (qaytarilgan summani oshiradi)."""
     d = FinDebt.query.get_or_404(did)
@@ -437,7 +437,7 @@ def debt_repay(did):
 
 
 @bp.route("/finance/debts/<int:did>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def debt_delete(did):
     d = FinDebt.query.get_or_404(did)
     record("delete", "debt", f"#{d.id} {d.amount:.0f} {d.creditor}")
@@ -450,7 +450,7 @@ def debt_delete(did):
 # ── Dividendlar ──────────────────────────────────────────────────────────────
 
 @bp.route("/finance/dividends")
-@admin_required
+@finance_required
 def dividends():
     rows = (FinTransaction.query.filter_by(category="Дивиденды")
             .order_by(FinTransaction.date.desc()).all())
@@ -466,7 +466,7 @@ def dividends():
 # ── Sozlamalar: hisoblar (ochilish qoldig'i) + statyalar ─────────────────────
 
 @bp.route("/finance/settings")
-@admin_required
+@finance_required
 def settings():
     wallets = FinWallet.query.order_by(FinWallet.sort).all()
     # Joriy balansni ham ko'rsatamiz (ochilish + harakatlar)
@@ -480,7 +480,7 @@ def settings():
 
 
 @bp.route("/finance/wallets/save", methods=["POST"])
-@admin_required
+@finance_required
 def wallet_save():
     wid = (request.form.get("id") or "").strip()
     name = (request.form.get("name") or "").strip()[:120]
@@ -514,7 +514,7 @@ def wallet_save():
 
 
 @bp.route("/finance/wallets/<int:wid>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def wallet_delete(wid):
     w = FinWallet.query.get_or_404(wid)
     used = FinTransaction.query.filter_by(wallet=w.name).count()
@@ -530,7 +530,7 @@ def wallet_delete(wid):
 
 
 @bp.route("/finance/categories/add", methods=["POST"])
-@admin_required
+@finance_required
 def category_add():
     name = (request.form.get("name") or "").strip()[:200]
     direction = "in" if request.form.get("direction") == "in" else "out"
@@ -553,7 +553,7 @@ def category_add():
 
 
 @bp.route("/finance/categories/<int:cid>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def category_delete(cid):
     c = FinCategory.query.get_or_404(cid)
     used = FinTransaction.query.filter_by(category=c.name).count()
@@ -617,7 +617,7 @@ def _recurring_paid(rec_id, year, month, category=None):
 
 
 @bp.route("/finance/calendar")
-@admin_required
+@finance_required
 def calendar():
     import calendar as pycal
     from datetime import date as _date
@@ -723,7 +723,7 @@ def calendar():
 
 
 @bp.route("/finance/calendar/plan/add", methods=["POST"])
-@admin_required
+@finance_required
 def plan_add():
     d = (request.form.get("date") or "").strip()[:10]
     direction = "in" if request.form.get("direction") == "in" else "out"
@@ -746,7 +746,7 @@ def plan_add():
 
 
 @bp.route("/finance/calendar/plan/<int:pid>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def plan_delete(pid):
     f = FinPlan.query.get_or_404(pid)
     y, m = f.date[:4], int(f.date[5:7])
@@ -758,7 +758,7 @@ def plan_delete(pid):
 
 
 @bp.route("/finance/calendar/recurring/add", methods=["POST"])
-@admin_required
+@finance_required
 def recurring_add():
     name = (request.form.get("name") or "").strip()
     try:
@@ -780,7 +780,7 @@ def recurring_add():
 
 
 @bp.route("/finance/calendar/recurring/<int:rid>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def recurring_delete(rid):
     r = FinRecurring.query.get_or_404(rid)
     db.session.delete(r)
@@ -790,7 +790,7 @@ def recurring_delete(rid):
 
 
 @bp.route("/finance/calendar/pay", methods=["POST"])
-@admin_required
+@finance_required
 def calendar_pay():
     """Rejali/doimiy to'lovni bajarish → moliya jurnaliga tranzaksiya tushadi."""
     kind = (request.form.get("kind") or "").strip()
@@ -857,7 +857,7 @@ def calendar_pay():
 # ── Tahlil (statya strukturasi + kontragentlar) ─────────────────────────────
 
 @bp.route("/finance/analysis")
-@admin_required
+@finance_required
 def analysis():
     year = _pick_year()
     txns = FinTransaction.query.filter_by(year=year).filter(
@@ -908,7 +908,7 @@ def _safe_back(month=None):
 
 
 @bp.route("/finance/payments")
-@admin_required
+@finance_required
 def payments():
     month = (request.args.get("month") or current_month_iso()).strip()[:7]
     rows = Payment.query.filter(Payment.date.like(month + "%")).order_by(
@@ -926,7 +926,7 @@ def payments():
 
 
 @bp.route("/finance/<int:pid>/toggle", methods=["POST"])
-@admin_required
+@finance_required
 def toggle(pid):
     from modules.finance.studio_link import sync_payment_to_finance
     p = Payment.query.get_or_404(pid)
@@ -944,7 +944,7 @@ def toggle(pid):
 
 
 @bp.route("/finance/<int:pid>/delete", methods=["POST"])
-@admin_required
+@finance_required
 def delete(pid):
     from modules.finance.studio_link import unlink_payment_finance
     p = Payment.query.get_or_404(pid)

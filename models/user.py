@@ -2,7 +2,7 @@ from datetime import datetime
 
 from database import db
 
-ROLES = ["admin", "operator", "montaj"]
+ROLES = ["admin", "operator", "montaj", "buxgalter"]
 
 
 class User(db.Model):
@@ -17,6 +17,15 @@ class User(db.Model):
     @property
     def is_admin(self):
         return self.role == "admin"
+
+    @property
+    def is_buxgalter(self):
+        return self.role == "buxgalter"
+
+    @property
+    def can_finance(self):
+        """Moliya bo'limiga kirish huquqi (rahbar yoki buxgalter)."""
+        return self.role in ("admin", "buxgalter")
 
     def to_dict(self):
         return {"id": self.id, "name": self.name, "role": self.role,

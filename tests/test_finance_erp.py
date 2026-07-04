@@ -351,3 +351,60 @@ def test_debt_full_crud(app, admin_client, post):
     # o'chirish
     post(admin_client, f"/finance/debts/{d.id}/delete")
     assert FinDebt.query.get(d.id) is None
+
+
+# ── Buxgalter roli: moliyaga kirish, boshqasiga yo'q ──
+
+def _login(app, role, code):
+    from models.user import User
+    with app.app_context():
+        if User.query.filter_by(code=code).first() is None:
+            db.session.add(User(name=role.title(), code=code, role=role))
+            db.session.commit()
+    c = app.test_client()
+    c.post("/login", data={"code": code})
+    return c
+
+
+def test_buxgalter_can_access_finance(app):
+    c = _login(app, "buxgalter", "770077")
+    for url in ("/finance", "/finance/transactions", "/finance/dds",
+                "/finance/debts", "/finance/settings", "/analytics"):
+        assert c.get(url).status_code == 200, url
+
+
+def test_buxgalter_can_add_transaction(app):
+    from models.finance import FinCategory, FinWallet, FinTransaction
+    c = _login(app, "buxgalter", "771177")
+    with app.app_context():
+        cat = FinCategory.query.filter_by(direction="out").first().name
+        w = FinWallet.query.first().name
+        with c.session_transaction() as s:
+            s["_csrf"] = "t"
+    r = c.post("/finance/transactions/add", data={
+        "_csrf": "t", "date": "2026-07-04", "amount": "700000",
+        "wallet": w, "category": cat, "purpose": "buxgalter kiritdi"})
+    assert r.status_code in (302, 303)
+    with app.app_context():
+        assert FinTransaction.query.filter_by(
+            purpose="buxgalter kiritdi").first() is not None
+
+
+def test_buxgalter_blocked_from_team_and_studio(app):
+    """Buxgalter jamoa boshqaruvi va studiya bo'limlariga kira olmaydi."""
+    c = _login(app, "buxgalter", "772277")
+    # Jamoa — faqat rahbar
+    r = c.get("/team")
+    assert r.status_code in (302, 303)
+    assert "/team" not in r.headers.get("Location", "")
+    # Bosh sahifa → moliyaga yo'naltiriladi
+    home = c.get("/")
+    assert home.status_code in (302, 303)
+    assert "/finance" in home.headers.get("Location", "")
+
+
+def test_operator_still_blocked_from_finance(app):
+    c = _login(app, "operator", "773377")
+    r = c.get("/finance")
+    assert r.status_code in (302, 303)
+    assert "/finance" not in r.headers.get("Location", "")
