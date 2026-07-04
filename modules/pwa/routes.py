@@ -8,7 +8,7 @@ maqsad emas — installability + tezkor yuklanish + oflayn fallback.
 """
 import json
 
-from flask import Blueprint, Response, render_template, url_for
+from flask import Blueprint, Response, redirect, render_template, url_for
 
 from config import Config
 
@@ -76,6 +76,16 @@ def service_worker():
 @bp.route("/offline")
 def offline():
     return render_template("offline.html")
+
+
+# iOS/qurilmalar ba'zan ildizдаги ikonни avtomatik qidiradi (link teg bo'lsa
+# ham). Static faylga yo'naltiramiz — ikonка har doim topiladi.
+@bp.route("/apple-touch-icon.png")
+@bp.route("/apple-touch-icon-precomposed.png")
+@bp.route("/apple-touch-icon-120x120.png")
+@bp.route("/apple-touch-icon-120x120-precomposed.png")
+def apple_touch_icon():
+    return redirect(url_for("static", filename="icons/apple-touch-icon.png"))
 
 
 # ── Service worker manbasi ───────────────────────────────────────────────────
