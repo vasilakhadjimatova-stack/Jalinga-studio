@@ -27,6 +27,27 @@
 .ce-gray{background:var(--surface2);color:var(--txt2)}
 .cal-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--txt2);font-weight:600;align-items:center}
 .cal-stats b{color:var(--txt);font-weight:800}
+/* ═══ TO'LIQ EKRAN (fullscreen) — chiroyli katta kalendar ═══ */
+#calFull{position:relative}
+.cal-fsbar{display:none}
+#calFull:fullscreen{background:
+  radial-gradient(1200px 700px at 88% -12%, rgba(240,181,72,.10), transparent 56%),
+  linear-gradient(165deg,#0E0F15 0%, #0B0C11 55%, #08090D 100%);
+  padding:22px 26px 26px;display:flex;flex-direction:column;overflow:hidden;
+  border-radius:0;border:0}
+html[data-theme="marble"] #calFull:fullscreen{background:
+  linear-gradient(165deg,#FAF9F5 0%,#EFEDE7 55%,#E8E5DC 100%)}
+#calFull:fullscreen .card-bd{padding:0;overflow:hidden;flex:1;display:flex;flex-direction:column}
+#calFull:fullscreen .cal-fsbar{display:flex;align-items:center;justify-content:space-between;
+  gap:14px;margin-bottom:16px;flex-wrap:wrap}
+#calFull:fullscreen .cal-fs-title{font-size:26px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:14px}
+#calFull:fullscreen .cal-fs-title .cal-stats{font-size:13.5px}
+#calFull:fullscreen .cal{flex:1;height:100%}
+#calFull:fullscreen thead th{padding:10px;font-size:13px}
+#calFull:fullscreen .cal td{height:auto;padding:10px 11px}
+#calFull:fullscreen .cal-day{font-size:16px;margin-bottom:8px}
+#calFull:fullscreen .cal-ev{font-size:13px;padding:5px 11px;margin-bottom:6px;border-radius:8px}
+#calFull:fullscreen .cal-fs-close{cursor:pointer}
 /* Studiya tablar */
 .stab{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;
   border:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--txt2);
@@ -90,6 +111,8 @@
     <a href="/calendar?year={{ prev_y }}&month={{ prev_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">‹ Oldingi</a>
     <a href="/calendar{% if sel %}?studio={{ sel.id }}{% endif %}" class="btn btn-ghost btn-sm">Bugun</a>
     <a href="/calendar?year={{ next_y }}&month={{ next_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">Keyingi ›</a>
+    <button class="btn btn-out btn-sm" onclick="calFullscreen()" title="To'liq ekran (butun oyna)">
+      <i class="icon-maximize"></i> To'liq ekran</button>
     <button class="btn btn-gold" onclick="mcBook('{{ today_iso }}')">
       <i class="icon-plus"></i> Yangi bron</button>
   </div>
@@ -107,8 +130,20 @@
 </div>
 
 <div class="grid" style="grid-template-columns:1fr 320px;gap:16px">
-  <div class="card" style="margin:0">
+  <div class="card" id="calFull" style="margin:0">
     <div class="card-bd" style="padding:14px;overflow-x:auto">
+      <!-- Faqat to'liq ekranда ko'rinadigan yuqori panel -->
+      <div class="cal-fsbar">
+        <div class="cal-fs-title">
+          <span>{{ month_name }} {{ year }}{% if sel %} — {{ sel.name }}{% endif %}</span>
+          <span class="cal-stats">
+            <span>🎬 <b>{{ n_book }}</b> bron</span>
+            <span>⏱ <b>{{ '%g'|format(total_hours) }}</b> soat</span>
+          </span>
+        </div>
+        <button class="btn btn-out btn-sm cal-fs-close" onclick="calFullscreen()">
+          <i class="icon-minimize"></i> Chiqish</button>
+      </div>
       <table class="cal">
         <thead><tr>{% for w in weekdays %}<th>{{ w }}</th>{% endfor %}</tr></thead>
         <tbody>
@@ -297,6 +332,19 @@
 <script>
 var BK = {{ bk|tojson }};
 var bkCur = null;
+
+/* To'liq ekran — butun oyna bo'lib chiroyli ochiladi */
+function calFullscreen(){
+  var el = document.getElementById('calFull');
+  if(!el) return;
+  var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  if(!fsEl){
+    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+}
+/* ESC bilan chiqilса ham holat tabiiy tiklanadi (CSS :fullscreen orqali) */
 
 /* Kun bosildi → yangi bron (sana avtomatik) */
 function mcBook(iso, e){
