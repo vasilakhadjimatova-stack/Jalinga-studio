@@ -27,6 +27,28 @@
 .ce-gray{background:var(--surface2);color:var(--txt2)}
 .cal-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--txt2);font-weight:600;align-items:center}
 .cal-stats b{color:var(--txt);font-weight:800}
+/* Kalendar joylashuvi: kompyuterда 2 ustun (kalendar + Yaqin kunlar) */
+.cal-layout{display:grid;grid-template-columns:1fr 320px;gap:16px}
+/* ═══ TELEFON: bitta ustun, «Yaqin kunlar» yo'q, kalendar to'liq kenglikда ═══ */
+@media(max-width:820px){
+  .cal-layout{grid-template-columns:1fr}
+  .cal-side{display:none}
+  #calFull .card-bd{padding:6px;overflow-x:visible}
+  .cal{table-layout:fixed}
+  .cal th{padding:6px 2px;font-size:9.5px;letter-spacing:0}
+  .cal td{height:auto;min-height:64px;padding:4px 3px}
+  .cal-day{font-size:12px;margin-bottom:3px;text-align:center}
+  /* Chip matnini yashirib, faqat rangli nuqta — kun katagi tiqilib ketmasin */
+  .cal-ev{font-size:0;padding:0;height:7px;margin:0 auto 3px;width:7px;
+    border-radius:50%;border-left:0;display:block}
+  .cal-ev.ce-green{background:var(--green)}.cal-ev.ce-amber{background:var(--amber)}
+  .cal-ev.ce-red{background:var(--red)}.cal-ev.ce-blue{background:var(--blue)}
+  .cal-ev.ce-gray{background:var(--txt3)}
+}
+/* Chip nuqtalarini bir qatorда terish (mobil) */
+@media(max-width:820px){
+  .cal td{position:relative}
+}
 /* ═══ TO'LIQ EKRAN (fullscreen) — chiroyli katta kalendar ═══ */
 #calFull{position:relative}
 .cal-fsbar{display:none}
@@ -129,7 +151,7 @@ html[data-theme="marble"] #calFull:fullscreen{background:
   {% endfor %}
 </div>
 
-<div class="grid" style="grid-template-columns:1fr 320px;gap:16px">
+<div class="cal-layout">
   <div class="card" id="calFull" style="margin:0">
     <div class="card-bd" style="padding:14px;overflow-x:auto">
       <!-- Faqat to'liq ekranда ko'rinadigan yuqori panel -->
@@ -151,7 +173,7 @@ html[data-theme="marble"] #calFull:fullscreen{background:
           <tr>
             {% for d in week %}
             <td class="{% if not d.in_month %}out{% endif %} {% if d.is_today %}today{% endif %}"
-                onclick="mcBook('{{ d.iso }}', event)" title="Shu kunga bron qilish">
+                onclick="mcDayTap('{{ d.iso }}', event)" title="Kun — bronlar / yangi bron">
               <div class="cal-day">{{ d.day }}</div>
               {% for it in d.evs[:4] %}
               <span class="cal-ev ce-{{ it.color }}" style="border-left-color:{{ it.scolor }}"
@@ -170,7 +192,7 @@ html[data-theme="marble"] #calFull:fullscreen{background:
     </div>
   </div>
 
-  <div class="card" style="margin:0">
+  <div class="card cal-side" style="margin:0">
     <div class="card-hd"><div class="card-title"><i class="icon-list"></i> Yaqin kunlar</div></div>
     <div style="padding:0;max-height:560px;overflow-y:auto">
       {% for a in agenda %}
@@ -226,6 +248,16 @@ html[data-theme="marble"] #calFull:fullscreen{background:
       <a class="btn btn-out btn-sm" id="bkCard" href="#" style="width:100%;justify-content:center">
         <i class="icon-id-card"></i> Mijoz kartasi — paket / balans</a>
     </div>
+  </div>
+</div>
+
+<!-- Kun agenda (telefon) — o'sha kunning bronlari -->
+<div class="modal-ov" id="m-day" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-calendar-days"></i> <span id="md-title">Kun</span></div>
+    <div id="md-list" style="margin:8px 0 14px;display:flex;flex-direction:column;gap:6px"></div>
+    <button class="btn btn-gold" id="md-add" style="width:100%;justify-content:center">
+      <i class="icon-plus"></i> Shu kunga yangi bron</button>
   </div>
 </div>
 
@@ -351,6 +383,38 @@ function mcBook(iso, e){
   if(e && e.target && e.target.closest('.cal-ev')) return;  // chip bosilsa — kun ochilmaydi
   document.getElementById('mb-date').value = iso;
   document.getElementById('m-book').classList.add('open');
+}
+
+function _esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':s; return d.innerHTML; }
+
+/* Kun bosildi. Telefonда o'sha kunning bronlari ro'yxati; bo'sh bo'lsa yoki
+   kompyuterда — to'g'ridan-to'g'ri yangi bron. */
+function mcDayTap(iso, e){
+  if(e && e.target && e.target.closest('.cal-ev')) return;   // nuqta/chip — o'z ishlovi
+  var isMobile = window.matchMedia('(max-width:820px)').matches;
+  var items = Object.keys(BK).map(function(k){return BK[k];})
+                .filter(function(b){ return b.date === iso; });
+  if(isMobile && items.length){ mcDay(iso, items); }
+  else { mcBook(iso); }
+}
+
+/* Kun agenda popup'i (telefon) — bronlar ro'yxati + «Yangi bron» */
+function mcDay(iso, items){
+  items.sort(function(a,b){ return (a.start||'').localeCompare(b.start||''); });
+  document.getElementById('md-title').textContent = iso;
+  document.getElementById('md-list').innerHTML = items.map(function(b){
+    return '<div class="feed-item" style="cursor:pointer;border-radius:12px" '+
+      'onclick="document.getElementById(\'m-day\').classList.remove(\'open\');mcShow('+b.id+')">'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:'+b.scolor+';flex:0 0 auto"></span>'+
+      '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">'+
+      b.start+'–'+b.end+' · '+_esc(b.teacher)+'</div>'+
+      '<div style="font-size:11px;color:var(--txt3)">'+_esc(b.studio)+' · '+_esc(b.status_label)+'</div>'+
+      '</div><i class="icon-chevron-right" style="color:var(--txt3)"></i></div>';
+  }).join('');
+  document.getElementById('md-add').onclick = function(){
+    document.getElementById('m-day').classList.remove('open'); mcBook(iso);
+  };
+  document.getElementById('m-day').classList.add('open');
 }
 
 /* Mijoz rejimi: mavjud (select) ↔ yangi (ism/telefon) */
