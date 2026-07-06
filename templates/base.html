@@ -447,6 +447,24 @@ document.addEventListener('submit', function(e){
   }
 }, true);
 
+/* ── Telefon maydonlari: har joyda «+998 » tayyor tursin ──────────────────
+   Bo'sh telefon maydoniga (yangi mijoz) avtomatik +998 qo'yiladi; fokusда
+   ham qayta tiklanadi. To'ldirilган (tahrirlash) maydonlarga tegmaydi. */
+(function(){
+  function isPhone(el){
+    if(el.tagName!=='INPUT') return false;
+    var n=(el.name||'').toLowerCase(), t=(el.type||'').toLowerCase();
+    return t==='tel' || n==='phone' || n==='new_phone' || n.indexOf('phone')>=0;
+  }
+  function prep(el){ if(!(el.value||'').trim()) el.value='+998 '; }
+  function all(){ document.querySelectorAll('input').forEach(function(el){
+    if(isPhone(el)) prep(el); }); }
+  document.addEventListener('DOMContentLoaded', all);
+  // Modal ochilganда yoki fokusда bo'sh bo'lsa ham tiklaymiz
+  document.addEventListener('focusin', function(e){
+    if(isPhone(e.target)) prep(e.target); });
+})();
+
 /* ── PWA: service worker + «Ilovani o'rnatish» ─────────────────────────── */
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
