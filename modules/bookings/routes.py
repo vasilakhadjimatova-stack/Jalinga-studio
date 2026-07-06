@@ -388,7 +388,6 @@ def set_status(bid):
         flash("Holat noto'g'ri", "error")
         return redirect(url_for("bookings.calendar", date=b.date))
     b.status = new
-    from models.montaj import EditJob
     warn = ""
     # Bekor bo'lsa — kutilayotgan soatbay to'lov o'chadi. Agar to'lov ALLAQACHON
     # "to'landi" bo'lsa — u haqiqiy pul, o'chirmaymiz, lekin ogohlantiramiz
@@ -401,15 +400,6 @@ def set_status(bid):
         if paid_left:
             warn = (" · ⚠️ bu bronда to'langan to'lov bor — kerak bo'lsa "
                     "Moliyada qaytaring")
-    # «done» dan boshqa holatga o'tsa — montaj kartasi endi keraksiz
-    # (yetim karta kanbanда qolib ketmasin: cancel/noshow/active hammasi).
-    if new == "done":
-        t = Teacher.query.get(b.teacher_id)
-        EditJob.for_booking(b, teacher_name=(t.name if t else ""))
-    else:
-        EditJob.query.filter(EditJob.booking_id == b.id,
-                             EditJob.status != "delivered").delete(
-            synchronize_session=False)
     db.session.commit()
     extra = ""
     if new == "noshow" and b.pay_type == "package":

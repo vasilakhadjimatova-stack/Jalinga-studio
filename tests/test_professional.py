@@ -110,24 +110,6 @@ def test_noshow_burns_package_hours(app, admin_client, post):
         assert Teacher.query.get(tid).balance_hours() == 10
 
 
-# ── 4. Bekor → montaj kartasi o'chadi ──
-def test_cancel_removes_edit_job(app, admin_client, post):
-    from models.studio import Booking
-    from models.montaj import EditJob
-    tid = _mk_teacher(app, "CancelJob Ustoz")
-    sid = _sid(app)
-    post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-06", start="10:00", end="12:00", pay_type="hourly")
-    with app.app_context():
-        bid = Booking.query.filter_by(teacher_id=tid).first().id
-    post(admin_client, f"/bookings/{bid}/status", status="done")
-    with app.app_context():
-        assert EditJob.query.filter_by(booking_id=bid).count() == 1
-    post(admin_client, f"/bookings/{bid}/status", status="cancelled")
-    with app.app_context():
-        assert EditJob.query.filter_by(booking_id=bid).count() == 0   # yetim yo'q
-
-
 # ── 5. Jamoa boshqaruvi ──
 def test_team_add_and_guards(app, admin_client, post):
     from models.user import User

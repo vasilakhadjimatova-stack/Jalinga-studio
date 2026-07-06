@@ -360,7 +360,6 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
     <div class="sb-sec">Mijozlar</div>
     <a href="/teachers" class="sb-a {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i> Mijozlar</a>
     <div class="sb-sec">Ishlab chiqarish</div>
-    <a href="/montaj" class="sb-a {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i> Montaj oqimi</a>
     <a href="/studios" class="sb-a {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i> Studiyalar</a>
     <div class="sb-sec">Boshqaruv</div>
     {% if current_user.can_finance %}
@@ -416,7 +415,6 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
   <a href="/calendar" class="bn-item {% if request.path.startswith('/calendar') %}active{% endif %}"><i class="icon-calendar-days"></i>Kalendar</a>
   <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Mijozlar</a>
   <a href="/studios" class="bn-item {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i>Studiya</a>
-  <a href="/montaj" class="bn-item {% if request.path.startswith('/montaj') %}active{% endif %}"><i class="icon-scissors"></i>Montaj</a>
   {% if current_user and current_user.can_finance %}
   <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i>Moliya</a>
   {% endif %}

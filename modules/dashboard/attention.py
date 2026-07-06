@@ -11,22 +11,12 @@ from core.timeutils import now_tashkent, today_iso
 from database import db
 from models.billing import Teacher, Payment, ClientNote
 from models.studio import Booking
-from models.montaj import EditJob
 
 
 def attention_items():
     today = today_iso()
     today_d = now_tashkent().date()
     items = []
-
-    # 🔴 Kechikkan montaj (SLA buzilgan)
-    overdue_jobs = [j for j in EditJob.query.filter(
-        EditJob.status != "delivered").all() if j.is_overdue()]
-    if overdue_jobs:
-        items.append({
-            "level": "danger", "icon": "timer-off",
-            "title": "Kechikkan montaj", "count": len(overdue_jobs),
-            "detail": "SLA muddati o'tgan — topshirish kerak", "link": "/montaj"})
 
     # 🟡 Follow-up muddati kelgan/o'tgan (faol mijozlar)
     active_ids = {t.id for t in Teacher.query.filter_by(is_active=True).all()}

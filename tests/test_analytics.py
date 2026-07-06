@@ -39,8 +39,7 @@ def test_analytics_new_sections(admin_client):
     r = admin_client.get("/analytics")
     assert r.status_code == 200
     for text in ("Aqlli xulosalar", "6 oylik trend", "Kelgusi 7 kun",
-                 "Mijoz segmentlari", "Top mijozlar",
-                 "Montaj — ochiq kartalar"):
+                 "Mijoz segmentlari", "Top mijozlar"):
         assert text.encode() in r.data, text
 
 
