@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Chegirmalar{% endblock %}
+{% block page_title %}Vaqt chegirmalari{% endblock %}
+{% block page_crumb %}Bo'sh soatlarga chegirma — kalendar va online bronga ta'sir qiladi{% endblock %}
+{% block content %}
+<div class="ph"><div>
+  <div class="gold-bar"></div>
+  <div class="ph-title">Vaqt chegirmalari</div>
+  <div class="ph-sub">Tinch soatlarni arzonlashtirib bo'sh vaqtni to'ldiring</div>
+</div>
+<div style="display:flex;gap:8px">
+  <a href="/studios" class="btn btn-out"><i class="icon-arrow-left"></i> Studiyalar</a>
+  <button class="btn btn-gold" onclick="pEdit()"><i class="icon-plus"></i> Yangi qoida</button>
+</div></div>
+
+<div class="card" style="margin-bottom:14px">
+  <div class="card-bd" style="font-size:13px;color:var(--txt2);line-height:1.6">
+    <b>Qanday ishlaydi:</b> qoida bronning <b>boshlanish soatiga</b> qarab qo'llanadi.
+    Masalan «Dushanba–Juma, 09:00–14:00, −20%» — o'sha oraliqda boshlangan
+    soatbay bronlar 20% arzon bo'ladi. Chegirma online bron sahifasida
+    <span style="color:var(--green);font-weight:700">yashil belgi</span> bilan
+    ko'rinadi va kalendardagi to'lov summasiga ham tushadi. Paket (balans)
+    bronlarga ta'sir qilmaydi.
+  </div>
+</div>
+
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr><th>Nomi</th><th>Studiya</th><th>Kunlar</th><th>Soat</th><th>Chegirma</th><th>Holat</th><th></th></tr></thead>
+    <tbody>
+      {% for r in rules %}
+      <tr>
+        <td><b>{{ r.name }}</b></td>
+        <td style="color:var(--txt2)">{{ r.studio_name }}</td>
+        <td style="color:var(--txt2)">{{ r.days_label }}</td>
+        <td style="font-variant-numeric:tabular-nums">{{ '%02d'|format(r.start_hour) }}:00–{{ '%02d'|format(r.end_hour) }}:00</td>
+        <td><span class="tag tag-green">−{{ r.discount }}%</span></td>
+        <td><span class="tag tag-{{ 'green' if r.is_active else 'gray' }}">{{ 'Faol' if r.is_active else "O'chiq" }}</span></td>
+        <td class="r" style="white-space:nowrap">
+          <button class="btn btn-sm btn-out" data-r='{{ r|tojson }}'
+                  onclick="pEdit(JSON.parse(this.dataset.r))"><i class="icon-pencil"></i></button>
+          <form method="POST" action="/pricing/delete" style="display:inline"
+                onsubmit="return confirm('Qoida o\'chirilsinmi?')">
+            <input type="hidden" name="id" value="{{ r.id }}">
+            <button class="btn btn-sm btn-out" style="color:var(--red)"><i class="icon-trash-2"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7"><div class="empty" style="padding:26px">
+        <i class="icon-tag"></i>Hali chegirma qoidasi yo'q. «Yangi qoida» bilan qo'shing —
+        masalan kunduzги bo'sh soatlarga −20%.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-ov" id="m-rule" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" id="mr-title"><i class="icon-tag"></i> Chegirma qoidasi</div>
+    <form method="POST" action="/pricing/save">
+      <input type="hidden" name="id" id="mr-id">
+      <label>Nomi</label>
+      <input class="input" name="name" id="mr-name" placeholder="Masalan: Kunduzgi chegirma" required>
+      <label style="margin-top:11px">Studiya</label>
+      <select class="input" name="studio_id" id="mr-studio">
+        <option value="0">Barcha studiyalar</option>
+        {% for s in studios %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <label style="margin-top:11px">Hafta kunlari <span style="color:var(--txt3);font-weight:400">(hech biri = har kuni)</span></label>
+      <div id="mr-days" style="display:flex;gap:6px;flex-wrap:wrap">
+        {% for d, nm in [(0,'Du'),(1,'Se'),(2,'Ch'),(3,'Pa'),(4,'Ju'),(5,'Sh'),(6,'Ya')] %}
+        <label class="daychip"><input type="checkbox" name="days" value="{{ d }}" style="display:none">{{ nm }}</label>
+        {% endfor %}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:11px">
+        <div><label>Boshlanish</label>
+          <select class="input" name="start_hour" id="mr-start">
+            {% for h in range(0,24) %}<option value="{{ h }}">{{ '%02d'|format(h) }}:00</option>{% endfor %}
+          </select></div>
+        <div><label>Tugash</label>
+          <select class="input" name="end_hour" id="mr-end">
+            {% for h in range(1,25) %}<option value="{{ h }}">{{ '%02d'|format(h) }}:00</option>{% endfor %}
+          </select></div>
+        <div><label>Chegirma %</label>
+          <input class="input" type="number" name="discount" id="mr-disc" min="0" max="90" step="5" value="20"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:13px;cursor:pointer">
+        <input type="checkbox" name="is_active" id="mr-active" value="1" checked style="width:17px;height:17px"> Faol
+      </label>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-rule').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">Saqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.daychip{padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;
+  cursor:pointer;font-size:13px;font-weight:600;user-select:none;transition:.12s}
+.daychip.on{border-color:var(--gold);background:var(--gold-bg);color:var(--gold)}
+</style>
+<script>
+document.querySelectorAll('.daychip').forEach(function(l){
+  l.addEventListener('click',function(){var cb=l.querySelector('input');
+    cb.checked=!cb.checked;l.classList.toggle('on',cb.checked);});});
+function pEdit(r){
+  r=r||{};
+  document.getElementById('mr-title').innerHTML='<i class="icon-tag"></i> '+(r.id?r.name:'Yangi qoida');
+  document.getElementById('mr-id').value=r.id||'';
+  document.getElementById('mr-name').value=r.name||'';
+  document.getElementById('mr-studio').value=r.studio_id||0;
+  document.getElementById('mr-start').value=(r.start_hour!=null?r.start_hour:9);
+  document.getElementById('mr-end').value=(r.end_hour!=null?r.end_hour:14);
+  document.getElementById('mr-disc').value=(r.discount!=null?r.discount:20);
+  document.getElementById('mr-active').checked=(r.is_active!==false);
+  var days=(r.days||'').split(',');
+  document.querySelectorAll('.daychip').forEach(function(l){var cb=l.querySelector('input');
+    cb.checked=days.indexOf(cb.value)>=0;l.classList.toggle('on',cb.checked);});
+  document.getElementById('m-rule').classList.add('open');
+}
+</script>
+{% endblock %}

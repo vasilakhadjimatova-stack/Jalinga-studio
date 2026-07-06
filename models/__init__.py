@@ -6,3 +6,4 @@ from models.finance import (            # noqa: F401
     FinWallet, FinCategory, FinTransaction, FinDebt, FinSetting,
     FinRecurring, FinPlan)
 from models.audit import AuditLog       # noqa: F401
+from models.pricing import PriceRule    # noqa: F401

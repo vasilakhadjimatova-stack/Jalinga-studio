@@ -316,10 +316,19 @@ html[data-theme="marble"] #calFull:fullscreen{background:
         <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
       </div>
       <label>To'lov turi</label>
-      <select class="select" name="pay_type" id="mb-pay">
+      <select class="select" name="pay_type" id="mb-pay" onchange="mcTogglePay()">
         <option value="hourly">💵 Soatbay (to'lov yoziladi)</option>
         <option value="package" id="mb-pay-pkg">📦 Paket balansidan</option>
       </select>
+      <div id="mb-disc-wrap">
+        <label>Chegirma % <span style="color:var(--txt3);font-weight:400">(ixtiyoriy — soatbay uchun)</span></label>
+        <input class="input" type="number" name="discount" id="mb-disc" min="0" max="90" step="5"
+               placeholder="0" inputmode="numeric">
+        <div style="font-size:11px;color:var(--txt3);margin-top:5px">
+          Bo'sh qoldirsangiz — vaqt qoidasi bo'yicha avtomatik chegirma qo'llanadi.
+          Qo'lda kiritsangiz — kattarog'i olinadi.
+        </div>
+      </div>
       <label>Operator (ixtiyoriy)</label>
       <input class="input" name="operator" placeholder="Kim yozib beradi">
       <label>Izoh</label>
@@ -436,7 +445,15 @@ function mcClientMode(m){
   var pay = document.getElementById('mb-pay');
   if(isNew){ pay.value = 'hourly'; pkg.disabled = true; }
   else { pkg.disabled = false; }
+  mcTogglePay();
   if(isNew) nn.focus();
+}
+
+/* Chegirma maydoni faqat soatbay uchun ko'rinadi (paket balansdan yechiladi) */
+function mcTogglePay(){
+  var pay = document.getElementById('mb-pay');
+  var w = document.getElementById('mb-disc-wrap');
+  if(w) w.style.display = (pay.value === 'package') ? 'none' : 'block';
 }
 
 /* Mavjud mijoz select'ini qidiruv bilan filtrlash */
