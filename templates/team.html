@@ -82,10 +82,64 @@
       <a href="/team/backup.json" class="btn btn-gold" download>
         <i class="icon-download"></i> Butun bazani yuklab olish (.json)</a>
       <div style="font-size:11.5px;color:var(--txt3);line-height:1.5">
-        Mijozlar, bronlar, to'lovlar, moliya, montaj va jamoa — bitta faylда.<br>
+        Mijozlar, bronlar, to'lovlar, moliya va jamoa — bitta faylда.<br>
         Telefon/kompyuterга saqlang; SQLite→Postgres ko'chirishда ham asqotadi.
       </div>
     </div>
+  </div>
+</div>
+
+<!-- XAVFLI: ma'lumotlarni tozalash (ishga tushirish uchun) -->
+<div class="card" style="border:1px solid rgba(251,113,133,.35)">
+  <div class="card-hd"><div class="card-title" style="color:var(--red)">
+    <i class="icon-trash-2"></i> Ma'lumotlarni tozalash</div>
+    <span class="tag tag-red">qaytarib bo'lmaydi</span></div>
+  <div class="card-bd">
+    <div style="font-size:12.5px;color:var(--txt2);line-height:1.6;margin-bottom:12px">
+      Dasturni real ishga tushirishдан oldin test/demo ma'lumotlarni tozalang.
+      <b style="color:var(--red)">Bu amal qaytarilmaydi</b> — avval yuqoridagi
+      zaxira nusxани yuklab oling.
+    </div>
+    <button class="btn btn-out" style="color:var(--red);border-color:var(--red)"
+            onclick="document.getElementById('m-reset').classList.add('open')">
+      <i class="icon-trash-2"></i> Tozalashni boshlash</button>
+  </div>
+</div>
+
+<div class="modal-ov" id="m-reset" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--red)"><i class="icon-alert-triangle"></i> Ma'lumotlarni tozalash</div>
+    <div style="font-size:12px;color:var(--txt3);margin:4px 0 12px">
+      Avval <a href="/team/backup.json" download style="color:var(--brand)">zaxira nusxани yuklab oling</a>.
+      Bu amal <b style="color:var(--red)">qaytarib bo'lmaydi</b>.
+    </div>
+    <form method="POST" action="/team/reset">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Nimani o'chirish?</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin:6px 0 12px">
+        <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:13px">
+          <input type="radio" name="scope" value="ops" checked style="margin-top:3px">
+          <span><b>Bron / mijoz / to'lov</b> — moliya jurnali (tarixiy yozuvlar), studiyalar, chegirmalar, xodimlar <b>qoladi</b>. <span style="color:var(--txt3)">(tavsiya)</span></span></label>
+        <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:13px">
+          <input type="radio" name="scope" value="ops_finance" style="margin-top:3px">
+          <span><b>Yuqoridagilar + butun moliya jurnali</b> (tranzaksiya, qarz). Studiyalar/chegirmalar/xodimlar qoladi.</span></label>
+        <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:13px">
+          <input type="radio" name="scope" value="full" style="margin-top:3px">
+          <span><b>To'liq reset</b> — hammasi o'chadi, faqat sizning admin loginingiz qoladi.</span></label>
+      </div>
+      <label>Login kodingiz</label>
+      <input class="input" type="password" name="confirm_code" inputmode="numeric" required placeholder="tasdiq uchun">
+      <label style="margin-top:10px">Tasdiq: <b>TOZALASH</b> deb yozing</label>
+      <input class="input" name="confirm_word" required placeholder="TOZALASH" autocomplete="off"
+             style="text-transform:uppercase">
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-reset').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn" style="flex:2;justify-content:center;background:var(--red);color:#fff"
+                onclick="return confirm('Rostan tozalansinmi? Bu amal QAYTARIB BO`LMAYDI.')">
+          <i class="icon-trash-2"></i> Tozalash</button>
+      </div>
+    </form>
   </div>
 </div>
 
