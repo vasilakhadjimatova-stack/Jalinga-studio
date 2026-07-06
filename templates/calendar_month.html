@@ -315,9 +315,18 @@ html[data-theme="marble"] #calFull:fullscreen{background:
       <div id="mb-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-top:9px"></div>
       <div style="font-size:11px;color:var(--txt3);margin-top:6px">Bir nechta kunga birdan bron qilish mumkin — har kun alohida tekshiriladi (band bo'lsa o'sha kun o'tkazib yuboriladi)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><label>Boshlanish</label><input class="input" type="time" name="start" value="10:00" required></div>
-        <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
+        <div><label>Boshlanish</label><input class="input" type="time" name="start" id="mb-start" value="10:00" required></div>
+        <div><label>Tugash</label><input class="input" type="time" name="end" id="mb-end" value="12:00" required></div>
       </div>
+      <!-- Har kunga alohida vaqt (bir necha kun tanlanganda) -->
+      <div id="mb-pertime" style="display:none;margin-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px">
+          <input type="checkbox" id="mb-pertime-chk" onchange="renderPerTime()" style="width:17px;height:17px">
+          🕒 Har kun har xil vaqtda — alohida belgilash
+        </label>
+        <div id="mb-pertime-list" style="display:none;margin-top:8px;flex-direction:column;gap:8px"></div>
+      </div>
+      <input type="hidden" name="slots_json" id="mb-slots">
       <label>To'lov turi</label>
       <select class="select" name="pay_type" id="mb-pay" onchange="mcTogglePay()">
         <option value="hourly">💵 Soatbay (to'lov yoziladi)</option>
@@ -478,6 +487,7 @@ function mcFilterClients(q){
 
 /* Ikki marta bosilib ikki bron ketmasin */
 function mcGuardSubmit(form){
+  if(typeof buildSlots === 'function') buildSlots();   // har kunga alohida vaqt
   var b = document.getElementById('mb-submit');
   if(b){ setTimeout(function(){ b.disabled = true; b.textContent = 'Saqlanmoqda…'; }, 0); }
   return true;
@@ -743,15 +753,55 @@ function syncDates(){
 }
 function renderChips(){
   var box=document.getElementById('mb-chips');
-  if(bkDates.length<=1){ box.style.display='none'; box.innerHTML=''; return; }
-  box.style.display='flex';
-  box.innerHTML=bkDates.map(function(d,i){
-    var p=d.split('-');
-    return '<span class="mb-chip">'+p[2]+'.'+p[1]+
-      '<button type="button" onclick="chipRemove('+i+')" title="Olib tashlash">×</button></span>';
-  }).join('');
+  if(bkDates.length<=1){ box.style.display='none'; box.innerHTML=''; }
+  else {
+    box.style.display='flex';
+    box.innerHTML=bkDates.map(function(d,i){
+      var p=d.split('-');
+      return '<span class="mb-chip">'+p[2]+'.'+p[1]+
+        '<button type="button" onclick="chipRemove('+i+')" title="Olib tashlash">×</button></span>';
+    }).join('');
+  }
+  updatePerTimeUI();
 }
 function chipRemove(i){ bkDates.splice(i,1); syncDates(); }
+
+/* ── Har kunga alohida vaqt ── */
+var bkTimes={};   // {sana: {start,end}}
+function updatePerTimeUI(){
+  var wrap=document.getElementById('mb-pertime');
+  if(bkDates.length>1){ wrap.style.display='block'; }
+  else { wrap.style.display='none'; document.getElementById('mb-pertime-chk').checked=false;
+         document.getElementById('mb-pertime-list').style.display='none'; }
+  if(document.getElementById('mb-pertime-chk').checked) renderPerTime();
+}
+function renderPerTime(){
+  var on=document.getElementById('mb-pertime-chk').checked;
+  var list=document.getElementById('mb-pertime-list');
+  list.style.display = on ? 'flex' : 'none';
+  if(!on){ return; }
+  var ds=document.getElementById('mb-start').value||'10:00';
+  var de=document.getElementById('mb-end').value||'12:00';
+  list.innerHTML=bkDates.map(function(d){
+    var t=bkTimes[d]||{start:ds,end:de}; bkTimes[d]=t;
+    var p=d.split('-');
+    return '<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;align-items:center">'+
+      '<b style="font-size:12.5px;min-width:44px">'+p[2]+'.'+p[1]+'</b>'+
+      '<input class="input" type="time" value="'+t.start+'" onchange="setPerTime(\''+d+'\',\'start\',this.value)">'+
+      '<input class="input" type="time" value="'+t.end+'" onchange="setPerTime(\''+d+'\',\'end\',this.value)"></div>';
+  }).join('');
+}
+function setPerTime(d,k,v){ bkTimes[d]=bkTimes[d]||{}; bkTimes[d][k]=v; }
+/* Submitдан oldin slots_json'ni to'ldiradi (per-time yoqилган bo'lsa) */
+function buildSlots(){
+  var el=document.getElementById('mb-slots');
+  if(bkDates.length>1 && document.getElementById('mb-pertime-chk').checked){
+    var ds=document.getElementById('mb-start').value, de=document.getElementById('mb-end').value;
+    el.value=JSON.stringify(bkDates.map(function(d){
+      var t=bkTimes[d]||{}; return {date:d, start:(t.start||ds), end:(t.end||de)};
+    }));
+  } else { el.value=''; }
+}
 document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') bcClose(); });
 </script>
 {% endblock %}
