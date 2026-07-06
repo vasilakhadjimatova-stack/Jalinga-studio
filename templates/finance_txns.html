@@ -88,7 +88,9 @@
           {{ {'operating':'Operatsion','investing':'Investitsion','financing':'Moliyaviy','technical':'O\'tkazma'}[t.activity] }}</span></td>
         <td class="r" style="white-space:nowrap">
           {% if t.source == 'studio' %}
-          <span class="src-lock" title="Studiya to'loviga bog'langan — «Studiya to'lovlari» sahifasidan boshqaring"><i class="icon-clapperboard"></i> Studiya</span>
+          {% if t.ref_url %}<a href="{{ t.ref_url }}" class="src-lock" style="text-decoration:none"
+             title="Studiya to'loviga bog'langan — mijoz kartasini ochish"><i class="icon-clapperboard"></i> Studiya <i class="icon-external-link" style="font-size:11px"></i></a>
+          {% else %}<span class="src-lock" title="Studiya to'loviga bog'langan"><i class="icon-clapperboard"></i> Studiya</span>{% endif %}
           {% elif t.source in ('plan', 'recurring') %}
           <span class="src-lock" title="To'lov kalendari boshqaradi"><i class="icon-calendar-clock"></i> Kalendar</span>
           {% elif current_user.can_finance %}

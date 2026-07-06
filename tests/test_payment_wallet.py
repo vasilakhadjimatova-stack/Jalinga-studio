@@ -101,6 +101,22 @@ def test_booking_without_paid_now_stays_pending(app, admin_client, post):
         assert p.is_paid is False and p.wallet == ""
 
 
+def test_mutual_link_finance_and_studio(app, admin_client, post):
+    """O'zaro bog'lanish: moliya yozuvи → mijoz, to'lov → moliya yozuvi."""
+    pid = _mk_pending_payment(app, amount=750000)
+    from models.billing import Payment
+    with app.app_context():
+        tid = Payment.query.get(pid).teacher_id
+    post(admin_client, f"/finance/{pid}/pay", wallet="Наличные", method="naqd")
+    # Moliya jurnalини shu to'lovga filtrlash → mijoz havolasi bor
+    r = admin_client.get(f"/finance/transactions?pay={pid}")
+    assert r.status_code == 200
+    assert f"/teachers/{tid}".encode() in r.data
+    # To'lovlar sahifasidan → moliya yozuviga havola
+    r2 = admin_client.get("/finance/payments?month=2026-07")
+    assert f"/finance/transactions?pay={pid}".encode() in r2.data
+
+
 def test_revert_unlinks_finance_and_clears_wallet(app, admin_client, post):
     pid = _mk_pending_payment(app)
     post(admin_client, f"/finance/{pid}/pay", wallet="Наличные", method="naqd")

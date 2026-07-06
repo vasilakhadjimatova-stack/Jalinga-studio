@@ -38,7 +38,11 @@
         <td class="r"><b>{{ p.amount|som }}</b></td>
         <td><span class="tag tag-{{ 'green' if p.is_paid else 'amber' }}">{{ "To'landi" if p.is_paid else 'Kutilmoqda' }}</span></td>
         <td style="font-size:12px;color:var(--txt2)">
-          {% if p.is_paid and p.wallet %}<i class="icon-wallet"></i> {{ p.wallet }}{% else %}—{% endif %}</td>
+          {% if p.is_paid %}
+            <a href="/finance/transactions?pay={{ p.id }}" style="text-decoration:none;color:var(--txt2)"
+               title="Moliya jurnalidagi yozuvni ochish"><i class="icon-wallet"></i>
+               {{ p.wallet or 'moliyada' }} <i class="icon-external-link" style="font-size:10px"></i></a>
+          {% else %}—{% endif %}</td>
         <td class="r" style="white-space:nowrap">
           {% if p.is_paid %}
           <form method="POST" action="/finance/{{ p.id }}/toggle" style="display:inline"
