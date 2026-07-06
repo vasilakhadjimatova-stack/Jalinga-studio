@@ -26,20 +26,33 @@ def create_app():
             raise RuntimeError(
                 "SECRET_KEY o'rnatilmagan! Productionда haqiqiy maxfiy kalit "
                 "kerak (Railway → Variables → SECRET_KEY).")
+        # Admin kodi yagona hisob ma'lumot — productionда standart/bo'sh bo'lsa
+        # istalgan begona kirib oladi. SECRET_KEY kabi majburiy qilamiz.
+        _ac = (os.environ.get("ADMIN_CODE") or "").strip()
+        if not _ac or _ac == "111111":
+            raise RuntimeError(
+                "ADMIN_CODE o'rnatilmagan yoki juda oddiy (111111)! "
+                "Productionда kuchli maxfiy kod kerak "
+                "(Railway → Variables → ADMIN_CODE, kamida 6 xonali).")
         app.config["SESSION_COOKIE_SECURE"] = True
 
-    # Ma'lumot XAVFI ogohlantirishi: productionда SQLite = har deploy'да
-    # baza yo'qoladi. Ishga tushishga to'sqinlik qilmaymiz (sayt yiqilib
-    # qolmasin), lekin baland CRITICAL log + UI banner beramiz.
+    # Ma'lumot XAVFI: productionда SQLite = har deploy'да baza yo'qoladi.
+    # Jimgina ma'lumot yo'qotishдан ko'ra ISHGA TUSHMASLIK xavfsizroq —
+    # HARD-FAIL qilamiz (FORCE_SQLITE=1 bilan ataylab chetlab o'tsa bo'ladi).
     if Config.DATA_AT_RISK:
-        logging.critical(
-            "═══════════════════════════════════════════════════════════\n"
-            "  MA'LUMOT XAVF OSTIDA: production'да SQLite ishlatilmoqda!\n"
-            "  Railway konteyneri vaqtinchalik — HAR DEPLOY'ДА BAZA "
-            "YO'QOLADI.\n"
-            "  Yechim: Railway → New → Database → PostgreSQL qo'shing va\n"
-            "  DATABASE_URL o'zgaruvchisi avtomatik ulanadi.\n"
-            "═══════════════════════════════════════════════════════════")
+        if os.environ.get("FORCE_SQLITE") != "1":
+            raise RuntimeError(
+                "MA'LUMOT XAVF OSTIDA: productionда SQLite! Har deploy'да baza "
+                "yo'qoladi. Postgres ulang (Railway → Database → PostgreSQL; "
+                "DATABASE_URL avtomatik ulanadi). Ataylab davom etish uchun "
+                "FORCE_SQLITE=1 qo'ying.")
+        logging.critical("FORCE_SQLITE=1 — productionда SQLite bilan davom "
+                         "etilyapti; har deploy'да baza yo'qoladi!")
+
+    # Proxy ortida (Railway) haqiqiy klient IP'ni olish — rate-limit va audit
+    # uchun. Aks holda remote_addr = proxy IP (barcha uchun bir xil) bo'ladi.
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     init_db(app)
 

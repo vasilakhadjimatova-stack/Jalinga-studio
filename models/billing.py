@@ -32,11 +32,15 @@ class Teacher(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def hours_purchased(self):
+        # FAQAT to'langan paketlar balans beradi (bonus paketlar is_paid=True).
+        # To'lov "kutilmoqda"ga qaytsa yoki o'chsa — soat ham qaytadi (arvoh
+        # balans oldini olish: pul kirmagan bo'lsa soat berilmaydi).
         from sqlalchemy import func
         return float(db.session.query(
             func.coalesce(func.sum(Payment.hours), 0)).filter(
             Payment.teacher_id == self.id,
-            Payment.kind == "package").scalar() or 0)
+            Payment.kind == "package",
+            Payment.is_paid.is_(True)).scalar() or 0)
 
     def hours_used(self):
         """Ishlatilgan soatlar. "noshow" (kelmadi) HAM kuyadi — 24 soat

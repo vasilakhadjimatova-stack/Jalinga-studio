@@ -6,6 +6,7 @@ kalendarда ko'radi. Spam-himoya: telefon bo'yicha faol bron chegarasi +
 honeypot maydon. Konflikt/ish-vaqti/o'tgan-vaqt tekshiruvlari studiya
 kalendari bilan bir xil.
 """
+import time
 from datetime import datetime, timedelta
 
 from flask import (Blueprint, render_template, request, redirect,
@@ -21,6 +22,35 @@ bp = Blueprint("book", __name__)
 
 MAX_UPCOMING = 5      # bitta telefon uchun faol kelgusi bron chegarasi
 MAX_DAYS_AHEAD = 60   # necha kun oldin bron qilsa bo'ladi
+
+# Spam himoyasi (login-siz ochiq endpoint): har IP soatiga cheklov + kunlik
+# global cap. Har yangi telefon yangi Teacher yaratgani uchun (MAX_UPCOMING
+# yordam bermaydi) — IP darajasida cheklaymiz. ProxyFix real IP beradi.
+_IP_HITS = {}                 # ip -> [timestamp, ...]
+_IP_WINDOW = 3600             # 1 soat
+_IP_MAX = 4                   # bir IP soatiga 4 ta online bron
+_DAILY = {"day": "", "n": 0}  # global kunlik hisoblagich
+_DAILY_MAX = 120              # butun tizim uchun kuniga 120 online bron
+
+
+def _spam_blocked(ip):
+    from flask import current_app
+    if current_app.config.get("TESTING"):
+        return False   # testда global hisoblagich xalaqit bermasin
+    now = time.time()
+    hits = [t for t in _IP_HITS.get(ip, []) if now - t < _IP_WINDOW]
+    _IP_HITS[ip] = hits
+    if len(hits) >= _IP_MAX:
+        return True
+    today = today_iso()
+    if _DAILY["day"] != today:
+        _DAILY["day"], _DAILY["n"] = today, 0
+    return _DAILY["n"] >= _DAILY_MAX
+
+
+def _spam_note(ip):
+    _IP_HITS.setdefault(ip, []).append(time.time())
+    _DAILY["n"] = _DAILY.get("n", 0) + 1
 
 
 def _min(hhmm):
@@ -99,6 +129,13 @@ def submit():
     if (f.get("website") or "").strip():
         return redirect(url_for("book.done"))
 
+    # Spam himoyasi: IP soatlik + global kunlik cheklov
+    ip = request.remote_addr or "?"
+    if _spam_blocked(ip):
+        flash("⛔ Juda ko'p so'rov. Iltimos keyinroq urinib ko'ring yoki "
+              "studiyaga qo'ng'iroq qiling.", "error")
+        return redirect(url_for("book.index"))
+
     name = (f.get("name") or "").strip()[:200]
     phone = (f.get("phone") or "").strip()[:50]
     full = _digits(phone)
@@ -135,6 +172,11 @@ def submit():
     if not Booking.within_work_hours(start, end):
         return _back(f"⛔ Ish vaqti {Config.WORK_START:02d}:00–"
                      f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.")
+    # Poyga himoyasi: studiya qatorini qulflab konflikt-tekshiruv↔insert
+    # oralig'ini serializatsiya qilamiz (ikki mijoz bir slotni bir vaqtда
+    # olsa — biri rad etiladi). Postgres row-lock; SQLite baribir serial.
+    db.session.query(Studio).filter_by(
+        id=studio.id).with_for_update().first()
     if Booking.conflict(studio.id, day, start, end):
         return _back(f"⛔ {start}–{end} band bo'lib qoldi. Boshqa vaqt tanlang.")
 
@@ -177,6 +219,7 @@ def submit():
         db.session.rollback()
         return _back(f"⛔ {start}–{end} endigina band bo'ldi. Boshqa vaqt tanlang.")
 
+    _spam_note(ip)   # muvaffaqiyatli bron — IP/kunlik hisoblagichga qo'shamiz
     _notify_staff(studio, t, b)
     return redirect(url_for("book.done", s=studio.id, d=day, t=start, e=end))
 

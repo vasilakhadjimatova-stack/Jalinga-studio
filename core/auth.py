@@ -17,37 +17,42 @@ def current_user():
     return User.query.get(uid) if uid else None
 
 
-# Brute-force himoyasi: bitta IP'dan 10 daqiqada 5 ta noto'g'ri urinish
-_FAILED = {}          # ip -> [timestamp, ...]
+# Brute-force himoyasi: 10 daqiqada 5 ta noto'g'ri urinish — HAM real IP
+# bo'yicha (ProxyFix XFF'дан oladi), HAM yuborilgan KOD bo'yicha (bir kodni
+# ko'p urinish o'sha kodni bloklaydi — maqsadli brute-force sekinlashadi).
+_FAILED = {}          # kalit -> [timestamp, ...]
 _MAX_TRIES = 5
 _WINDOW = 600         # 10 daqiqa
 
 
-def _rate_limited(ip):
+def _rate_limited(key):
     import time
     now = time.time()
-    tries = [t for t in _FAILED.get(ip, []) if now - t < _WINDOW]
-    _FAILED[ip] = tries
+    tries = [t for t in _FAILED.get(key, []) if now - t < _WINDOW]
+    _FAILED[key] = tries
     return len(tries) >= _MAX_TRIES
 
 
-def _note_failure(ip):
+def _note_failure(key):
     import time
-    _FAILED.setdefault(ip, []).append(time.time())
+    _FAILED.setdefault(key, []).append(time.time())
 
 
 def login_by_code(code):
     ip = request.remote_addr or "?"
-    if _rate_limited(ip):
-        return None, "Juda ko'p urinish — 10 daqiqadan keyin qayta urining"
     code = (code or "").strip()
+    ck = f"code:{code}" if code else ""
+    if _rate_limited(f"ip:{ip}") or (ck and _rate_limited(ck)):
+        return None, "Juda ko'p urinish — 10 daqiqadan keyin qayta urining"
     if not code:
         return None, "Kod kiritilmadi"
     u = User.query.filter_by(code=code, is_active=True).first()
     if not u:
-        _note_failure(ip)
+        _note_failure(f"ip:{ip}")
+        _note_failure(ck)
         return None, "Kod noto'g'ri"
-    _FAILED.pop(ip, None)   # muvaffaqiyat — hisob tozalanadi
+    _FAILED.pop(f"ip:{ip}", None)   # muvaffaqiyat — hisoblar tozalanadi
+    _FAILED.pop(ck, None)
     session["user_id"] = u.id
     session.permanent = True
     return u, None

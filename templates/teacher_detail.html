@@ -53,10 +53,10 @@
   </div><div class="kpi-ico blue"><i class="icon-clapperboard"></i></div></div></div>
   <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Oxirgi tashrif</div>
-    <div class="kpi-val" style="font-size:17px">{% if last_visit %}{{ last_visit }}{% else %}—{% endif %}</div>
+    <div class="kpi-val" style="font-size:17px">{% if last_visit %}{{ last_visit|dmy }}{% else %}—{% endif %}</div>
     <div style="font-size:10.5px;color:var(--txt3)">
       {% if days_since is not none %}{{ days_since }} kun oldin{% endif %}
-      {% if next_visit %} · 📅 keyingi {{ next_visit }}{% endif %}</div>
+      {% if next_visit %} · 📅 keyingi {{ next_visit|dmy }}{% endif %}
   </div><div class="kpi-ico {{ 'green' if next_visit else 'amber' }}"><i class="icon-history"></i></div></div></div>
 </div>
 

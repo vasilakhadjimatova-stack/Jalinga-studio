@@ -54,11 +54,26 @@ def notify_teacher_booking(b, studio, teacher, created=True):
             f"📅 {b.date} · {b.start}–{b.end} ({b.hours:g} soat)\n{pay}")
 
 
+_CHAT_HITS = {}   # chat_id -> [timestamp, ...] — per-chat throttle
+
+
+def _chat_throttled(chat_id):
+    """Bitta chat 1 daqiqada 10 tadan ko'p /start yuborsa — o'tkazib yuboramiz
+    (token enumeratsiyasiga qarshi qo'shimcha to'siq)."""
+    now = time.time()
+    hits = [t for t in _CHAT_HITS.get(chat_id, []) if now - t < 60]
+    hits.append(now)
+    _CHAT_HITS[chat_id] = hits
+    return len(hits) > 10
+
+
 def _handle_update(app, upd):
     msg = upd.get("message") or {}
     text = (msg.get("text") or "").strip()
     chat_id = str((msg.get("chat") or {}).get("id") or "")
     if not chat_id:
+        return
+    if _chat_throttled(chat_id):
         return
     if text.startswith("/start"):
         token = text[6:].strip()
@@ -76,17 +91,21 @@ def _handle_update(app, upd):
                             f"ulandingiz. Endi bron tasdig'i va dars oldidan "
                             f"eslatmalar shu yerga keladi. 🎬")
                     return
-                # Rahbar/xodim kirish kodi bilan ulash — kunlik digest uchun
-                u = User.query.filter_by(code=token, is_active=True).first()
-                if u and u.role in ("admin", "buxgalter"):
-                    u.tg_chat_id = chat_id
-                    db.session.commit()
-                    tg_send(chat_id,
-                            f"👋 Salom, <b>{u.name}</b>!\nRahbar sifatida "
-                            f"ulandingiz. Endi har ertalab kunlik hisobot "
-                            f"(digest) va e'tibor talab qiladigan ishlar shu "
-                            f"yerga keladi. 📊")
-                    return
+                # Rahbar/xodim ALOHIDA tg_token bilan ulanadi (login kodi EMAS
+                # — bot orqali login kodini brute-force qilishni oldini olish).
+                # Token uzun bo'lsagina qidiramiz (login kodi 6 xonali).
+                if len(token) >= 16:
+                    u = User.query.filter_by(
+                        tg_token=token, is_active=True).first()
+                    if u and u.role in ("admin", "buxgalter"):
+                        u.tg_chat_id = chat_id
+                        db.session.commit()
+                        tg_send(chat_id,
+                                f"👋 Salom, <b>{u.name}</b>!\nRahbar sifatida "
+                                f"ulandingiz. Endi har ertalab kunlik hisobot "
+                                f"(digest) va e'tibor talab qiladigan ishlar "
+                                f"shu yerga keladi. 📊")
+                        return
         tg_send(chat_id, "👋 Jalinga Studio boti. Ulash uchun shaxsiy portal "
                          "havolangizdagi «Telegram'ga ulash» tugmasini bosing.")
 

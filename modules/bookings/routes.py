@@ -143,7 +143,8 @@ def calendar():
             "start": b.start, "end": b.end, "hours": b.hours,
             "status": b.status, "status_label": b.status_label(),
             "status_color": b.status_color(), "pay_type": b.pay_type,
-            "amount": (booking_price(st, b.date, b.start, b.hours)[0]
+            "amount": (booking_price(st, b.date, b.start, b.hours,
+                                     manual=b.discount)[0]
                        if (st and b.pay_type == "hourly") else 0),
             "operator": b.operator or "", "note": b.note or "",
             "created_by": b.created_by or "",
@@ -284,6 +285,11 @@ def save():
     paid_now = bool(f.get("paid_now")) and pay_type == "hourly"
     pay_wallet = (f.get("pay_wallet") or "").strip()[:60]
     pay_method = (f.get("pay_method") or "").strip()[:20]
+    # Poyga himoyasi: shu studiya qatorini qulflab, konflikt-tekshiruv↔insert
+    # oralig'ini serializatsiya qilamiz (Postgres row-lock; SQLite baribir
+    # yozuvlarni ketma-ket qiladi) — TOCTOU ikki karra bron oldini oladi.
+    db.session.query(Studio).filter_by(
+        id=studio.id).with_for_update().first()
     made, errs = [], []
     for it in plan:
         day, s_, e_ = it["date"], it["start"], it["end"]
@@ -314,6 +320,8 @@ def save():
             with db.session.begin_nested():
                 b = Booking(studio_id=studio.id, teacher_id=teacher.id,
                             date=day, start=s_, end=e_, pay_type=pay_type,
+                            discount=(manual_disc if pay_type == "hourly"
+                                      else 0),
                             operator=operator, note=note, created_by=u.name)
                 db.session.add(b)
                 db.session.flush()
@@ -339,6 +347,13 @@ def save():
                         sync_payment_to_finance(pay, teacher_name=teacher.name)
         except IntegrityError:
             errs.append(f"{day} {s_}–{e_} — endigina band bo'ldi")
+            continue
+        except Exception as exc:
+            # Savepoint avtomatik qaytariladi — bitta kunning xatosi butun
+            # partiyani yiqitmasin (masalan moliya sync kutilmagan xatosi).
+            import logging
+            logging.getLogger(__name__).error(f"bron saqlash xato ({day}): {exc}")
+            errs.append(f"{day} {s_}–{e_} — saqlashda xato")
             continue
         made.append(b)
     db.session.commit()
@@ -387,6 +402,23 @@ def set_status(bid):
     if new not in ("active", "done", "cancelled", "noshow"):
         flash("Holat noto'g'ri", "error")
         return redirect(url_for("bookings.calendar", date=b.date))
+    # «active»/«done»ga qaytarishda konflikt qayta tekshiriladi — bekor qilingan
+    # slotга yangi bron yaratilган bo'lsa, ustma-ust ikkita faol bron bo'lmasin.
+    if new in ("active", "done") and b.status in ("cancelled", "noshow"):
+        c = Booking.conflict(b.studio_id, b.date, b.start, b.end,
+                             exclude_id=b.id)
+        if c:
+            flash(f"⛔ Bu vaqt endi band ({c.start}–{c.end}) — qaytarib "
+                  f"bo'lmadi. Avval boshqa bronni ko'chiring.", "error")
+            return redirect(url_for("bookings.calendar", date=b.date))
+        # Paket: faqat CANCELLED→active balansni yangidan yeydi (noshow allaqachon
+        # hisobda). Balans yetarli bo'lsagina qaytariladi.
+        if b.pay_type == "package" and b.status == "cancelled":
+            t = Teacher.query.get(b.teacher_id)
+            if t and t.balance_hours() < b.hours:
+                flash(f"⛔ Balans yetarli emas ({t.balance_hours():g} soat) — "
+                      f"bronni qaytarib bo'lmadi.", "error")
+                return redirect(url_for("bookings.calendar", date=b.date))
     b.status = new
     warn = ""
     # Bekor bo'lsa — kutilayotgan soatbay to'lov o'chadi. Agar to'lov ALLAQACHON
@@ -472,8 +504,10 @@ def edit(bid):
         if p:
             was_paid = p.is_paid
             from models.pricing import booking_price
+            # Saqlangan qo'lda chegirmani ham qo'llaymiz — tahrirlaganda
+            # mijozning chegirmasi yo'qolmasin (arvoh qarz oldini olish).
             p.amount, _d, _r, _b = booking_price(
-                studio, day, start, new_hours)
+                studio, day, start, new_hours, manual=b.discount)
             p.date = day
             p.note = (f"{studio.name} · {day} {start}–{end} ({new_hours:g} soat)"
                       + (f" · −{_d}%" if _d else ""))
