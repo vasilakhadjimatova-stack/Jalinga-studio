@@ -310,7 +310,10 @@ html[data-theme="marble"] #calFull:fullscreen{background:
             <i class="icon-plus"></i> kun</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--txt3);margin-top:-2px">Bir nechta kunga birdan bron qilish mumkin — har kun alohida tekshiriladi (band bo'lsa o'sha kun o'tkazib yuboriladi)</div>
+      <button type="button" class="btn btn-out" style="width:100%;justify-content:center;margin-top:8px"
+              onclick="bcOpen()"><i class="icon-calendar-range"></i> Bandlik kalendari — bir nechta kun tanlash</button>
+      <div id="mb-chips" style="display:none;flex-wrap:wrap;gap:6px;margin-top:9px"></div>
+      <div style="font-size:11px;color:var(--txt3);margin-top:6px">Bir nechta kunga birdan bron qilish mumkin — har kun alohida tekshiriladi (band bo'lsa o'sha kun o'tkazib yuboriladi)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label>Boshlanish</label><input class="input" type="time" name="start" value="10:00" required></div>
         <div><label>Tugash</label><input class="input" type="time" name="end" value="12:00" required></div>
@@ -391,6 +394,8 @@ function calFullscreen(){
 function mcBook(iso, e){
   if(e && e.target && e.target.closest('.cal-ev')) return;  // chip bosilsa — kun ochilmaydi
   document.getElementById('mb-date').value = iso;
+  // Kalendardan oldin tanlangan ko'p kunlarni tozalash (toza bron)
+  if(typeof bkDates !== 'undefined'){ bkDates = []; if(typeof syncDates==='function') syncDates(); }
   document.getElementById('m-book').classList.add('open');
 }
 
@@ -547,5 +552,206 @@ function bkEdit(){
   document.getElementById('m-edit').classList.add('open');
 }
 document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') bkClose(); });
+</script>
+
+<!-- ════ BANDLIK KALENDARI (bir nechta kun tanlash) ════ -->
+<div class="modal-ov" id="bcModal" onclick="if(event.target===this)bcClose()">
+  <div class="modal bc-modal">
+    <div class="bc-head">
+      <div>
+        <div class="modal-title" style="margin:0"><i class="icon-calendar-range"></i> Bandlik kalendari</div>
+        <div style="font-size:12px;color:var(--txt3);margin-top:2px">Bo'sh kunni bosing — sana avtomatik tanlanadi</div>
+      </div>
+      <div class="bc-nav">
+        <button type="button" class="bc-navbtn" onclick="bcMonth(-1)"><i class="icon-chevron-left"></i></button>
+        <div class="bc-month" id="bcMonthLbl">—</div>
+        <button type="button" class="bc-navbtn" onclick="bcMonth(1)"><i class="icon-chevron-right"></i></button>
+      </div>
+    </div>
+    <div class="bc-legend">
+      <span><i class="lg lg-free"></i> Bo'sh</span>
+      <span><i class="lg lg-busy"></i> Band</span>
+      <span><i class="lg lg-today"></i> Bugun</span>
+      <span><i class="lg lg-sel"></i> Tanlandi</span>
+    </div>
+    <label id="bcMultiRow" style="display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface2);cursor:pointer;font-size:13px;line-height:1.45">
+      <input type="checkbox" id="bcMultiChk" onchange="bcToggleMulti()" style="width:18px;height:18px;accent-color:var(--brand);flex:0 0 auto">
+      <span><b>🗓 Bir nechta kun tanlash</b> <span style="color:var(--txt3)">— shu studiyada bir necha kunni belgilang, hammasi birdan bron bo'ladi.</span></span>
+    </label>
+    <div class="bc-grid bc-wd"><div>Du</div><div>Se</div><div>Ch</div><div>Pa</div><div>Ju</div><div>Sh</div><div>Ya</div></div>
+    <div class="bc-grid" id="bcDays"></div>
+    <div class="bc-day-detail" id="bcDetail" style="display:none">
+      <div class="bc-detail-t" id="bcDetailT">—</div>
+      <div id="bcDetailList"></div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:16px">
+      <button type="button" class="btn btn-out" style="flex:1" onclick="bcClose()">Yopish</button>
+      <button type="button" class="btn btn-gold" style="flex:2;justify-content:center" id="bcUseBtn" onclick="bcUse()" disabled>
+        <i class="icon-check"></i> Shu kunni tanlash</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bc-modal{max-width:540px;width:96%}
+  .bc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .bc-nav{display:flex;align-items:center;gap:8px}
+  .bc-navbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
+    background:var(--surface2);color:var(--txt2);cursor:pointer;display:flex;
+    align-items:center;justify-content:center;font-size:17px;transition:.16s}
+  .bc-navbtn:hover{color:var(--brand);border-color:var(--brand);background:var(--brand-bg)}
+  .bc-month{font-weight:800;font-size:15px;min-width:128px;text-align:center}
+  .bc-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--txt2);font-weight:600;margin-bottom:12px}
+  .bc-legend span{display:inline-flex;align-items:center;gap:5px}
+  .bc-legend .lg{width:11px;height:11px;border-radius:4px;display:inline-block}
+  .lg-free{background:var(--surface2);border:1px solid var(--line)}
+  .lg-busy{background:var(--red-bg);border:1px solid var(--red)}
+  .lg-today{background:var(--blue-bg);border:1px solid var(--blue)}
+  .lg-sel{background:var(--brand)}
+  .bc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .bc-wd{margin-bottom:8px}
+  .bc-wd>div{text-align:center;font-size:10px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px}
+  .bc-cell{aspect-ratio:1;border-radius:11px;border:1px solid var(--line);background:var(--surface2);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+    position:relative;transition:.14s;font-weight:700;font-size:14px;color:var(--txt)}
+  .bc-cell:hover{transform:translateY(-2px);border-color:var(--txt3);box-shadow:var(--sh2)}
+  .bc-cell.out{opacity:.32;cursor:default;pointer-events:none}
+  .bc-cell.past{opacity:.4;cursor:not-allowed;background:transparent;pointer-events:none}
+  .bc-cell.busy{background:var(--red-bg);border-color:var(--red)}
+  .bc-cell.today{border-color:var(--blue);border-width:2px}
+  .bc-cell.sel{background:var(--brand);color:#1a1204;border-color:var(--brand);box-shadow:0 6px 18px var(--brand-bg)}
+  .bc-cell .bc-dot{width:6px;height:6px;border-radius:50%;background:var(--red);margin-top:3px}
+  .bc-cell.sel .bc-dot{background:#1a1204}
+  .bc-cell .bc-cnt{position:absolute;top:3px;right:5px;font-size:9px;font-weight:800;color:var(--red)}
+  .bc-cell.sel .bc-cnt{color:#1a1204}
+  .bc-day-detail{margin-top:14px;padding:13px 15px;background:var(--surface2);border:1px solid var(--line);border-radius:13px}
+  .bc-detail-t{font-weight:800;font-size:13px;margin-bottom:9px;color:var(--txt)}
+  .bc-ev{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+  .bc-ev:last-child{border-bottom:none}
+  .bc-ev-nm{font-weight:700;color:var(--txt)}
+  .bc-ev-meta{font-size:11px;color:var(--txt2)}
+  .bc-free-msg{color:var(--green);font-weight:700;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .mb-chip{display:inline-flex;align-items:center;gap:6px;background:var(--brand-bg);color:var(--brand);
+    border:1px solid var(--brand);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700}
+  .mb-chip button{background:none;border:none;color:var(--brand);cursor:pointer;font-size:14px;line-height:1;padding:0}
+</style>
+
+<script>
+var BC_TODAY = "{{ today_iso }}";
+var BC_MONTHS = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+var bcStudio='', bcView=new Date(BC_TODAY+'T00:00:00'), bcSel=null,
+    bcMulti=false, bcSelSet=[], bcCache={}, bcDataNow={};
+var bkDates=[];   // kalendardan tanlangan kunlar (asosiy + qo'shimchalar)
+
+function bcYM(v){ return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0'); }
+function bcISO(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+
+function bcOpen(){
+  var sidEl=document.getElementById('mb-studio');
+  bcStudio=sidEl?sidEl.value:'';
+  if(!bcStudio){ alert('Avval studiyani tanlang.'); return; }
+  var cur=document.getElementById('mb-date').value || BC_TODAY;
+  bcView=new Date(cur+'T00:00:00'); bcView.setDate(1);
+  bcMulti=false; document.getElementById('bcMultiChk').checked=false;
+  bcSel=cur; bcSelSet = bkDates.length ? bkDates.slice() : [];
+  document.getElementById('bcModal').classList.add('open');
+  bcUpdUseBtn(); bcLoad();
+}
+function bcClose(){ document.getElementById('bcModal').classList.remove('open'); }
+function bcMonth(delta){ bcView.setMonth(bcView.getMonth()+delta); bcLoad(); }
+function bcLoad(){
+  var ym=bcYM(bcView), key=bcStudio+'-'+ym;
+  if(bcCache[key]){ bcDataNow=bcCache[key]; bcRender(); return; }
+  document.getElementById('bcDays').innerHTML=
+    '<div style="grid-column:1/-1;text-align:center;padding:22px;color:var(--txt3)">Yuklanmoqda…</div>';
+  fetch('/bookings/busy?studio_id='+encodeURIComponent(bcStudio)+'&ym='+ym)
+    .then(function(r){return r.json();})
+    .then(function(d){ bcCache[key]=d; bcDataNow=d; bcRender(); })
+    .catch(function(){ bcDataNow={}; bcRender(); });
+}
+function bcRender(){
+  var y=bcView.getFullYear(), m=bcView.getMonth();
+  document.getElementById('bcMonthLbl').textContent=BC_MONTHS[m]+' '+y;
+  var first=new Date(y,m,1), startWd=(first.getDay()+6)%7;
+  var dim=new Date(y,m+1,0).getDate(), html='';
+  for(var i=0;i<startWd;i++) html+='<div class="bc-cell out"></div>';
+  for(var d=1;d<=dim;d++){
+    var iso=bcISO(y,m,d), cls='bc-cell', past=iso<BC_TODAY;
+    if(past) cls+=' past';
+    if(iso===BC_TODAY) cls+=' today';
+    var evs=bcDataNow[iso]||[];
+    if(evs.length) cls+=' busy';
+    if(bcMulti ? (bcSelSet.indexOf(iso)>=0) : (iso===bcSel)) cls+=' sel';
+    var cnt=evs.length?'<span class="bc-cnt">'+evs.length+'</span>':'';
+    var dot=evs.length?'<span class="bc-dot"></span>':'';
+    var oc=past?'':' onclick="bcPick(\''+iso+'\')"';
+    html+='<div class="'+cls+'"'+oc+'>'+cnt+'<span>'+d+'</span>'+dot+'</div>';
+  }
+  document.getElementById('bcDays').innerHTML=html;
+  bcDetail(bcMulti ? (bcSelSet[bcSelSet.length-1]||null) : bcSel);
+}
+function bcPick(iso){
+  if(bcMulti){ var k=bcSelSet.indexOf(iso); if(k>=0) bcSelSet.splice(k,1); else bcSelSet.push(iso); }
+  else { bcSel=iso; }
+  bcRender(); bcUpdUseBtn();
+}
+function bcDetail(iso){
+  var box=document.getElementById('bcDetail');
+  if(!iso){ box.style.display='none'; return; }
+  var p=iso.split('-');
+  document.getElementById('bcDetailT').textContent=p[2]+'.'+p[1]+'.'+p[0];
+  var evs=bcDataNow[iso]||[], list=document.getElementById('bcDetailList');
+  if(!evs.length){
+    list.innerHTML='<div class="bc-free-msg"><i class="icon-check-circle"></i> Bu kun bo\'sh — bron qilishingiz mumkin</div>';
+  } else {
+    list.innerHTML=evs.map(function(e){
+      return '<div class="bc-ev"><div style="flex:1;min-width:0">'+
+        '<div class="bc-ev-nm">'+_esc(e.teacher)+'</div>'+
+        '<div class="bc-ev-meta">'+e.start+'–'+e.end+' · '+_esc(e.status)+'</div></div></div>';
+    }).join('');
+  }
+  box.style.display='block';
+}
+function bcToggleMulti(){
+  bcMulti=document.getElementById('bcMultiChk').checked;
+  if(bcMulti){ bcSelSet = bcSel ? [bcSel] : []; }
+  else { if(bcSelSet.length) bcSel=bcSelSet.slice().sort()[0]; bcSelSet=[]; }
+  bcRender(); bcUpdUseBtn();
+}
+function bcUpdUseBtn(){
+  var btn=document.getElementById('bcUseBtn');
+  if(bcMulti){ var n=bcSelSet.length; btn.disabled=(n===0);
+    btn.innerHTML='<i class="icon-check"></i> '+(n?(n+' kunni tanlash'):'Kun tanlang'); }
+  else { btn.disabled=!bcSel; btn.innerHTML='<i class="icon-check"></i> Shu kunni tanlash'; }
+}
+function bcUse(){
+  if(bcMulti){ if(!bcSelSet.length) return; bkDates=bcSelSet.slice().sort(); }
+  else { if(!bcSel) return; bkDates=[bcSel]; }
+  syncDates(); bcClose();
+}
+/* Tanlangan kunlarni formaga yozadi: mb-date = 1-kun, qolganlari yashirin input */
+function syncDates(){
+  var wrap=document.getElementById('mb-dates');
+  wrap.querySelectorAll('.mbd-cal').forEach(function(x){ x.remove(); });
+  if(bkDates.length){ document.getElementById('mb-date').value=bkDates[0]; }
+  for(var i=1;i<bkDates.length;i++){
+    var inp=document.createElement('input');
+    inp.type='hidden'; inp.name='date'; inp.value=bkDates[i]; inp.className='mbd-cal';
+    wrap.appendChild(inp);
+  }
+  renderChips();
+}
+function renderChips(){
+  var box=document.getElementById('mb-chips');
+  if(bkDates.length<=1){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='flex';
+  box.innerHTML=bkDates.map(function(d,i){
+    var p=d.split('-');
+    return '<span class="mb-chip">'+p[2]+'.'+p[1]+
+      '<button type="button" onclick="chipRemove('+i+')" title="Olib tashlash">×</button></span>';
+  }).join('');
+}
+function chipRemove(i){ bkDates.splice(i,1); syncDates(); }
+document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') bcClose(); });
 </script>
 {% endblock %}
