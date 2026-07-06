@@ -8,7 +8,6 @@ Har bo'lim bitta savolga javob beradi:
   • Kelgusi 7 kun      — «oldinda nima kutilyapti?» (forward pipeline)
   • Segmentlar/Churn   — «kimni yo'qotayapmiz, kimga sotamiz?»
   • Top mijozlar       — «kimga bog'liqmiz?» (kontsentratsiya xavfi)
-  • Montaj SLA         — «va'dani bajaryapmizmi?»
   • Aqlli xulosalar    — hammasidan avtomatik tavsiya chiqaradi.
 
 Pul ko'rsatkichlari faqat rahbarга (operator soat/bandlikni ko'radi).
@@ -21,7 +20,6 @@ from flask import Blueprint, render_template
 from core.auth import login_required, current_user
 from core.timeutils import now_tashkent, today_iso
 from models.billing import Teacher, Payment
-from models.montaj import EditJob
 from models.studio import Booking, Studio
 
 bp = Blueprint("analytics", __name__)
@@ -315,18 +313,6 @@ def index():
                  key=lambda x: -x["hours"])[:10]
     top3_share = round(sum(x["share"] for x in top[:3]), 1)
 
-    # ── Montaj SLA ───────────────────────────────────────────────────────
-    jobs = EditJob.query.all()
-    open_jobs = [j for j in jobs if j.status != "delivered"]
-    overdue = [j for j in open_jobs if j.is_overdue()]
-    dl_days = [(j.delivered_at - j.created_at).total_seconds() / 86400
-               for j in jobs
-               if j.delivered_at and j.created_at
-               and j.delivered_at.strftime("%Y-%m-%d") >= d90]
-    sla = {"open": len(open_jobs), "overdue": len(overdue),
-           "avg_days": round(sum(dl_days) / len(dl_days), 1) if dl_days else None,
-           "delivered_90": len(dl_days)}
-
     # ── Lead-time: bron necha kun oldindan qilinadi (90 kun) ────────────
     leads = []
     for b in Booking.query.filter(Booking.date >= d90).all():
@@ -397,14 +383,6 @@ def index():
         add("pie-chart", "warn",
             f"Top-3 mijoz jami soatning {top3_share}% ini beradi — "
             f"kontsentratsiya xavfi: yangi mijozlar oqimini kengaytiring.")
-    if sla["overdue"]:
-        add("timer-off", "warn",
-            f"Montajda {sla['overdue']} ta karta muddati o'tgan — SLA "
-            f"buzilmoqda.", "/montaj")
-    elif sla["avg_days"] is not None and sla["avg_days"] <= 3:
-        add("check-circle", "ok",
-            f"Montaj o'rtacha {sla['avg_days']} kunda topshirilyapti — "
-            f"SLA (3 kun) ichida.")
     if is_admin and kpi["revenue_d"] is not None:
         if kpi["revenue_d"] >= 10:
             add("banknote", "ok",
@@ -429,6 +407,6 @@ def index():
         week_ahead=week_ahead, seg=seg,
         churn=churn, churn_days=CHURN_DAYS,
         top=top, top3_share=top3_share,
-        sla=sla, lead_avg=lead_avg, insights=insights,
+        lead_avg=lead_avg, insights=insights,
         capacity=capacity, days_full=days_uz_full,
         month_label=f"{MONTH_UZ[t0.month]} {t0.year}")

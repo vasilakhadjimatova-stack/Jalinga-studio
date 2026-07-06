@@ -10,7 +10,7 @@ def test_backup_export(admin_client):
     data = json.loads(r.data)
     # Barcha muhim jadvallar backup'da
     for t in ("users", "teachers", "bookings", "jalinga_payments",
-              "fin_transactions", "edit_jobs"):
+              "fin_transactions"):
         assert t in data, t
     assert data["_meta"]["app"] == "Jalinga Studio"
 

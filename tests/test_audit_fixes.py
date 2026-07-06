@@ -1,4 +1,4 @@
-"""Audit tuzatishlari: moliya-auth, to'lov sinxron, montaj yetim karta,
+"""Audit tuzatishlari: moliya-auth, to'lov sinxron,
 inf/nan, dedup label, qidiruv, portal reschedule."""
 
 
@@ -105,25 +105,6 @@ def test_cancel_keeps_paid_payment(app, admin_client, post):
     with app.app_context():
         # to'langan to'lov o'chmadi (haqiqiy pul)
         assert Payment.query.filter_by(booking_id=bid, is_paid=True).count() == 1
-
-
-# ── done→noshow montaj kartasini o'chiradi ──
-def test_done_to_noshow_removes_editjob(app, admin_client, post):
-    from models.studio import Booking
-    from models.montaj import EditJob
-    tid = _mk_client(app, "Montaj Mijoz")
-    sid = _sid(app)
-    post(admin_client, "/bookings/save", studio_id=sid, client_mode="existing",
-         teacher_id=tid, date="2027-08-01", start="10:00", end="12:00",
-         pay_type="hourly")
-    with app.app_context():
-        bid = Booking.query.filter_by(teacher_id=tid).first().id
-    post(admin_client, f"/bookings/{bid}/status", status="done")
-    with app.app_context():
-        assert EditJob.query.filter_by(booking_id=bid).count() == 1
-    post(admin_client, f"/bookings/{bid}/status", status="noshow")
-    with app.app_context():
-        assert EditJob.query.filter_by(booking_id=bid).count() == 0   # yetim qolmadi
 
 
 # ── buy_package inf/nan ni rad etadi ──

@@ -255,26 +255,6 @@
     </div>
   </div>
 </div>
-
-<!-- Montaj SLA -->
-<div class="grid g4" style="margin-top:16px">
-  <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">Montaj — ochiq kartalar</div>
-    <div class="kpi-val" style="font-size:20px">{{ sla.open }}</div>
-  </div><div class="kpi-ico blue"><i class="icon-scissors"></i></div></div></div>
-  <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">Muddati o'tgan</div>
-    <div class="kpi-val" style="font-size:20px;color:{{ 'var(--red)' if sla.overdue else 'var(--green)' }}">{{ sla.overdue }}</div>
-  </div><div class="kpi-ico {{ 'red' if sla.overdue else 'green' }}"><i class="icon-timer-off"></i></div></div></div>
-  <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">O'rtacha topshirish (90k)</div>
-    <div class="kpi-val" style="font-size:20px">{{ sla.avg_days if sla.avg_days is not none else '—' }}{% if sla.avg_days is not none %} kun{% endif %}</div>
-  </div><div class="kpi-ico gold"><i class="icon-gauge"></i></div></div></div>
-  <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">Topshirildi (90 kun)</div>
-    <div class="kpi-val" style="font-size:20px">{{ sla.delivered_90 }}</div>
-  </div><div class="kpi-ico green"><i class="icon-check-circle"></i></div></div></div>
-</div>
 {% endblock %}
 
 {% block extra_js %}

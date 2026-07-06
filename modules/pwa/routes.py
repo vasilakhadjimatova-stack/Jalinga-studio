@@ -26,7 +26,7 @@ def manifest():
         "name": f"{Config.COMPANY_NAME} — Boshqaruv",
         "short_name": "Jalinga",
         "description": "Jalinga Studio boshqaruv paneli: bron, mijozlar, "
-                       "montaj, moliya.",
+                       "studiya, moliya.",
         "lang": "uz",
         "dir": "ltr",
         "start_url": "/?src=pwa",
