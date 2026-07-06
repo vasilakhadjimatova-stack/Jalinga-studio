@@ -158,7 +158,8 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin-bottom:6px;font-we
       <div style="margin-bottom:12px"><label>Ism</label>
         <input type="text" name="name" placeholder="Ismingiz" required maxlength="120"></div>
       <div style="margin-bottom:12px"><label>Telefon</label>
-        <input type="tel" name="phone" placeholder="+998 90 123 45 67" required maxlength="30"></div>
+        <input type="tel" name="phone" id="fPhone" value="+998 " placeholder="+998 90 123 45 67"
+               required maxlength="30" onfocus="if(!this.value.trim())this.value='+998 '"></div>
       <div><label>Izoh (ixtiyoriy)</label>
         <textarea name="note" rows="2" placeholder="Qo'shimcha ma'lumot" maxlength="300"></textarea></div>
     </div>
