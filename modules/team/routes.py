@@ -60,6 +60,77 @@ def backup():
     return Response(body, mimetype="application/json", headers={
         "Content-Disposition": f'attachment; filename="jalinga-backup-{stamp}.json"'})
 
+@bp.route("/team/reset", methods=["POST"])
+@admin_required
+def reset_data():
+    """Ishga tushirish uchun ma'lumotlarni tozalash (faqat rahbar).
+
+    Himoyalar: rahbar O'Z login kodini + «TOZALASH» so'zini kiritishi shart.
+    Qamrov (scope):
+      • ops          — bron/mijoz/to'lov + studiyaga bog'langan moliya kirimlari
+      • ops_finance  — ops + butun moliya jurnali (tranzaksiya, qarz)
+      • full         — hammasi (faqat joriy admin qoladi)
+    Qaytarib bo'lmaydi — oldин /team/backup.json bilan zaxira oling.
+    """
+    me = current_user()
+    f = request.form
+    scope = (f.get("scope") or "").strip()
+    code = (f.get("confirm_code") or "").strip()
+    word = (f.get("confirm_word") or "").strip().upper()
+    if scope not in ("ops", "ops_finance", "full"):
+        flash("⛔ Qamrov tanlanmadi", "error")
+        return redirect(url_for("team.index"))
+    if code != (me.code if me else None):
+        flash("⛔ Login kodingiz noto'g'ri — tozalash bekor qilindi", "error")
+        return redirect(url_for("team.index"))
+    if word != "TOZALASH":
+        flash("⛔ Tasdiq uchun «TOZALASH» deb yozing", "error")
+        return redirect(url_for("team.index"))
+
+    from models.studio import Booking
+    from models.billing import Teacher, Payment, ClientNote
+    from models.finance import (FinTransaction, FinDebt, FinPlan,
+                                FinRecurring, FinWallet, FinCategory)
+    from models.studio import Studio
+    from models.pricing import PriceRule
+    try:
+        # 1) Studiya operatsiyasi — hamma qamrovда o'chadi (FK tartibi muhim)
+        n_pay = Payment.query.delete()
+        ClientNote.query.delete()
+        n_book = Booking.query.delete()
+        n_teacher = Teacher.query.delete()
+        # Studiyaga bog'langan moliya kirimlari (test to'lovlaridan) — ular ham
+        # operatsion, shuning uchun barcha qamrovда tozalanadi.
+        FinTransaction.query.filter_by(source="studio").delete(
+            synchronize_session=False)
+
+        if scope in ("ops_finance", "full"):
+            FinTransaction.query.delete(synchronize_session=False)
+            FinDebt.query.delete()
+        if scope == "full":
+            FinPlan.query.delete()
+            FinRecurring.query.delete()
+            FinWallet.query.delete()
+            FinCategory.query.delete()
+            PriceRule.query.delete()
+            Studio.query.delete()
+            # Boshqa xodimlar (login) — joriy admindан tashqari
+            User.query.filter(User.id != me.id).delete(
+                synchronize_session=False)
+            AuditLog.query.delete()
+
+        record("reset", "database",
+               f"scope={scope} · {n_book} bron, {n_teacher} mijoz, "
+               f"{n_pay} to'lov o'chirildi")
+        db.session.commit()
+        flash(f"✅ Baza tozalandi ({scope}): {n_book} bron, {n_teacher} mijoz, "
+              f"{n_pay} to'lov o'chdi. Ishga tayyor!", "success")
+    except Exception as exc:
+        db.session.rollback()
+        flash(f"⛔ Tozalashда xato: {exc}", "error")
+    return redirect(url_for("team.index"))
+
+
 ROLE_LABELS = {"admin": "👑 Rahbar", "operator": "🎥 Operator",
                "montaj": "✂️ Montajchi", "buxgalter": "🧮 Buxgalter"}
 

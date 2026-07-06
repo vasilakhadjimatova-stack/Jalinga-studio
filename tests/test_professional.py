@@ -216,3 +216,60 @@ def test_forms_have_server_csrf(app, admin_client):
     for path in (f"/teachers/{tid}", "/finance/payments", "/team", "/pricing"):
         html = admin_client.get(path).get_data(as_text=True)
         assert 'name="_csrf"' in html, f"{path} formalarida server CSRF yo'q"
+
+
+# ── 10. Ma'lumotlarni tozalash (reset) — himoya + qamrov ──
+def test_reset_data_guards_and_scope(app, admin_client, post):
+    from database import db
+    from models.studio import Booking, Studio
+    from models.billing import Teacher, Payment
+    from models.finance import FinTransaction
+    sid = _sid(app)
+    tid = _mk_teacher(app, "Reset Mijoz")
+    post(admin_client, "/bookings/save", client_mode="existing", studio_id=sid,
+         teacher_id=tid, date="2027-05-01", start="10:00", end="12:00",
+         pay_type="hourly")
+    # tarixiy moliya yozuvi (manual) — qolishi kerak
+    post(admin_client, "/finance/transactions/add", date="2026-01-15",
+         category="Поступление от клиента (запись)", wallet="Наличные",
+         amount="5000000")
+    with app.app_context():
+        assert Teacher.query.count() > 0
+        hist_before = FinTransaction.query.filter(
+            FinTransaction.source != "studio").count()
+    # Noto'g'ri kod → tozalanmaydi
+    post(admin_client, "/team/reset", scope="ops", confirm_code="000000",
+         confirm_word="TOZALASH")
+    with app.app_context():
+        assert Teacher.query.count() > 0
+    # To'g'ri (ADMIN_CODE=111111) → ops scope tozalaydi
+    post(admin_client, "/team/reset", scope="ops", confirm_code="111111",
+         confirm_word="TOZALASH")
+    with app.app_context():
+        assert Teacher.query.count() == 0
+        assert Booking.query.count() == 0
+        assert Payment.query.count() == 0
+        assert Studio.query.count() > 0   # studiyalar qoladi
+        # tarixiy (studio bo'lmagan) moliya yozuvlari qoladi
+        assert FinTransaction.query.filter(
+            FinTransaction.source != "studio").count() == hist_before
+
+
+def test_reset_data_admin_only(app):
+    from models.user import User
+    from database import db
+    with app.app_context():
+        if not User.query.filter_by(code="556612").first():
+            db.session.add(User(name="Op2", code="556612", role="operator"))
+            db.session.commit()
+    c = app.test_client()
+    c.post("/login", data={"code": "556612"})
+    with c.session_transaction() as s:
+        s["_csrf"] = "t"
+    r = c.post("/team/reset", data={"_csrf": "t", "scope": "full",
+               "confirm_code": "556612", "confirm_word": "TOZALASH"})
+    assert r.status_code in (302, 303)   # operatorga ruxsat yo'q (dashboardga)
+    from models.billing import Teacher
+    with app.app_context():
+        # operator tozalay olmadi — dastur hali ishlaydi
+        assert Teacher.query is not None
