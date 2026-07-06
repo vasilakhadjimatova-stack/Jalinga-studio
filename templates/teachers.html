@@ -1,51 +1,114 @@
 {% extends "base.html" %}
 {% block title %}Mijozlar{% endblock %}
-{% block page_title %}Mijozlar{% endblock %}
-{% block page_crumb %}Mijozlar bazasi — balans va aloqa{% endblock %}
+{% block page_title %}Mijozlar CRM{% endblock %}
+{% block page_crumb %}Baza · segment · LTV · follow-up{% endblock %}
+{% block extra_css %}
+<style>
+.segchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.segchip{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;
+  font-size:12px;font-weight:700;color:var(--txt2);border:1px solid var(--line);
+  background:var(--surface);text-decoration:none;transition:.15s}
+.segchip:hover{border-color:var(--brand);color:var(--txt)}
+.segchip.on{background:var(--brand-bg);border-color:var(--brand);color:var(--brand)}
+.segchip .n{font-weight:800;color:var(--txt)}
+.segchip.on .n{color:var(--brand)}
+.cli-row td{vertical-align:middle}
+.cli-name{display:flex;align-items:center;gap:10px}
+.mini{font-size:11px;color:var(--txt3)}
+.qa{display:inline-flex;width:30px;height:30px;border-radius:9px;align-items:center;
+  justify-content:center;border:1px solid var(--line);color:var(--txt2);margin-left:4px}
+.qa:hover{border-color:var(--brand);color:var(--brand)}
+</style>
+{% endblock %}
 {% block content %}
 <div class="ph"><div>
   <div class="gold-bar"></div>
-  <div class="ph-title">Mijozlar</div>
-  <div class="ph-sub">Mijozlar bazasi — balans, portal, aloqa</div>
+  <div class="ph-title">Mijozlar CRM</div>
+  <div class="ph-sub">Baza — segment, umumiy qiymat (LTV), tashriflar va follow-up</div>
 </div>
 <button class="btn btn-gold" onclick="document.getElementById('m-teacher').classList.add('open')">
   <i class="icon-user-plus"></i> Yangi mijoz</button></div>
 
+<!-- Follow-up eslatmalari (muddati kelgan/o'tgan) -->
+{% set overdue = followups|selectattr('due_date','le',today)|list %}
+{% if followups %}
+<div class="card" style="border-left:3px solid var(--amber);margin-bottom:14px">
+  <div class="card-hd"><div class="card-title"><i class="icon-alarm-clock"></i> Follow-up eslatmalar</div>
+    <span class="tag tag-{{ 'red' if overdue else 'amber' }}">{{ followups|length }} ta{% if overdue %} · {{ overdue|length }} muddati o'tgan{% endif %}</span></div>
+  <div style="padding:0">
+    {% for n in followups[:6] %}
+    <a href="/teachers/{{ n.teacher_id }}#notes" class="feed-item">
+      <span class="tag tag-{{ 'red' if n.due_date <= today else 'amber' }}">{{ n.due_date }}</span>
+      <div style="flex:1;min-width:0"><b>{{ n.teacher }}</b>
+        <div class="mini">{{ n.text or 'Follow-up' }}</div></div>
+      <i class="icon-chevron-right" style="color:var(--txt3)"></i>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Segment chiplari -->
+<div class="segchips">
+  <a href="/teachers?show={{ show }}{% if q %}&q={{ q }}{% endif %}&sort={{ sort }}"
+     class="segchip {% if not seg %}on{% endif %}">Hammasi</a>
+  {% for key, info in segments.items() %}
+  <a href="/teachers?show={{ show }}&seg={{ key }}{% if q %}&q={{ q }}{% endif %}&sort={{ sort }}"
+     class="segchip {% if seg==key %}on{% endif %}">{{ info[0] }}
+     <span class="n">{{ seg_counts.get(key, 0) }}</span></a>
+  {% endfor %}
+</div>
+
 <form method="get" action="/teachers" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-  <input class="input" name="q" value="{{ q }}" placeholder="🔍 Ism, telefon, telegram yoki yo'nalish bo'yicha qidirish..."
-         style="flex:1;min-width:200px" onchange="this.form.submit()">
+  <input class="input" name="q" value="{{ q }}" placeholder="🔍 Ism, telefon, telegram, teg..."
+         style="flex:1;min-width:180px">
+  {% if seg %}<input type="hidden" name="seg" value="{{ seg }}">{% endif %}
+  <select class="select" name="sort" onchange="this.form.submit()" style="width:auto">
+    <option value="recent" {% if sort=='recent' %}selected{% endif %}>Oxirgi tashrif</option>
+    <option value="ltv" {% if sort=='ltv' %}selected{% endif %}>Qiymat (LTV)</option>
+    <option value="balance" {% if sort=='balance' %}selected{% endif %}>Balans</option>
+    <option value="name" {% if sort=='name' %}selected{% endif %}>Ism (A-Z)</option>
+  </select>
   <select class="select" name="show" onchange="this.form.submit()" style="width:auto">
     <option value="active" {% if show=='active' %}selected{% endif %}>Faol</option>
     <option value="all" {% if show=='all' %}selected{% endif %}>Hammasi</option>
     <option value="archive" {% if show=='archive' %}selected{% endif %}>Arxiv</option>
   </select>
-  <button class="btn btn-out" type="submit"><i class="icon-search"></i> Qidirish</button>
-  {% if q or show != 'active' %}<a class="btn btn-ghost" href="/teachers">Tozalash</a>{% endif %}
+  <button class="btn btn-out" type="submit"><i class="icon-search"></i></button>
+  {% if q or show != 'active' or seg %}<a class="btn btn-ghost" href="/teachers">Tozalash</a>{% endif %}
 </form>
 
 <div class="card">
   <div style="padding:9px 14px;font-size:12px;color:var(--txt3);border-bottom:1px solid var(--line)">
-    {{ total }} ta mijoz{% if q %} · «{{ q }}» bo'yicha{% endif %}</div>
+    {{ total }} ta mijoz{% if seg %} · {{ segments[seg][0] }}{% endif %}{% if q %} · «{{ q }}»{% endif %}</div>
   <div style="overflow-x:auto">
   <table class="tbl">
-    <thead><tr><th>Mijoz</th><th>Yo'nalish</th><th>Aloqa</th><th class="r">Balans (soat)</th><th></th></tr></thead>
+    <thead><tr><th>Mijoz</th><th>Segment</th><th class="r">Balans</th>
+      <th class="r">LTV</th><th>Oxirgi / kelgusi</th><th></th></tr></thead>
     <tbody>
       {% for t in teachers %}
-      <tr>
+      <tr class="cli-row">
         <td>
-          <a href="/teachers/{{ t.id }}" style="display:flex;align-items:center;gap:10px">
+          <a href="/teachers/{{ t.id }}" class="cli-name">
             <span class="sb-av" style="width:32px;height:32px;font-size:12.5px">{{ t.name[0]|upper }}</span>
-            <b>{{ t.name }}</b>
-            {% if not t.is_active %}<span class="tag tag-gray">arxiv</span>{% endif %}
+            <span><b>{{ t.name }}</b>{% if not t.is_active %} <span class="tag tag-gray">arxiv</span>{% endif %}
+              <div class="mini">{{ t.subject or '—' }}{% for tag in t.tags %} · <span style="color:var(--brand)">#{{ tag }}</span>{% endfor %}</div></span>
           </a>
         </td>
-        <td style="color:var(--txt3)">{{ t.subject or '—' }}</td>
-        <td style="font-size:12.5px">{{ t.phone or '—' }}{% if t.telegram %} · <span style="color:var(--blue)">@{{ t.telegram }}</span>{% endif %}</td>
-        <td class="r"><span class="tag tag-{% if t.balance_hours > 2 %}green{% elif t.balance_hours > 0 %}amber{% else %}gray{% endif %}">{{ t.balance_hours }}</span></td>
-        <td class="r"><a href="/teachers/{{ t.id }}" class="btn btn-sm btn-out">Ochish <i class="icon-arrow-right"></i></a></td>
+        <td><span class="tag tag-{{ segments[t.segment][1] }}">{{ segments[t.segment][0] }}</span></td>
+        <td class="r"><span class="tag tag-{% if t.balance > 2 %}green{% elif t.balance > 0 %}amber{% else %}gray{% endif %}">{{ t.balance }} soat</span></td>
+        <td class="r"><b>{{ t.ltv|som }}</b><div class="mini">{{ t.sessions }} tashrif</div></td>
+        <td class="mini" style="white-space:nowrap">
+          {% if t.last %}🕘 {{ t.last }}{% if t.days_since is not none %} ({{ t.days_since }} kun){% endif %}{% else %}—{% endif %}
+          {% if t.next %}<div style="color:var(--green)">📅 {{ t.next }}</div>{% endif %}</td>
+        <td class="r" style="white-space:nowrap">
+          {% if t.phone %}<a class="qa" href="tel:{{ t.phone }}" title="Qo'ng'iroq" onclick="event.stopPropagation()"><i class="icon-phone"></i></a>{% endif %}
+          {% if t.telegram %}<a class="qa" href="https://t.me/{{ t.telegram }}" target="_blank" title="Telegram" onclick="event.stopPropagation()"><i class="icon-send"></i></a>{% endif %}
+          <a href="/teachers/{{ t.id }}" class="qa" title="Ochish"><i class="icon-arrow-right"></i></a>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="5"><div class="empty"><i class="icon-users"></i>Hali mijoz yo'q — birinchisini qo'shing</div></td></tr>
+      <tr><td colspan="6"><div class="empty"><i class="icon-users"></i>Mijoz topilmadi</div></td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -62,6 +125,10 @@
         <div><label>Telegram</label><input class="input" name="telegram" placeholder="@username"></div>
       </div>
       <label>Yo'nalish / soha</label><input class="input" name="subject" placeholder="Matematika, IELTS...">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Qayerdan keldi (manba)</label><input class="input" name="source" placeholder="Instagram, referral, reklama..."></div>
+        <div><label>Teglar (vergul bilan)</label><input class="input" name="tags" placeholder="VIP, korporativ"></div>
+      </div>
       <label>Izoh</label><input class="input" name="note">
       <div style="display:flex;gap:9px;margin-top:18px">
         <button type="button" class="btn btn-out" style="flex:1"

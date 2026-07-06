@@ -78,7 +78,7 @@ def test_labels_say_mijoz_not_ustoz(app, admin_client):
     (Eslatma: mijoz ISMIda 'Ustoz' bo'lishi mumkin — shuning uchun aniq
     label matnlarini tekshiramiz, umumiy 'Ustoz' so'zini emas.)"""
     html = admin_client.get("/teachers").data.decode()
-    assert '<div class="ph-title">Mijozlar</div>' in html
+    assert '<div class="ph-title">Mijozlar' in html   # «Mijozlar» / «Mijozlar CRM»
     assert "Yangi mijoz" in html
     assert "Yangi ustoz" not in html
     assert ">Ustozlar<" not in html                  # sidebar/nav label emas

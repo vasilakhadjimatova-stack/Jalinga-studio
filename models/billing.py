@@ -21,6 +21,8 @@ class Teacher(db.Model):
     telegram   = db.Column(db.String(64), default="")
     subject    = db.Column(db.String(120), default="")   # fan/yo'nalish
     note       = db.Column(db.Text, default="")
+    source     = db.Column(db.String(80), default="")    # qayerdan keldi (CRM)
+    tags       = db.Column(db.String(200), default="")   # vergul bilan (VIP, korporativ…)
     is_active  = db.Column(db.Boolean, nullable=False, default=True)
     # Shaxsiy portal — maxfiy havola tokeni (parolsiz kirish; havola = kalit)
     portal_token = db.Column(db.String(48), default="", index=True)
@@ -50,6 +52,18 @@ class Teacher(db.Model):
     def balance_hours(self):
         return round(self.hours_purchased() - self.hours_used(), 2)
 
+    # ── CRM metrikalari (bitta mijoz uchun; ro'yxatда batch ishlatiladi) ──
+    def ltv(self):
+        """Umumiy to'lagan puli (LTV) — tasdiqlangan to'lovlar yig'indisi."""
+        from sqlalchemy import func
+        return float(db.session.query(
+            func.coalesce(func.sum(Payment.amount), 0)).filter(
+            Payment.teacher_id == self.id,
+            Payment.is_paid.is_(True)).scalar() or 0)
+
+    def tag_list(self):
+        return [t.strip() for t in (self.tags or "").split(",") if t.strip()]
+
     def ensure_token(self):
         """Portal tokeni yo'q bo'lsa yaratadi (commit chaqiruvchida)."""
         if not (self.portal_token or "").strip():
@@ -62,8 +76,48 @@ class Teacher(db.Model):
             "id": self.id, "name": self.name, "phone": self.phone or "",
             "telegram": self.telegram or "", "subject": self.subject or "",
             "note": self.note or "", "is_active": self.is_active,
+            "source": self.source or "", "tags": self.tag_list(),
             "balance_hours": self.balance_hours(),
         }
+
+
+# CRM segment kodlari va ular haqida ma'lumot (UI'да ranglar/yorliqlar)
+CRM_SEGMENTS = {
+    "new":      ("🆕 Yangi", "blue"),
+    "active":   ("🟢 Faol", "green"),
+    "cooling":  ("🟡 Sovumoqda", "amber"),
+    "sleeping": ("🟠 Uxlagan", "amber"),
+    "lost":     ("🔴 Yo'qotilgan", "red"),
+}
+
+
+class ClientNote(db.Model):
+    """CRM o'zaro aloqa tarixi — eslatma, qo'ng'iroq, uchrashuv, follow-up.
+
+    Bitta `note` matn maydonidan farqli: sanali, muallifli, turli xil
+    yozuvlar oqimi. Follow-up turi due_date + done bilan «vazifa» bo'ladi.
+    """
+    __tablename__ = "client_notes"
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("teachers.id"),
+                           nullable=False, index=True)
+    at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    author = db.Column(db.String(120), default="")
+    kind = db.Column(db.String(16), default="note")   # note|call|meeting|followup
+    text = db.Column(db.String(1000), default="")
+    due_date = db.Column(db.String(10), default="")   # follow-up: YYYY-MM-DD
+    done = db.Column(db.Boolean, default=False)        # follow-up bajarildi
+
+    def to_dict(self):
+        return {"id": self.id, "teacher_id": self.teacher_id,
+                "at": self.at.strftime("%Y-%m-%d %H:%M") if self.at else "",
+                "author": self.author or "", "kind": self.kind,
+                "text": self.text or "", "due_date": self.due_date or "",
+                "done": self.done}
+
+
+NOTE_KINDS = {"note": "📝 Eslatma", "call": "📞 Qo'ng'iroq",
+              "meeting": "🤝 Uchrashuv", "followup": "⏰ Follow-up"}
 
 
 class Payment(db.Model):
