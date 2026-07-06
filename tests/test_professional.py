@@ -273,3 +273,26 @@ def test_reset_data_admin_only(app):
     with app.app_context():
         # operator tozalay olmadi — dastur hali ishlaydi
         assert Teacher.query is not None
+
+
+# ── 11. Xodimni o'chirish (delete) — himoyalar ──
+def test_delete_employee(app, admin_client, post):
+    from models.user import User
+    from database import db
+    with app.app_context():
+        db.session.add(User(name="O'chiriladigan", code="667788",
+                            role="operator"))
+        db.session.commit()
+        oid = User.query.filter_by(code="667788").first().id
+        admin = User.query.filter_by(role="admin", is_active=True).first()
+        aid = admin.id
+        alone = User.query.filter_by(role="admin", is_active=True).count() == 1
+    # oddiy xodim o'chadi
+    post(admin_client, f"/team/{oid}/delete")
+    with app.app_context():
+        assert User.query.get(oid) is None
+    # o'zini (yagona admin) o'chirib bo'lmaydi
+    if alone:
+        post(admin_client, f"/team/{aid}/delete")
+        with app.app_context():
+            assert User.query.get(aid) is not None
