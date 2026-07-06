@@ -26,7 +26,9 @@ def _to_minutes(hhmm):
 class Studio(db.Model):
     __tablename__ = "studios"
     id          = db.Column(db.Integer, primary_key=True)
-    name        = db.Column(db.String(120), nullable=False)
+    # unique — bo'sh bazada 2 gunicorn worker parallel seed qilса dublikat
+    # studiya yaratmasin (ikkinchisi IntegrityError bilan tushib qutuladi).
+    name        = db.Column(db.String(120), nullable=False, unique=True)
     description = db.Column(db.String(300), default="")
     hourly_rate = db.Column(db.Float, nullable=False, default=0)   # so'm/soat
     color       = db.Column(db.String(10), default="#6098F2")
@@ -55,6 +57,8 @@ class Booking(db.Model):
                              index=True)
     pay_type     = db.Column(db.String(10), nullable=False, default="hourly")
     # hourly (soatbay to'lov) / package (paket balansidan yechiladi)
+    # Qo'lda kiritilgan chegirma foizi (soatbay) — tahrirlaganda saqlanadi
+    discount     = db.Column(db.Integer, nullable=False, default=0)
     operator     = db.Column(db.String(120), default="")   # kim yozib beradi
     note         = db.Column(db.String(300), default="")
     created_by   = db.Column(db.String(120), default="")

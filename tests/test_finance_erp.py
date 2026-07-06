@@ -284,17 +284,22 @@ def test_recurring_pay_and_double_block(app, admin_client, post):
 
 
 def test_recurring_reconciled_by_category(app):
-    """Shu oyда shu statyada haqiqiy chiqim bo'lsa, recurring qoplangan
-    hisoblanadi (ikki marta sanamaslik)."""
-    from models.finance import FinRecurring, FinTransaction
-    from modules.finance.routes import _recurring_paid
-    r = FinRecurring.query.filter_by(category="аренда").first()
-    assert r is not None
-    # Kelajak oyида hech narsa yo'q → qoplanmagan
-    assert _recurring_paid(r.id, 2026, 11, r.category) is False
-    # Shu oyда «аренда» chiqimi paydo bo'lsa → qoplangan (ikki marta sanamaslik)
-    _mk_txn("2026-11-04", 6_000_000, "аренда", "карта 9933")
-    assert _recurring_paid(r.id, 2026, 11, r.category) is True
+    """Shu oyда shu statyada AYNAN shu summali chiqim bo'lsa, recurring
+    qoplangan hisoblanadi. Boshqa summali xarajat qoplamaydi (umumiy statya
+    bo'yicha soxta reconciliation oldini olish)."""
+    with app.app_context():
+        from models.finance import FinRecurring
+        from modules.finance.routes import _recurring_paid
+        r = FinRecurring.query.filter_by(category="аренда").first()
+        assert r is not None
+        # Kelajak oyида hech narsa yo'q → qoplanmagan
+        assert _recurring_paid(r.id, 2026, 11, r.category) is False
+        # Boshqa (kichik) summali xarajat → HALI qoplanmagan (soxta emas)
+        _mk_txn("2026-11-04", 50_000, "аренда", "карта 9933")
+        assert _recurring_paid(r.id, 2026, 11, r.category) is False
+        # Aynan recurring summasidagi chiqim → qoplangan
+        _mk_txn("2026-11-05", r.amount, "аренда", "карта 9933")
+        assert _recurring_paid(r.id, 2026, 11, r.category) is True
 
 
 # ── Dastur-native moliya: sync yo'q, to'liq CRUD ──

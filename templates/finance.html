@@ -145,7 +145,7 @@
       {{ '+' if t.direction=='in' else '−' }}{{ t.amount|som }}</div>
   </div>
   {% else %}
-  <div class="empty"><i class="icon-database"></i>Ma'lumot yo'q — Sync tugmasini bosing</div>
+  <div class="empty"><i class="icon-database"></i>Hozircha yozuv yo'q — <a href="/finance/transactions" style="color:var(--brand)">Jurnal</a> bo'limidan tranzaksiya qo'shing</div>
   {% endfor %}
 </div>
 {% endblock %}

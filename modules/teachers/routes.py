@@ -162,7 +162,13 @@ def save():
     t.source = (f.get("source") or "").strip()[:80]
     t.tags = ",".join(x.strip() for x in (f.get("tags") or "").split(",")
                       if x.strip())[:200]
-    t.is_active = bool(f.get("is_active", "1"))
+    # Yangi mijoz — doim faol (qo'shish formasida checkbox yo'q).
+    # Tahrirlashда esa checkbox bo'shatilса arxivlash imkoni bo'lsin
+    # (avval default '1' bo'lgani uchun arxivlab bo'lmasdi).
+    if is_new:
+        t.is_active = True
+    else:
+        t.is_active = bool(f.get("is_active"))
     t.ensure_token()   # portal havolasi darhol tayyor bo'lsin
     db.session.commit()
     flash(f"✅ {t.name} {'qo`shildi' if is_new else 'yangilandi'}", "success")

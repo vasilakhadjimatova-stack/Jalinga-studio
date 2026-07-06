@@ -75,14 +75,19 @@ def _last_active_admin(u):
 def index():
     rows = User.query.order_by(User.is_active.desc(), User.role.asc(),
                                User.name.asc()).all()
-    # Telegram kunlik digest — o'zini ulash havolasi (rahbar/buxgalter)
+    # Telegram kunlik digest — o'zini ulash uchun ALOHIDA maxfiy token
+    # (login kodi EMAS — bot orqali login kodini oshkor qilmaymiz).
     from core.telegram import is_configured, bot_username
     me = current_user()
     tg_ready = is_configured()
+    tg_token = ""
+    if me and me.can_finance:
+        tg_token = me.ensure_tg_token()
+        db.session.commit()
     return render_template(
         "team.html", team=rows, roles=ROLES, role_labels=ROLE_LABELS,
         tg_ready=tg_ready, tg_bot=bot_username() if tg_ready else "",
-        me_code=me.code if me else "",
+        me_token=tg_token,
         me_linked=bool(me and me.tg_chat_id))
 
 

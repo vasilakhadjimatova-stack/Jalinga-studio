@@ -566,7 +566,7 @@ function mcShow(id){
       (b.pay_type==='package' ? '📦 paket' : '💵 soatbay') + '</span>';
   var st = document.getElementById('bkStudio');
   st.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' +
-    b.scolor + ';margin-right:6px"></span>' + b.studio;
+    b.scolor + ';margin-right:6px"></span>' + _esc(b.studio);
   document.getElementById('bkHours').textContent = b.hours + ' soat';
   _bkRow('bkAmountRow', b.pay_type==='hourly' ? _money(b.amount) + " so'm" : '');
   _bkRow('bkOpRow', b.operator);

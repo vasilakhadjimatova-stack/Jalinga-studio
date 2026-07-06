@@ -5,8 +5,26 @@ Sahifalar: dashboard (hisoblar+KPI+grafiklar) · tranzaksiyalar jurnali ·
 studiya to'lovlari (eski jurnal). Sync: ochiq xlsx eksport orqali.
 """
 import logging
+import math
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
+
+
+def _bad_amount(x):
+    """Summa yaroqsizmi: inf/nan yoki musbat emas (0 yoki manfiy)."""
+    try:
+        return (not math.isfinite(float(x))) or float(x) <= 0
+    except (ValueError, TypeError):
+        return True
+
+
+def _bad_date(d):
+    """Sana YYYY-MM-DD emasmi (int krash / poison oy-yil oldini oladi)."""
+    try:
+        datetime.strptime((d or "").strip(), "%Y-%m-%d")
+        return False
+    except (ValueError, TypeError):
+        return True
 
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash)
@@ -211,7 +229,7 @@ def txn_add():
     except ValueError:
         amount = 0
     cat = FinCategory.query.filter_by(name=cat_name).first()
-    if len(d) != 10 or amount <= 0 or cat is None or not wallet:
+    if _bad_date(d) or _bad_amount(amount) or cat is None or not wallet:
         flash("Sana, summa (>0), hamyon va statya to'g'ri kiritilishi shart",
               "error")
         return redirect(url_for("finance.transactions"))
@@ -259,7 +277,7 @@ def txn_edit(tid):
     except ValueError:
         amount = 0
     wallet = (request.form.get("wallet") or "").strip()
-    if len(d) != 10 or amount <= 0 or cat is None or not wallet:
+    if _bad_date(d) or _bad_amount(amount) or cat is None or not wallet:
         flash("Sana, summa (>0), hamyon va statya to'g'ri bo'lishi shart",
               "error")
         return redirect(url_for("finance.transactions", month=t.date[:7]))
@@ -389,8 +407,9 @@ def debts():
 
 def _num(field, default=0.0):
     try:
-        return float((request.form.get(field) or "0").replace(" ", "")
-                     .replace(",", "."))
+        v = float((request.form.get(field) or "0").replace(" ", "")
+                  .replace(",", "."))
+        return v if math.isfinite(v) else default   # inf/nan → default
     except ValueError:
         return default
 
@@ -399,7 +418,7 @@ def _num(field, default=0.0):
 @finance_required
 def debt_add():
     amount = _num("amount")
-    if amount <= 0:
+    if _bad_amount(amount):
         flash("Summa 0 dan katta bo'lishi shart", "error")
         return redirect(url_for("finance.debts"))
     db.session.add(FinDebt(
@@ -419,7 +438,7 @@ def debt_add():
 def debt_edit(did):
     d = FinDebt.query.get_or_404(did)
     amount = _num("amount")
-    if amount <= 0:
+    if _bad_amount(amount):
         flash("Summa 0 dan katta bo'lishi shart", "error")
         return redirect(url_for("finance.debts"))
     d.date = (request.form.get("date") or "").strip()[:24]
@@ -513,7 +532,19 @@ def wallet_save():
             if other:
                 flash("Bu nomli hisob allaqachon bor", "error")
                 return redirect(url_for("finance.settings"))
+            old_name = w.name
             w.name, w.opening_balance, w.currency = name, opening, cur
+            # Nom o'zgarsa — hisob nomi (matn kalit) bilan bog'langan barcha
+            # yozuvlarni ko'chiramiz (aks holda balans/DDS yetim qoladi).
+            if old_name != name:
+                FinTransaction.query.filter_by(wallet=old_name).update(
+                    {"wallet": name}, synchronize_session=False)
+                FinRecurring.query.filter_by(wallet=old_name).update(
+                    {"wallet": name}, synchronize_session=False)
+                FinPlan.query.filter_by(wallet=old_name).update(
+                    {"wallet": name}, synchronize_session=False)
+                Payment.query.filter_by(wallet=old_name).update(
+                    {"wallet": name}, synchronize_session=False)
     else:
         if FinWallet.query.filter_by(name=name).first():
             flash("Bu nomli hisob allaqachon bor", "error")
@@ -622,13 +653,20 @@ def _recurring_paid(rec_id, year, month, category=None):
     if db.session.query(FinTransaction.id).filter_by(
             recurring_id=rec_id, year=year, month=month).first():
         return True
+    # Qo'lda reconciliation: shu oyда shu statyada AYNAN shu summali chiqim
+    # bo'lsagina qoplangan deb hisoblaymiz. Faqat statya bo'yicha moslash
+    # xavfli edi — umumiy statyaда (masalan «прочие расходы») bitta tasodifiy
+    # xarajat shu statyaдаги barcha doimiy to'lovlarni «to'langan» qilib
+    # qo'yardi va kassa bashoratini soxta yaxshilardi.
     if category:
-        exists = db.session.query(FinTransaction.id).filter_by(
-            year=year, month=month, category=category,
-            direction="out").filter(
-            FinTransaction.source != "recurring").first()
-        if exists:
-            return True
+        rec = FinRecurring.query.get(rec_id)
+        if rec and rec.amount:
+            exists = db.session.query(FinTransaction.id).filter_by(
+                year=year, month=month, category=category,
+                direction="out", amount=rec.amount).filter(
+                FinTransaction.source != "recurring").first()
+            if exists:
+                return True
     return False
 
 
@@ -748,7 +786,7 @@ def plan_add():
                        .replace(",", "."))
     except ValueError:
         amount = 0
-    if len(d) != 10 or amount <= 0:
+    if _bad_date(d) or _bad_amount(amount):
         flash("Sana va musbat summa kiritilishi shart", "error")
         return redirect(url_for("finance.calendar"))
     db.session.add(FinPlan(
@@ -783,7 +821,7 @@ def recurring_add():
         pay_day = int(request.form.get("pay_day") or "1")
     except ValueError:
         amount, pay_day = 0, 1
-    if not name or amount <= 0:
+    if not name or _bad_amount(amount):
         flash("Nom va musbat summa kiritilishi shart", "error")
         return redirect(url_for("finance.calendar"))
     db.session.add(FinRecurring(
@@ -816,7 +854,7 @@ def calendar_pay():
         item_id = 0
     wallet = (request.form.get("wallet") or "").strip()
     d = (request.form.get("date") or "").strip()[:10]
-    if len(d) != 10:
+    if _bad_date(d):
         from datetime import date as _date
         d = _date.today().strftime("%Y-%m-%d")
 
@@ -960,11 +998,16 @@ def pay(pid):
     p.is_paid = True
     t = Teacher.query.get(p.teacher_id)
     tx = sync_payment_to_finance(p, teacher_name=t.name if t else None)
-    used = tx.wallet if tx else (wallet or p.wallet or "—")
     record("pay", "payment",
-           f"#{p.id} {(t.name if t else '?')} {p.amount:.0f} → {used}")
+           f"#{p.id} {(t.name if t else '?')} {p.amount:.0f} → "
+           f"{tx.wallet if tx else '—'}")
     db.session.commit()
-    flash(f"✅ To'landi — «{used}» hisobiga moliya jurnaliga tushdi", "success")
+    if tx:   # bonus/nol summa moliyaga tushmaydi — yolg'on tasdiq bermaymiz
+        flash(f"✅ To'landi — «{tx.wallet}» hisobiga moliya jurnaliga tushdi",
+              "success")
+    else:
+        flash("✅ To'landi (bonus/nol summa — moliya jurnaliga tushmadi)",
+              "success")
     return _safe_back(p.date[:7] if p.date else None)
 
 
@@ -974,8 +1017,8 @@ def toggle(pid):
     from modules.finance.studio_link import sync_payment_to_finance
     p = Payment.query.get_or_404(pid)
     p.is_paid = not p.is_paid
-    if not p.is_paid:
-        p.wallet = ""   # «kutilmoqda»ga qaytdi — hisob bog'lanishi uziladi
+    # «kutilmoqda»ga qaytganda p.wallet SAQLANADI — qayta «to'landi» qilinsa
+    # o'sha hisobga tushsin (aks holda daromad boshqa hisobga ko'chib ketardi).
     # Tasdiqlanganда moliya jurnaliga kirim tushadi (bekor bo'lsa yo'qoladi)
     t = Teacher.query.get(p.teacher_id)
     sync_payment_to_finance(p, teacher_name=t.name if t else None)

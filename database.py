@@ -43,7 +43,9 @@ def _column_default_sql(col):
     if d is None:
         return ""
     if isinstance(d, bool):
-        return f" DEFAULT {1 if d else 0}"
+        # Postgres boolean ustunga integer default (1/0) qabul qilmaydi —
+        # TRUE/FALSE kalit so'zi ikkала dialektда ham ishlaydi.
+        return " DEFAULT TRUE" if d else " DEFAULT FALSE"
     if isinstance(d, (int, float)):
         return f" DEFAULT {d}"
     return " DEFAULT '" + str(d).replace("'", "''") + "'"

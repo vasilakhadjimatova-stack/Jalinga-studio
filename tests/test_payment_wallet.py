@@ -117,7 +117,9 @@ def test_mutual_link_finance_and_studio(app, admin_client, post):
     assert f"/finance/transactions?pay={pid}".encode() in r2.data
 
 
-def test_revert_unlinks_finance_and_clears_wallet(app, admin_client, post):
+def test_revert_unlinks_finance_keeps_wallet(app, admin_client, post):
+    """«Kutilmoqda»ga qaytarilса moliya yozuvi uziladi, LEKIN hisob saqlanadi
+    (qayta to'landiда o'sha hisobga tushsin — daromad ko'chib ketmasin)."""
     pid = _mk_pending_payment(app)
     post(admin_client, f"/finance/{pid}/pay", wallet="Наличные", method="naqd")
     post(admin_client, f"/finance/{pid}/toggle")   # kutilmoqda'ga qaytarish
@@ -126,6 +128,11 @@ def test_revert_unlinks_finance_and_clears_wallet(app, admin_client, post):
     with app.app_context():
         p = Payment.query.get(pid)
         assert p.is_paid is False
-        assert p.wallet == ""
+        assert p.wallet == "Наличные"                      # hisob saqlandi
         assert FinTransaction.query.filter_by(
             payment_id=pid, source="studio").first() is None
+    # qayta to'landi → o'sha hisobga tushadi
+    post(admin_client, f"/finance/{pid}/toggle")
+    with app.app_context():
+        tx = FinTransaction.query.filter_by(payment_id=pid).first()
+        assert tx is not None and tx.wallet == "Наличные"
