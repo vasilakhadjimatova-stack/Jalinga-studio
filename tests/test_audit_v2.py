@@ -188,6 +188,25 @@ def test_public_booking_max_days(app, client):
         assert Booking.query.filter_by(date=far).count() == 0
 
 
+# ── Telegram: uzish tg_chat_id ni tozalaydi va tokenни yangilaydi ──
+def test_tg_unlink_clears_and_rotates(app, admin_client, post):
+    from database import db
+    from models.user import User
+    with app.app_context():
+        admin = User.query.filter_by(role="admin").order_by(User.id).first()
+        admin.tg_chat_id = "999888"
+        admin.tg_token = "OLD_STATIC_TOKEN_1234567890"
+        db.session.commit()
+        old_token = admin.tg_token
+        aid = admin.id
+    r = post(admin_client, "/team/tg/unlink")
+    assert r.status_code in (302, 303)
+    with app.app_context():
+        admin = User.query.get(aid)
+        assert admin.tg_chat_id == ""          # bog'lanish uzildi
+        assert admin.tg_token and admin.tg_token != old_token  # token yangilandi
+
+
 def test_edit_paid_booking_updates_finance(app, admin_client, post):
     """To'langan bron uzaytirilса bog'langan moliya kirimi ham yangilanadi."""
     from models.studio import Booking, Studio

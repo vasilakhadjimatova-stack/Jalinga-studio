@@ -162,6 +162,33 @@ def index():
         me_linked=bool(me and me.tg_chat_id))
 
 
+@bp.route("/team/tg/unlink", methods=["POST"])
+@admin_required
+def tg_unlink():
+    """Telegram bog'lanishini uzish + yangi maxfiy token yaratish.
+
+    Nega kerak: agar bot boshqa (noto'g'ri) Telegram akkauntига ulanib
+    qolgan bo'lsa — masalan havola boshqa qurilmада ochilган bo'lsa —
+    haqiqiy rahbar qayta ulana olmaydi (sahifa «Ulangan» ko'rsatib, tugmani
+    yashiradi). Bu amal chat bog'lanishни tozalaydi VA tokenни yangilaydi,
+    shunda eski havola ishlamay qoladi va faqat yangi havola bilan
+    ulanish mumkin.
+    """
+    me = current_user()
+    if not (me and me.can_finance):
+        flash("⛔ Ruxsat yo'q", "error")
+        return redirect(url_for("team.index"))
+    me.tg_chat_id = ""
+    me.tg_token = ""          # keyingi ochilishда ensure_tg_token yangisini beradi
+    me.ensure_tg_token()
+    db.session.commit()
+    record("update", "user", f"{me.name} — Telegram uzildi (token yangilandi)")
+    flash("✅ Telegram uzildi. Endi «Telegram'ga ulash» tugmasi orqali "
+          "to'g'ri akkauntдан qayta ulaning (eski havola ishlamaydi).",
+          "success")
+    return redirect(url_for("team.index"))
+
+
 @bp.route("/team/save", methods=["POST"])
 @admin_required
 def save():
