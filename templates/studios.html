@@ -12,6 +12,34 @@
 <button class="btn btn-gold" onclick="sEdit()"><i class="icon-plus"></i> Yangi studiya</button>
 {% endif %}</div>
 
+{% if current_user.is_admin %}
+<!-- Online bron havolasi — mijozlarga ulashish uchun -->
+<div class="card" style="margin-bottom:16px">
+  <div class="card-hd"><div class="card-title"><i class="icon-globe"></i> Online bron havolasi</div>
+    <span class="tag tag-green">Ochiq</span></div>
+  <div class="card-bd">
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">
+      Bu havolani mijozlarga bering (Instagram bio, Telegram kanal, vizitka QR) —
+      ular bo'sh vaqtni <b>o'zi</b> band qiladi, bron kalendaringizga tushadi.
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="bookUrl" readonly value=""
+        style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--line);
+        border-radius:10px;padding:11px 13px;color:var(--txt);font-size:13.5px">
+      <button class="btn btn-gold" onclick="copyBookUrl()"><i class="icon-copy"></i> Nusxa</button>
+      <a class="btn btn-out" href="/book" target="_blank"><i class="icon-external-link"></i> Ochish</a>
+    </div>
+  </div>
+</div>
+<script>
+(function(){var u=location.origin+'/book';var el=document.getElementById('bookUrl');if(el)el.value=u;})();
+function copyBookUrl(){var el=document.getElementById('bookUrl');el.select();
+  navigator.clipboard&&navigator.clipboard.writeText(el.value);
+  var b=event.currentTarget;var t=b.innerHTML;b.innerHTML='<i class="icon-check"></i> Nusxa olindi';
+  setTimeout(function(){b.innerHTML=t},1500);}
+</script>
+{% endif %}
+
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(270px,1fr))">
   {% for s in studios %}
   <div class="card" style="margin:0;border-top:3px solid {{ s.color }};cursor:pointer"

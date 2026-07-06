@@ -54,6 +54,7 @@ def create_app():
     from modules.analytics.routes import bp as analytics_bp
     from modules.team.routes import bp as team_bp
     from modules.pwa.routes import bp as pwa_bp
+    from modules.book.routes import bp as book_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dash_bp)
     app.register_blueprint(studios_bp)
@@ -65,6 +66,7 @@ def create_app():
     app.register_blueprint(analytics_bp)
     app.register_blueprint(team_bp)
     app.register_blueprint(pwa_bp)
+    app.register_blueprint(book_bp)
 
     @app.context_processor
     def inject_globals():

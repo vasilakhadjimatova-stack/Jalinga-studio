@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Online bron — {{ company }}</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<meta name="theme-color" content="#0B0C11">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0C11; --surface:#15171F; --surface2:#1C1F2A; --line:rgba(255,255,255,.08);
+  --txt:#F4F5F9; --txt2:#AEB6C8; --txt3:#8A93A8;
+  --gold:#F0A831; --gold-dk:#D98A1B; --gold-bg:rgba(240,168,49,.16);
+  --green:#7CBFA0; --red:#FB7185; --r:18px; --r2:12px;
+  --sh2:0 4px 14px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:Inter,system-ui,sans-serif;
+  min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1200px 600px at 50% -10%,rgba(240,168,49,.10),transparent 60%)}
+.wrap{max-width:560px;margin:0 auto;padding:24px 16px 60px}
+.brand{display:flex;align-items:center;gap:12px;justify-content:center;margin:12px 0 22px}
+.brand img{width:44px;height:44px;border-radius:12px}
+.brand-t{font-weight:800;font-size:19px;letter-spacing:.2px}
+.brand-s{font-size:12px;color:var(--txt3)}
+.hero{text-align:center;margin-bottom:22px}
+.hero h1{font-size:24px;font-weight:800;margin-bottom:6px}
+.hero p{color:var(--txt2);font-size:13.5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:18px;margin-bottom:14px;box-shadow:var(--sh2)}
+.step{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.step .n{width:20px;height:20px;border-radius:50%;background:var(--gold-bg);
+  color:var(--gold);display:grid;place-items:center;font-size:11px}
+.studios{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.st-opt{border:1.5px solid var(--line);border-radius:var(--r2);padding:13px;
+  cursor:pointer;transition:.15s;background:var(--surface2)}
+.st-opt:hover{border-color:var(--gold-dk)}
+.st-opt.sel{border-color:var(--gold);background:var(--gold-bg)}
+.st-opt .nm{font-weight:700;font-size:14px}
+.st-opt .rt{font-size:12px;color:var(--txt3);margin-top:3px}
+input[type=date],input[type=text],input[type=tel],textarea{
+  width:100%;background:var(--surface2);border:1.5px solid var(--line);
+  border-radius:var(--r2);padding:13px 14px;color:var(--txt);font-size:15px;
+  font-family:inherit;outline:none;transition:.15s}
+input:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-bg)}
+label{display:block;font-size:12.5px;color:var(--txt2);margin-bottom:6px;font-weight:600}
+.dur{display:flex;gap:8px;flex-wrap:wrap}
+.dur button{flex:1;min-width:52px;padding:11px 0;border:1.5px solid var(--line);
+  background:var(--surface2);color:var(--txt);border-radius:var(--r2);
+  font-weight:700;font-size:14px;cursor:pointer;transition:.15s}
+.dur button.sel{border-color:var(--gold);background:var(--gold-bg);color:var(--gold)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
+.slot{padding:11px 0;border:1.5px solid var(--line);background:var(--surface2);
+  color:var(--txt);border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;
+  transition:.12s;font-variant-numeric:tabular-nums}
+.slot:hover{border-color:var(--gold-dk)}
+.slot.sel{border-color:var(--gold);background:var(--gold);color:#1a1204}
+.hint{font-size:12.5px;color:var(--txt3);text-align:center;padding:14px 0}
+.summary{display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;background:var(--gold-bg);border-radius:var(--r2);
+  margin-bottom:14px;font-size:14px}
+.summary b{color:var(--gold);font-size:16px}
+.go{width:100%;padding:16px;border:none;border-radius:var(--r2);cursor:pointer;
+  background:linear-gradient(180deg,var(--gold),var(--gold-dk));color:#1a1204;
+  font-weight:800;font-size:16px;letter-spacing:.2px;transition:.15s;
+  box-shadow:0 6px 18px rgba(240,168,49,.3)}
+.go:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.flash{background:var(--red);color:#fff;padding:12px 15px;border-radius:var(--r2);
+  margin-bottom:14px;font-size:13.5px;font-weight:600}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+.foot{text-align:center;color:var(--txt3);font-size:12px;margin-top:22px}
+@media(max-width:400px){.slots{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="/static/favicon.png" alt="{{ company }}">
+    <div><div class="brand-t">{{ company }}</div>
+      <div class="brand-s">Online bron</div></div>
+  </div>
+
+  <div class="hero">
+    <h1>Studiyani band qiling</h1>
+    <p>Bir necha soniyada — bo'sh vaqtni tanlang, biz siz bilan bog'lanamiz.</p>
+  </div>
+
+  {% with msgs = get_flashed_messages() %}
+    {% if msgs %}{% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+  {% endwith %}
+
+  <form method="post" action="/book/submit" id="bookForm" autocomplete="off">
+    <input type="text" name="website" class="hp" tabindex="-1" aria-hidden="true">
+    <input type="hidden" name="studio_id" id="fStudio">
+    <input type="hidden" name="start" id="fStart">
+    <input type="hidden" name="hours" id="fHours" value="1">
+
+    <!-- 1. Studiya -->
+    <div class="card">
+      <div class="step"><span class="n">1</span> Studiyani tanlang</div>
+      {% if studios %}
+      <div class="studios" id="studios">
+        {% for s in studios %}
+        <div class="st-opt" data-id="{{ s.id }}" data-rate="{{ s.hourly_rate }}"
+             onclick="pickStudio(this)">
+          <div class="nm">{{ s.name }}</div>
+          <div class="rt">{% if s.hourly_rate %}{{ '{:,.0f}'.format(s.hourly_rate).replace(',',' ') }} so'm/soat{% else %}kelishuv{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="hint">Hozircha faol studiya yo'q.</div>
+      {% endif %}
+    </div>
+
+    <!-- 2. Sana + davomiylik -->
+    <div class="card">
+      <div class="step"><span class="n">2</span> Sana va davomiylik</div>
+      <div class="grid2" style="margin-bottom:14px">
+        <div><label>Sana</label>
+          <input type="date" id="fDate" value="{{ today }}" min="{{ today }}"
+                 max="{{ max_date }}" onchange="loadSlots()"></div>
+        <div><label>Necha soat</label>
+          <div class="dur" id="dur">
+            {% for h in [1,2,3,4] %}
+            <button type="button" data-h="{{ h }}" onclick="pickDur(this)"
+                    class="{{ 'sel' if h==1 else '' }}">{{ h }}s</button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Vaqt -->
+    <div class="card">
+      <div class="step"><span class="n">3</span> Bo'sh vaqtni tanlang</div>
+      <div id="slotBox"><div class="hint">Avval studiya va sanani tanlang.</div></div>
+    </div>
+
+    <!-- 4. Aloqa -->
+    <div class="card">
+      <div class="step"><span class="n">4</span> Aloqa ma'lumotlari</div>
+      <div style="margin-bottom:12px"><label>Ism</label>
+        <input type="text" name="name" placeholder="Ismingiz" required maxlength="120"></div>
+      <div style="margin-bottom:12px"><label>Telefon</label>
+        <input type="tel" name="phone" placeholder="+998 90 123 45 67" required maxlength="30"></div>
+      <div><label>Izoh (ixtiyoriy)</label>
+        <textarea name="note" rows="2" placeholder="Qo'shimcha ma'lumot" maxlength="300"></textarea></div>
+    </div>
+
+    <div class="summary" id="summary" style="display:none">
+      <span id="sumTxt"></span><b id="sumPrice"></b>
+    </div>
+
+    <button type="submit" class="go" id="goBtn" disabled>Bron qilish</button>
+  </form>
+
+  <div class="foot">{{ company }} · {{ work_start }}:00–{{ work_end }}:00 · har kuni</div>
+</div>
+
+<script>
+var WS={{ work_start }}, WE={{ work_end }}, rate=0, dur=1, chosenStart="";
+function pickStudio(el){
+  document.querySelectorAll('.st-opt').forEach(function(x){x.classList.remove('sel')});
+  el.classList.add('sel');
+  document.getElementById('fStudio').value=el.dataset.id;
+  rate=parseFloat(el.dataset.rate)||0;
+  loadSlots();
+}
+function pickDur(el){
+  document.querySelectorAll('#dur button').forEach(function(x){x.classList.remove('sel')});
+  el.classList.add('sel');
+  dur=parseInt(el.dataset.h)||1;
+  document.getElementById('fHours').value=dur;
+  loadSlots();
+}
+function fmt(n){return n.toLocaleString('ru-RU').replace(/,/g,' ');}
+function loadSlots(){
+  var sid=document.getElementById('fStudio').value;
+  var date=document.getElementById('fDate').value;
+  var box=document.getElementById('slotBox');
+  chosenStart=""; document.getElementById('fStart').value=""; refreshGo();
+  if(!sid||!date){box.innerHTML='<div class="hint">Avval studiya va sanani tanlang.</div>';return;}
+  box.innerHTML='<div class="hint">Yuklanmoqda…</div>';
+  fetch('/book/slots?studio_id='+sid+'&date='+encodeURIComponent(date))
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(!d.ok){box.innerHTML='<div class="hint">Bo\'sh vaqt topilmadi.</div>';return;}
+      var busy=d.busy||[];
+      var now=new Date();
+      var isToday=(date===new Date(now.getTime()+5*3600000).toISOString().slice(0,10));
+      var nowMin=(now.getUTCHours()+5)*60+now.getUTCMinutes();
+      var html='',cnt=0;
+      for(var t=WS*60;t+dur*60<=WE*60;t+=30){
+        var s=t,e=t+dur*60,ok=true;
+        for(var i=0;i<busy.length;i++){if(busy[i][0]<e&&busy[i][1]>s){ok=false;break;}}
+        if(isToday&&s<=nowMin)ok=false;
+        if(ok){var hh=('0'+Math.floor(t/60)).slice(-2)+':'+('0'+(t%60)).slice(-2);
+          html+='<button type="button" class="slot" data-t="'+hh+'" onclick="pickSlot(this)">'+hh+'</button>';cnt++;}
+      }
+      box.innerHTML=cnt?('<div class="slots">'+html+'</div>'):'<div class="hint">Bu kunда bo\'sh vaqt qolmadi. Boshqa sana tanlang.</div>';
+    })
+    .catch(function(){box.innerHTML='<div class="hint">Xatolik. Qayta urinib ko\'ring.</div>';});
+}
+function pickSlot(el){
+  document.querySelectorAll('.slot').forEach(function(x){x.classList.remove('sel')});
+  el.classList.add('sel');
+  chosenStart=el.dataset.t;
+  document.getElementById('fStart').value=chosenStart;
+  refreshGo();
+}
+function refreshGo(){
+  var ok=document.getElementById('fStudio').value&&chosenStart;
+  var btn=document.getElementById('goBtn'),sum=document.getElementById('summary');
+  btn.disabled=!ok;
+  if(ok){
+    sum.style.display='flex';
+    document.getElementById('sumTxt').textContent=
+      document.getElementById('fDate').value+' · '+chosenStart+' · '+dur+' soat';
+    document.getElementById('sumPrice').textContent=rate?fmt(Math.round(rate*dur))+' so\'m':'kelishuv';
+  }else{sum.style.display='none';}
+}
+</script>
+</body>
+</html>
