@@ -79,6 +79,19 @@ def create_app():
         except (ValueError, TypeError):
             return "0"
 
+    @app.template_filter("dmy")
+    def dmy(v):
+        """Sana ko'rinishi: 2026-07-10 → 10.07.2026 (kun.oy.yil).
+
+        Faqat YYYY-MM-DD (yoki YYYY-MM-DD HH:MM...) boshlanadigan qatorni
+        aylantiradi; boshqasiga tegmaydi."""
+        s = str(v or "").strip()
+        if len(s) >= 10 and s[4] == "-" and s[7] == "-" \
+                and s[:4].isdigit() and s[5:7].isdigit() and s[8:10].isdigit():
+            tail = s[10:]   # vaqt qismi bo'lsa saqlanadi (masalan " 14:30")
+            return f"{s[8:10]}.{s[5:7]}.{s[:4]}{tail}"
+        return s
+
     with app.app_context():
         from seed import seed_all
         seed_all()

@@ -31,7 +31,7 @@
     <tbody>
       {% for t in rows %}
       <tr>
-        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ t.date }}</td>
+        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ t.date|dmy }}</td>
         <td>{{ t.purpose or '—' }}
           {% if t.counterparty %}<div style="font-size:11px;color:var(--txt3)">{{ t.counterparty }}</div>{% endif %}</td>
         <td style="white-space:nowrap">{{ t.wallet }}</td>

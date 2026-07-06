@@ -31,7 +31,7 @@
     <tbody>
       {% for p in items %}
       <tr>
-        <td style="font-variant-numeric:tabular-nums">{{ p.date }}</td>
+        <td style="font-variant-numeric:tabular-nums">{{ p.date|dmy }}</td>
         <td><a href="/teachers/{{ p.teacher_id }}" style="font-weight:700">{{ p.teacher_name }}</a>
           {% if p.note %}<div style="font-size:11px;color:var(--txt3)">{{ p.note }}</div>{% endif %}</td>
         <td>{{ p.kind_label }}{% if p.hours %} ({{ p.hours|round(1) }} soat){% endif %}</td>

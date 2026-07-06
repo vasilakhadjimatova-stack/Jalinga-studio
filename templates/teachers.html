@@ -38,7 +38,7 @@
   <div style="padding:0">
     {% for n in followups[:6] %}
     <a href="/teachers/{{ n.teacher_id }}#notes" class="feed-item">
-      <span class="tag tag-{{ 'red' if n.due_date <= today else 'amber' }}">{{ n.due_date }}</span>
+      <span class="tag tag-{{ 'red' if n.due_date <= today else 'amber' }}">{{ n.due_date|dmy }}</span>
       <div style="flex:1;min-width:0"><b>{{ n.teacher }}</b>
         <div class="mini">{{ n.text or 'Follow-up' }}</div></div>
       <i class="icon-chevron-right" style="color:var(--txt3)"></i>
@@ -99,8 +99,8 @@
         <td class="r"><span class="tag tag-{% if t.balance > 2 %}green{% elif t.balance > 0 %}amber{% else %}gray{% endif %}">{{ t.balance }} soat</span></td>
         <td class="r"><b>{{ t.ltv|som }}</b><div class="mini">{{ t.sessions }} tashrif</div></td>
         <td class="mini" style="white-space:nowrap">
-          {% if t.last %}🕘 {{ t.last }}{% if t.days_since is not none %} ({{ t.days_since }} kun){% endif %}{% else %}—{% endif %}
-          {% if t.next %}<div style="color:var(--green)">📅 {{ t.next }}</div>{% endif %}</td>
+          {% if t.last %}🕘 {{ t.last|dmy }}{% if t.days_since is not none %} ({{ t.days_since }} kun){% endif %}{% else %}—{% endif %}
+          {% if t.next %}<div style="color:var(--green)">📅 {{ t.next|dmy }}</div>{% endif %}</td>
         <td class="r" style="white-space:nowrap">
           {% if t.phone %}<a class="qa" href="tel:{{ t.phone }}" title="Qo'ng'iroq" onclick="event.stopPropagation()"><i class="icon-phone"></i></a>{% endif %}
           {% if t.telegram %}<a class="qa" href="https://t.me/{{ t.telegram }}" target="_blank" title="Telegram" onclick="event.stopPropagation()"><i class="icon-send"></i></a>{% endif %}

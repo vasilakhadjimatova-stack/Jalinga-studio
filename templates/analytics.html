@@ -90,7 +90,7 @@
       <div class="card-hd"><div class="card-title"><i class="icon-calendar-range"></i> Kelgusi 7 kun yuklama</div></div>
       <div class="card-bd"><div class="wk">
         {% for d in week_ahead %}
-        <div class="wkc" title="{{ d.date }} — {{ d.hours }} soat">
+        <div class="wkc" title="{{ d.date|dmy }} — {{ d.hours }} soat">
           <div class="l">{{ d.label }}</div>
           <div class="h">{{ d.hours }}</div>
           <div class="wkbar"><i style="width:{{ d.pct }}%"></i></div>

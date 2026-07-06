@@ -37,7 +37,7 @@ p{color:#AEB6C8;font-size:14.5px;line-height:1.6;margin-bottom:20px}
   {% if info and info.studio %}
   <div class="det">
     <div class="row"><span>Studiya</span><b>{{ info.studio }}</b></div>
-    <div class="row"><span>Sana</span><b>{{ info.date }}</b></div>
+    <div class="row"><span>Sana</span><b>{{ info.date|dmy }}</b></div>
     <div class="row"><span>Vaqt</span><b>{{ info.start }}–{{ info.end }}</b></div>
   </div>
   {% endif %}

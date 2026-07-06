@@ -44,7 +44,7 @@
     <tbody>
       {% for d in rows %}
       <tr>
-        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ d.date or '—' }}</td>
+        <td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ d.date|dmy or '—' }}</td>
         <td><b>{{ d.creditor or '—' }}</b>
           {% if d.debtor %}<div style="font-size:11px;color:var(--txt3)">{{ d.debtor }} bergan</div>{% endif %}</td>
         <td style="max-width:340px"><div style="white-space:normal;font-size:12px;color:var(--txt2)">{{ d.reason or '—' }}</div></td>

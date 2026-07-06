@@ -200,7 +200,7 @@ html[data-theme="marble"] #calFull:fullscreen{background:
         <span class="dot" style="width:9px;height:9px;border-radius:50%;background:{{ a.scolor }};flex:0 0 auto"></span>
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:12.5px">{{ a.title }}</div>
-          <div style="font-size:11px;color:var(--txt3)">{{ a.date }} · {{ a.studio }}</div>
+          <div style="font-size:11px;color:var(--txt3)">{{ a.date|dmy }} · {{ a.studio }}</div>
         </div>
       </div>
       {% else %}
