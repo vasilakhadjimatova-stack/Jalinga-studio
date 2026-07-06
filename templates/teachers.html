@@ -119,6 +119,7 @@
   <div class="modal">
     <div class="modal-title"><i class="icon-user-plus"></i> Yangi mijoz</div>
     <form method="POST" action="/teachers/save">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <label>Ism *</label><input class="input" name="name" required placeholder="Akmal Karimov">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label>Telefon</label><input class="input" name="phone" placeholder="+998 90 123 45 67"></div>

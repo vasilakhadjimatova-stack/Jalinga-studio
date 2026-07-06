@@ -47,6 +47,7 @@
           {% if p.is_paid %}
           <form method="POST" action="/finance/{{ p.id }}/toggle" style="display:inline"
                 onsubmit="return confirm('«Kutilmoqda»ga qaytarilsinmi? Moliyadan olib tashlanadi.')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-ghost" type="submit" title="Kutilmoqda'ga qaytarish">↩︎</button>
           </form>
           {% else %}
@@ -57,6 +58,7 @@
           {% if current_user.can_finance %}
           <form method="POST" action="/finance/{{ p.id }}/delete" style="display:inline"
                 onsubmit="return confirm('To\'lov o\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
           </form>
           {% endif %}
@@ -76,6 +78,7 @@
     <div class="modal-title"><i class="icon-banknote"></i> To'lovni qabul qilish</div>
     <div id="pay-info" style="font-size:13px;color:var(--txt2);margin:4px 0 14px"></div>
     <form method="POST" id="pay-form" action="">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <label>Qaysi hisobga tushdi? <span style="color:var(--red)">*</span></label>
       <select class="select" name="wallet" id="pay-wallet" required>
         {% for w in wallets %}<option value="{{ w }}">{{ w }}</option>{% endfor %}

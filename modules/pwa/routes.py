@@ -16,7 +16,7 @@ bp = Blueprint("pwa", __name__)
 
 # SW versiyasi — o'zgarsa eski kesh tozalanadi (sw.js ichида ishlatiladi).
 # v3: HTML sahifalar keshdan chiqarildi (CSRF token xato bug'ini tuzatadi).
-CACHE_VERSION = "jalinga-v3"
+CACHE_VERSION = "jalinga-v4"
 
 
 @bp.route("/manifest.webmanifest")

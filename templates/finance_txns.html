@@ -98,6 +98,7 @@
             onclick='txEdit({{ t.id }}, {{ t.date|tojson }}, {{ t.category|tojson }}, {{ t.wallet|tojson }}, {{ t.amount }}, {{ (t.counterparty or "")|tojson }}, {{ (t.purpose or "")|tojson }})'><i class="icon-pencil"></i></button>
           <form method="POST" action="/finance/transactions/{{ t.id }}/delete" style="display:inline"
                 onsubmit="return confirm('Tranzaksiya o\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
           </form>
           {% endif %}
@@ -117,6 +118,7 @@
   <div class="modal">
     <div class="modal-title"><i class="icon-plus-circle"></i> <span id="txTitle">Yangi tranzaksiya</span></div>
     <form method="POST" id="txForm" action="/finance/transactions/add">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <label>Sana</label><input class="input" type="date" name="date" id="txDate" required>
       <label>Statya</label>
       <select class="select" name="category" id="txCat" required>

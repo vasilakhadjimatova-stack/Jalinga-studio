@@ -202,3 +202,17 @@ def test_admin_code_env_syncs_existing_admin(app):
             os.environ.pop("ADMIN_CODE", None)
         else:
             os.environ["ADMIN_CODE"] = old_env
+
+
+# ── 9. POST formalarda server tomonidan CSRF token bo'ladi (JS'ga bog'liq emas) ──
+def test_forms_have_server_csrf(app, admin_client):
+    """CSRF bug: forma ichida {{ csrf_token() }} yashirin maydon bo'lishi shart
+    (service worker/JS eskirsa ham «Bad Request: CSRF token xato» chiqmasin)."""
+    from models.billing import Teacher
+    from database import db
+    with app.app_context():
+        t = Teacher(name="CSRF Form", is_active=True)
+        db.session.add(t); db.session.commit(); tid = t.id
+    for path in (f"/teachers/{tid}", "/finance/payments", "/team", "/pricing"):
+        html = admin_client.get(path).get_data(as_text=True)
+        assert 'name="_csrf"' in html, f"{path} formalarida server CSRF yo'q"

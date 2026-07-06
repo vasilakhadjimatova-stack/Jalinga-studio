@@ -42,6 +42,7 @@
                   onclick="pEdit(JSON.parse(this.dataset.r))"><i class="icon-pencil"></i></button>
           <form method="POST" action="/pricing/delete" style="display:inline"
                 onsubmit="return confirm('Qoida o\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <input type="hidden" name="id" value="{{ r.id }}">
             <button class="btn btn-sm btn-out" style="color:var(--red)"><i class="icon-trash-2"></i></button>
           </form>
@@ -62,6 +63,7 @@
   <div class="modal">
     <div class="modal-title" id="mr-title"><i class="icon-tag"></i> Chegirma qoidasi</div>
     <form method="POST" action="/pricing/save">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="id" id="mr-id">
       <label>Nomi</label>
       <input class="input" name="name" id="mr-name" placeholder="Masalan: Kunduzgi chegirma" required>

@@ -72,6 +72,7 @@
       <i class="icon-copy"></i> Nusxalash</button>
     <form method="POST" action="/teachers/{{ t.id }}/token" style="display:inline"
           onsubmit="return confirm('Yangi havola yaratilsinmi? Eskisi ISHLAMAY qoladi.')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-refresh-cw"></i> Yangilash</button>
     </form>
     <div style="width:100%;font-size:11.5px;color:var(--txt3)">
@@ -85,6 +86,7 @@
   <div class="card-hd"><div class="card-title"><i class="icon-message-square-text"></i> O'zaro aloqa tarixi</div></div>
   <div class="card-bd" style="border-bottom:1px solid var(--line)">
     <form method="POST" action="/teachers/{{ t.id }}/note" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div style="width:130px"><label>Tur</label>
         <select class="select" name="kind" id="nk" onchange="document.getElementById('nd').style.display=this.value=='followup'?'block':'none'">
           {% for k, lbl in note_kinds.items() %}<option value="{{ k }}">{{ lbl }}</option>{% endfor %}
@@ -108,9 +110,11 @@
       <div style="display:flex;gap:2px">
         {% if n.kind=='followup' %}
         <form method="POST" action="/teachers/{{ t.id }}/note/{{ n.id }}/done" style="display:inline">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-ghost" type="submit" title="{{ 'Qayta ochish' if n.done else 'Bajarildi' }}">{{ '↩︎' if n.done else '✓' }}</button>
         </form>{% endif %}
         <form method="POST" action="/teachers/{{ t.id }}/note/{{ n.id }}/delete" style="display:inline" onsubmit="return confirm('O\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
         </form>
       </div>
@@ -125,6 +129,7 @@
     <div class="card-bd">
       <form method="POST" action="/teachers/{{ t.id }}/package"
             onsubmit="var b=this.querySelector('button[type=submit]');setTimeout(function(){b.disabled=true;b.textContent='Saqlanmoqda…';},0);return true">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div><label>Soat</label><input class="input" type="number" name="hours" min="1" max="1000" step="0.5" value="10" required></div>
           <div><label>Summa (so'm)</label><input class="input" type="number" name="amount" min="0" step="1000" required></div>
@@ -140,6 +145,7 @@
       {% if current_user.is_admin %}
       <form method="POST" action="/teachers/{{ t.id }}/bonus"
             style="display:flex;gap:8px;align-items:flex-end;margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <div style="width:92px"><label>🎁 Bonus soat</label>
           <input class="input" type="number" name="hours" min="0.5" max="20" step="0.5" value="1"></div>
         <div style="flex:1"><label>Sabab</label>
@@ -154,6 +160,7 @@
     <div class="card-hd"><div class="card-title"><i class="icon-user-cog"></i> Profil</div></div>
     <div class="card-bd">
       <form method="POST" action="/teachers/save">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <input type="hidden" name="id" value="{{ t.id }}">
         <label>Ism</label><input class="input" name="name" value="{{ t.name }}" required>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
