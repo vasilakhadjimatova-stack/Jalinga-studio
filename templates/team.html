@@ -24,6 +24,18 @@
       e'tibor talab qiladigan ishlar) shu yerga keladi.
     {% elif me_linked %}
       ✅ Siz ulangansiz. Har kuni ertalab <b>9:00</b> da botdan kunlik hisobot olasiz.
+      <div style="margin-top:10px">
+        <form method="POST" action="/team/tg/unlink" style="display:inline"
+              onsubmit="return confirm('Telegram uzilsinmi? Eski havola ishlamay qoladi — qayta ulanish uchun yangi havola kerak bo\'ladi.')">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-out" style="color:var(--red);border-color:var(--red)">
+            <i class="icon-link-2-off"></i> Telegram'ni uzish</button>
+        </form>
+      </div>
+      <div style="margin-top:8px;font-size:11.5px;color:var(--txt3)">
+        Bot boshqa (noto'g'ri) Telegram akkauntига ulanib qolgan bo'lsa — uzing,
+        so'ng to'g'ri akkauntдан qayta ulaning.
+      </div>
     {% else %}
       Har ertalab kunlik hisobot olish uchun botni ulang:
       <div style="margin-top:10px">
