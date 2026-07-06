@@ -341,6 +341,29 @@ html[data-theme="marble"] #calFull:fullscreen{background:
           Qo'lda kiritsangiz — kattarog'i olinadi.
         </div>
       </div>
+      <!-- Darhol to'landi — mijoz bron paytida to'lasa, hisobни tanlaydi -->
+      <div id="mb-paidnow-wrap" style="margin-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px">
+          <input type="checkbox" name="paid_now" id="mb-paidnow" value="1"
+                 onchange="mcTogglePaid()" style="width:17px;height:17px">
+          💵 Darhol to'landi (hozir to'lab bo'ldi)
+        </label>
+        <div id="mb-paid-fields" style="display:none;margin-top:9px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><label>Qaysi hisobga</label>
+              <select class="select" name="pay_wallet" id="mb-pay-wallet">
+                {% for w in wallets %}<option value="{{ w }}">{{ w }}</option>{% endfor %}
+              </select></div>
+            <div><label>Usul</label>
+              <select class="select" name="pay_method" id="mb-pay-method" onchange="mcPayMethodWallet()">
+                {% for m in pay_methods %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+              </select></div>
+          </div>
+          <div style="font-size:11px;color:var(--txt3);margin-top:5px">
+            Tanlangan hisobga moliya jurnaliga darhol kirim yoziladi.
+          </div>
+        </div>
+      </div>
       <label>Operator (ixtiyoriy)</label>
       <input class="input" name="operator" placeholder="Kim yozib beradi">
       <label>Izoh</label>
@@ -463,11 +486,27 @@ function mcClientMode(m){
   if(isNew) nn.focus();
 }
 
-/* Chegirma maydoni faqat soatbay uchun ko'rinadi (paket balansdan yechiladi) */
+/* Chegirma va «darhol to'landi» faqat soatbay uchun (paket balansdan yechiladi) */
 function mcTogglePay(){
-  var pay = document.getElementById('mb-pay');
+  var isPkg = document.getElementById('mb-pay').value === 'package';
   var w = document.getElementById('mb-disc-wrap');
-  if(w) w.style.display = (pay.value === 'package') ? 'none' : 'block';
+  if(w) w.style.display = isPkg ? 'none' : 'block';
+  var pn = document.getElementById('mb-paidnow-wrap');
+  if(pn) pn.style.display = isPkg ? 'none' : 'block';
+  if(isPkg){ var chk=document.getElementById('mb-paidnow'); if(chk){chk.checked=false; mcTogglePaid();} }
+}
+/* «Darhol to'landi» belgilansa — hisob/usul maydonlari ochiladi */
+function mcTogglePaid(){
+  var on = document.getElementById('mb-paidnow').checked;
+  document.getElementById('mb-paid-fields').style.display = on ? 'block' : 'none';
+}
+/* Usul → tavsiya etilgan hisob (studio_link bilan mos) */
+var MB_METHOD_WALLET = {"naqd":"Наличные","karta":"карта 9933",
+  "o'tkazma":"РС Jalinga","click/payme":"карта 9933"};
+function mcPayMethodWallet(){
+  var m=document.getElementById('mb-pay-method').value;
+  var w=document.getElementById('mb-pay-wallet'), want=MB_METHOD_WALLET[m];
+  if(want){ for(var i=0;i<w.options.length;i++){ if(w.options[i].value===want){ w.value=want; break; } } }
 }
 
 /* Mavjud mijoz select'ini qidiruv bilan filtrlash */
