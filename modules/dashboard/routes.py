@@ -64,8 +64,11 @@ def index():
         "teacher": teachers.get(b.teacher_id).name if teachers.get(b.teacher_id) else "?",
     } for b in todays]
 
+    from modules.dashboard.attention import attention_items
+    attention = attention_items()
+
     return render_template(
-        "dashboard.html", todays=rows,
+        "dashboard.html", todays=rows, attention=attention,
         kpi={
             "today_count": len(todays),
             "month_revenue": month_revenue,

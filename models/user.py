@@ -12,6 +12,8 @@ class User(db.Model):
     code       = db.Column(db.String(12), unique=True, nullable=False, index=True)
     role       = db.Column(db.String(20), nullable=False, default="operator")
     is_active  = db.Column(db.Boolean, nullable=False, default=True)
+    # Telegram bog'lanish (bot /start <kod> orqali) — rahbarga digest/eslatma
+    tg_chat_id = db.Column(db.String(24), default="")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
