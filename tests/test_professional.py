@@ -175,3 +175,30 @@ def test_teacher_phone_dedup(app, admin_client, post):
          phone="998905553322")   # bir xil raqam, boshqa format
     with app.app_context():
         assert Teacher.query.count() == before   # yaratilmadi
+
+
+# ── 8. ADMIN_CODE env asosiy admin kodini yangilaydi (Railway) ──
+def test_admin_code_env_syncs_existing_admin(app):
+    """ADMIN_CODE o'zgarсa — mavjud asosiy admin kodi ham yangilanadi
+    (baza allaqachon to'la bo'lsa ham). Holat 111111 ga tiklanadi."""
+    import os
+    from models.user import User
+    from seed import seed_all
+    old_env = os.environ.get("ADMIN_CODE")
+    try:
+        with app.app_context():
+            os.environ["ADMIN_CODE"] = "902413"
+            seed_all()
+            a = User.query.filter_by(role="admin").order_by(User.id).first()
+            assert a.code == "902413" and a.is_active
+    finally:
+        # Holatni tiklaymiz — boshqa testlar 111111 bilan kiradi
+        with app.app_context():
+            os.environ["ADMIN_CODE"] = "111111"
+            seed_all()
+            a = User.query.filter_by(role="admin").order_by(User.id).first()
+            assert a.code == "111111"
+        if old_env is None:
+            os.environ.pop("ADMIN_CODE", None)
+        else:
+            os.environ["ADMIN_CODE"] = old_env
