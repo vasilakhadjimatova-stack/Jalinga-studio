@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bron qabul qilindi — {{ company }}</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<meta name="theme-color" content="#0B0C11">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0B0C11;color:#F4F5F9;font-family:Inter,system-ui,sans-serif;
+  min-height:100vh;display:grid;place-items:center;padding:24px;
+  background-image:radial-gradient(1000px 500px at 50% 0%,rgba(240,168,49,.12),transparent 60%)}
+.box{max-width:420px;width:100%;text-align:center}
+.tick{width:82px;height:82px;margin:0 auto 22px;border-radius:50%;
+  background:rgba(124,191,160,.16);display:grid;place-items:center}
+.tick svg{width:44px;height:44px;stroke:#7CBFA0;stroke-width:3;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+h1{font-size:24px;font-weight:800;margin-bottom:10px}
+p{color:#AEB6C8;font-size:14.5px;line-height:1.6;margin-bottom:20px}
+.det{background:#15171F;border:1px solid rgba(255,255,255,.08);border-radius:16px;
+  padding:18px;margin-bottom:22px;text-align:left}
+.det .row{display:flex;justify-content:space-between;padding:7px 0;font-size:14px}
+.det .row span{color:#8A93A8}.det .row b{font-weight:700}
+.btn{display:inline-block;padding:14px 26px;border-radius:12px;text-decoration:none;
+  background:linear-gradient(180deg,#F0A831,#D98A1B);color:#1a1204;font-weight:800;font-size:15px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="tick"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+  <h1>Bron qabul qilindi! 🎬</h1>
+  <p>Rahmat! So'rovingiz operatorga yuborildi — tez orada telefon orqali
+     tasdiqlash uchun bog'lanamiz.</p>
+  {% if info and info.studio %}
+  <div class="det">
+    <div class="row"><span>Studiya</span><b>{{ info.studio }}</b></div>
+    <div class="row"><span>Sana</span><b>{{ info.date }}</b></div>
+    <div class="row"><span>Vaqt</span><b>{{ info.start }}–{{ info.end }}</b></div>
+  </div>
+  {% endif %}
+  <a href="/book" class="btn">Yana bron qilish</a>
+</div>
+</body>
+</html>
