@@ -11,7 +11,8 @@ Soatbay bron: yaratilganda Payment (kutilmoqda) yoziladi — Moliya sahifasida
 import calendar as pycal
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import (Blueprint, render_template, request, redirect, url_for,
+                   flash, jsonify)
 
 from core.auth import login_required, current_user
 from core.timeutils import today_iso
@@ -184,6 +185,30 @@ def calendar():
 def month_view():
     """Eski havolalar uchun — /calendar'ga yo'naltiradi."""
     return redirect(url_for("bookings.calendar", **request.args))
+
+
+@bp.route("/bookings/busy")
+@login_required
+def busy():
+    """Bandlik kalendari uchun JSON: studiya+oy bo'yicha kunma-kun bronlar.
+
+    ?studio_id=<id>&ym=YYYY-MM → {"YYYY-MM-DD": [{start,end,teacher,status}]}.
+    """
+    sid = request.args.get("studio_id", type=int)
+    ym = (request.args.get("ym") or "").strip()[:7]
+    if not (sid and len(ym) == 7):
+        return jsonify({})
+    tmap = {t.id: t.name for t in Teacher.query.all()}
+    out = {}
+    for b in Booking.query.filter(
+            Booking.date.like(ym + "%"), Booking.studio_id == sid,
+            Booking.status.in_(("active", "done", "noshow"))).order_by(
+            Booking.start.asc()).all():
+        out.setdefault(b.date, []).append({
+            "start": b.start, "end": b.end,
+            "teacher": tmap.get(b.teacher_id, "?"),
+            "status": b.status_label()})
+    return jsonify(out)
 
 
 @bp.route("/bookings/save", methods=["POST"])
