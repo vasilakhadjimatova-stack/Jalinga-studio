@@ -30,7 +30,14 @@ DEFAULT_WALLET = "карта 9933"
 SKIP_METHODS = {"bonus"}
 
 
-def _resolve_wallet(method):
+def _resolve_wallet(method, explicit=None):
+    """Hisob (hamyon) nomi.
+
+    Ustuvorlik: aniq tanlangan (to'lash paytida) → to'lov usulidan → birinchi.
+    """
+    exp = (explicit or "").strip()
+    if exp and FinWallet.query.filter_by(name=exp).first():
+        return exp
     name = METHOD_WALLET.get((method or "").strip(), DEFAULT_WALLET)
     if FinWallet.query.filter_by(name=name).first():
         return name
@@ -68,7 +75,8 @@ def sync_payment_to_finance(payment, teacher_name=None):
     date = (payment.date or "")[:10]
     if len(date) != 10:
         return None
-    wallet = _resolve_wallet(payment.method)
+    # Aniq tanlangan hisob (Payment.wallet) ustun; bo'lmasa usuldan
+    wallet = _resolve_wallet(payment.method, getattr(payment, "wallet", ""))
     who = (teacher_name or "").strip()
     kind_label = "paket" if payment.kind == "package" else "soatbay"
     purpose = f"Studiya to'lovi ({kind_label})"

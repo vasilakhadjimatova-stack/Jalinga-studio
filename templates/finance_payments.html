@@ -27,7 +27,7 @@
 <div class="card">
   <div style="overflow-x:auto">
   <table class="tbl">
-    <thead><tr><th>Sana</th><th>Mijoz</th><th>Turi</th><th class="r">Summa</th><th>Holat</th><th></th></tr></thead>
+    <thead><tr><th>Sana</th><th>Mijoz</th><th>Turi</th><th class="r">Summa</th><th>Holat</th><th>Hisob</th><th></th></tr></thead>
     <tbody>
       {% for p in items %}
       <tr>
@@ -37,11 +37,19 @@
         <td>{{ p.kind_label }}{% if p.hours %} ({{ p.hours|round(1) }} soat){% endif %}</td>
         <td class="r"><b>{{ p.amount|som }}</b></td>
         <td><span class="tag tag-{{ 'green' if p.is_paid else 'amber' }}">{{ "To'landi" if p.is_paid else 'Kutilmoqda' }}</span></td>
+        <td style="font-size:12px;color:var(--txt2)">
+          {% if p.is_paid and p.wallet %}<i class="icon-wallet"></i> {{ p.wallet }}{% else %}—{% endif %}</td>
         <td class="r" style="white-space:nowrap">
-          <form method="POST" action="/finance/{{ p.id }}/toggle" style="display:inline">
-            <button class="btn btn-sm {{ 'btn-ghost' if p.is_paid else 'btn-gold' }}" type="submit">
-              {{ '↩︎' if p.is_paid else "✓ To'landi" }}</button>
+          {% if p.is_paid %}
+          <form method="POST" action="/finance/{{ p.id }}/toggle" style="display:inline"
+                onsubmit="return confirm('«Kutilmoqda»ga qaytarilsinmi? Moliyadan olib tashlanadi.')">
+            <button class="btn btn-sm btn-ghost" type="submit" title="Kutilmoqda'ga qaytarish">↩︎</button>
           </form>
+          {% else %}
+          <button class="btn btn-sm btn-gold" type="button"
+                  data-id="{{ p.id }}" data-t="{{ p.teacher_name }}" data-a="{{ p.amount }}"
+                  data-m="{{ p.method }}" onclick="payOpen(this)"><i class="icon-check"></i> To'lash</button>
+          {% endif %}
           {% if current_user.can_finance %}
           <form method="POST" action="/finance/{{ p.id }}/delete" style="display:inline"
                 onsubmit="return confirm('To\'lov o\'chirilsinmi?')">
@@ -51,10 +59,59 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6"><div class="empty"><i class="icon-receipt"></i>Bu oyda to'lov yo'q</div></td></tr>
+      <tr><td colspan="7"><div class="empty"><i class="icon-receipt"></i>Bu oyda to'lov yo'q</div></td></tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
 </div>
+
+<!-- To'lovni qabul qilish — qaysi hisobga tushdi -->
+<div class="modal-ov" id="m-pay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-banknote"></i> To'lovni qabul qilish</div>
+    <div id="pay-info" style="font-size:13px;color:var(--txt2);margin:4px 0 14px"></div>
+    <form method="POST" id="pay-form" action="">
+      <label>Qaysi hisobga tushdi? <span style="color:var(--red)">*</span></label>
+      <select class="select" name="wallet" id="pay-wallet" required>
+        {% for w in wallets %}<option value="{{ w }}">{{ w }}</option>{% endfor %}
+      </select>
+      <label style="margin-top:11px">To'lov usuli</label>
+      <select class="select" name="method" id="pay-method" onchange="payMethodWallet()">
+        {% for m in methods %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+      <div style="font-size:11.5px;color:var(--txt3);margin-top:8px">
+        Tasdiqlansa — moliya jurnaliga («{{ 'Поступление от клиента' }}») shu hisob bo'yicha kirim yoziladi.
+      </div>
+      <div style="display:flex;gap:9px;margin-top:18px">
+        <button type="button" class="btn btn-out" style="flex:1"
+                onclick="document.getElementById('m-pay').classList.remove('open')">Bekor</button>
+        <button type="submit" class="btn btn-gold" style="flex:2;justify-content:center">
+          <i class="icon-check"></i> Tasdiqlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// To'lov usuli → tavsiya etilgan hisob (studio_link.METHOD_WALLET bilan mos)
+var METHOD_WALLET = {"naqd":"Наличные","karta":"карта 9933",
+  "o'tkazma":"РС Jalinga","click/payme":"карта 9933"};
+function payOpen(btn){
+  var d=btn.dataset;
+  document.getElementById('pay-form').action='/finance/'+d.id+'/pay';
+  document.getElementById('pay-info').innerHTML=
+    '<b>'+d.t+'</b> · '+Number(d.a).toLocaleString('ru-RU').replace(/,/g,' ')+" so'm";
+  var m=document.getElementById('pay-method');
+  if(d.m){ m.value=d.m; }
+  payMethodWallet();
+  document.getElementById('m-pay').classList.add('open');
+}
+function payMethodWallet(){
+  var m=document.getElementById('pay-method').value;
+  var w=document.getElementById('pay-wallet');
+  var want=METHOD_WALLET[m];
+  if(want){ for(var i=0;i<w.options.length;i++){ if(w.options[i].value===want){ w.value=want; break; } } }
+}
+</script>
 {% endblock %}
