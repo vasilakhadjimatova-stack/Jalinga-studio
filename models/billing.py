@@ -130,6 +130,8 @@ class Payment(db.Model):
     amount     = db.Column(db.Float, nullable=False, default=0)   # so'm
     hours      = db.Column(db.Float, nullable=False, default=0)   # paket: soat
     method     = db.Column(db.String(20), default="naqd")
+    # Qaysi hisob (moliya hamyoni)ga tushgan — to'lash paytida tanlanadi
+    wallet     = db.Column(db.String(60), default="")
     date       = db.Column(db.String(10), nullable=False, index=True)
     is_paid    = db.Column(db.Boolean, nullable=False, default=True, index=True)
     note       = db.Column(db.String(300), default="")
@@ -142,6 +144,7 @@ class Payment(db.Model):
             "booking_id": self.booking_id, "kind": self.kind,
             "kind_label": PAY_KINDS.get(self.kind, self.kind),
             "amount": self.amount or 0, "hours": self.hours or 0,
-            "method": self.method or "", "date": self.date,
+            "method": self.method or "", "wallet": self.wallet or "",
+            "date": self.date,
             "is_paid": self.is_paid, "note": self.note or "",
         }

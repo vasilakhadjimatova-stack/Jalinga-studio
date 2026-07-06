@@ -25,6 +25,15 @@ def test_public_page_open_no_login(client):
     assert "Studiyani band".encode() in r.data
 
 
+def test_public_form_submits_all_fields(client):
+    """Regressiya: sana maydonida name bo'lmasa forma sanani yubormaydi
+    va «Studiya, sana va vaqtni tanlang» xatosi chiqadi."""
+    html = client.get("/book").data.decode()
+    for nm in ('name="date"', 'name="studio_id"', 'name="start"',
+               'name="hours"', 'name="name"', 'name="phone"'):
+        assert nm in html, f"forma maydoni yo'q: {nm}"
+
+
 def test_slots_json(app, client):
     sid = _sid(app)
     day, _ = _future(11)

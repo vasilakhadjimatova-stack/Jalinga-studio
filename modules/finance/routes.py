@@ -15,7 +15,7 @@ from config import Config
 from core.auth import finance_required
 from core.timeutils import current_month_iso
 from database import db
-from models.billing import Teacher, Payment
+from models.billing import Teacher, Payment, PAY_METHODS
 from models.finance import (FinWallet, FinCategory, FinTransaction,
                             FinDebt, FinSetting, FinRecurring, FinPlan)
 from models.audit import record
@@ -921,8 +921,35 @@ def payments():
         items.append(d)
     paid = sum(p.amount or 0 for p in rows if p.is_paid)
     pending = sum(p.amount or 0 for p in rows if not p.is_paid)
+    wallets = FinWallet.query.order_by(FinWallet.sort).all()
     return render_template("finance_payments.html", items=items, month=month,
-                           paid=paid, pending=pending)
+                           paid=paid, pending=pending,
+                           wallets=[w.name for w in wallets],
+                           methods=PAY_METHODS)
+
+
+@bp.route("/finance/<int:pid>/pay", methods=["POST"])
+@finance_required
+def pay(pid):
+    """To'lovni «to'landi» qiladi — QAYSI HISOB (hamyon)ga tushishini so'raydi
+    va o'sha hisobga moliya kirim yozuvini bog'laydi (impulse-erp uslubi)."""
+    from modules.finance.studio_link import sync_payment_to_finance
+    p = Payment.query.get_or_404(pid)
+    wallet = (request.form.get("wallet") or "").strip()[:60]
+    method = (request.form.get("method") or "").strip()[:20]
+    if method:
+        p.method = method
+    if wallet:
+        p.wallet = wallet
+    p.is_paid = True
+    t = Teacher.query.get(p.teacher_id)
+    tx = sync_payment_to_finance(p, teacher_name=t.name if t else None)
+    used = tx.wallet if tx else (wallet or p.wallet or "—")
+    record("pay", "payment",
+           f"#{p.id} {(t.name if t else '?')} {p.amount:.0f} → {used}")
+    db.session.commit()
+    flash(f"✅ To'landi — «{used}» hisobiga moliya jurnaliga tushdi", "success")
+    return _safe_back(p.date[:7] if p.date else None)
 
 
 @bp.route("/finance/<int:pid>/toggle", methods=["POST"])
@@ -931,6 +958,8 @@ def toggle(pid):
     from modules.finance.studio_link import sync_payment_to_finance
     p = Payment.query.get_or_404(pid)
     p.is_paid = not p.is_paid
+    if not p.is_paid:
+        p.wallet = ""   # «kutilmoqda»ga qaytdi — hisob bog'lanishi uziladi
     # Tasdiqlanganда moliya jurnaliga kirim tushadi (bekor bo'lsa yo'qoladi)
     t = Teacher.query.get(p.teacher_id)
     sync_payment_to_finance(p, teacher_name=t.name if t else None)
