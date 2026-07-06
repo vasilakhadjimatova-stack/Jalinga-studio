@@ -19,7 +19,8 @@ from core.auth import login_required, current_user
 from core.timeutils import today_iso
 from database import db
 from models.studio import Studio, Booking
-from models.billing import Teacher, Payment
+from models.billing import Teacher, Payment, PAY_METHODS
+from models.finance import FinWallet
 from models.pricing import booking_price
 
 bp = Blueprint("bookings", __name__)
@@ -178,6 +179,8 @@ def calendar():
         sel=(sel.to_dict() if sel else None),
         n_book=n_book, total_hours=total_hours,
         prev_m=month - 1, prev_y=year, next_m=month + 1, next_y=year,
+        wallets=[w.name for w in FinWallet.query.order_by(FinWallet.sort).all()],
+        pay_methods=PAY_METHODS,
         today_iso=today.strftime("%Y-%m-%d"))
 
 
@@ -277,6 +280,10 @@ def save():
         manual_disc = max(0, min(90, int(f.get("discount") or 0)))
     except (ValueError, TypeError):
         manual_disc = 0
+    # Darhol to'landi (ixtiyoriy) — mijoz bron paytida to'lasa, hisobни tanlaydi
+    paid_now = bool(f.get("paid_now")) and pay_type == "hourly"
+    pay_wallet = (f.get("pay_wallet") or "").strip()[:60]
+    pay_method = (f.get("pay_method") or "").strip()[:20]
     made, errs = [], []
     for it in plan:
         day, s_, e_ = it["date"], it["start"], it["end"]
@@ -317,10 +324,19 @@ def save():
                              f"({hrs:g} soat)")
                     if disc:
                         pnote += f" · −{disc}%"
-                    db.session.add(Payment(
+                    pay = Payment(
                         teacher_id=teacher.id, booking_id=b.id, kind="hourly",
-                        amount=amount, hours=0, date=day, is_paid=False,
-                        note=pnote, created_by=u.name))
+                        amount=amount, hours=0, date=day,
+                        is_paid=paid_now,
+                        method=(pay_method or "naqd") if paid_now else "naqd",
+                        wallet=pay_wallet if paid_now else "",
+                        note=pnote, created_by=u.name)
+                    db.session.add(pay)
+                    if paid_now:
+                        db.session.flush()
+                        from modules.finance.studio_link import (
+                            sync_payment_to_finance)
+                        sync_payment_to_finance(pay, teacher_name=teacher.name)
         except IntegrityError:
             errs.append(f"{day} {s_}–{e_} — endigina band bo'ldi")
             continue
@@ -345,7 +361,9 @@ def save():
             total_amt = sum(
                 booking_price(studio, b.date, b.start, b.hours,
                               manual=manual_disc)[0] for b in made)
-            extra = f" · to'lov {total_amt:,.0f} so'm (kutilmoqda)".replace(
+            state = (f"to'landi → {pay_wallet or 'hisob'}" if paid_now
+                     else "kutilmoqda")
+            extra = f" · to'lov {total_amt:,.0f} so'm ({state})".replace(
                 ",", " ")
         newc = " · 🆕 yangi mijoz qo'shildi" if was_new_client else ""
         flash(f"✅ {teacher.name} — {studio.name}: "
