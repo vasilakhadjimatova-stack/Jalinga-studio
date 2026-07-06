@@ -75,8 +75,15 @@ def _last_active_admin(u):
 def index():
     rows = User.query.order_by(User.is_active.desc(), User.role.asc(),
                                User.name.asc()).all()
-    return render_template("team.html", team=rows, roles=ROLES,
-                           role_labels=ROLE_LABELS)
+    # Telegram kunlik digest — o'zini ulash havolasi (rahbar/buxgalter)
+    from core.telegram import is_configured, bot_username
+    me = current_user()
+    tg_ready = is_configured()
+    return render_template(
+        "team.html", team=rows, roles=ROLES, role_labels=ROLE_LABELS,
+        tg_ready=tg_ready, tg_bot=bot_username() if tg_ready else "",
+        me_code=me.code if me else "",
+        me_linked=bool(me and me.tg_chat_id))
 
 
 @bp.route("/team/save", methods=["POST"])

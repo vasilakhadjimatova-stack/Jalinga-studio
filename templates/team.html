@@ -13,6 +13,30 @@
   <button class="btn btn-gold" onclick="tEdit()"><i class="icon-user-plus"></i> Yangi xodim</button>
 </div></div>
 
+<!-- Telegram kunlik digest — rahbarga ertalabki hisobot -->
+<div class="card" style="margin-bottom:14px">
+  <div class="card-hd"><div class="card-title"><i class="icon-bell-ring"></i> Telegram kunlik hisobot</div>
+    <span class="tag tag-{{ 'green' if me_linked else 'gray' }}">{{ 'Ulangan' if me_linked else 'Ulanmagan' }}</span></div>
+  <div class="card-bd" style="font-size:13px;color:var(--txt2);line-height:1.6">
+    {% if not tg_ready %}
+      Telegram bot sozlanmagan (server <code>TELEGRAM_BOT_TOKEN</code> kutmoqda).
+      Ulangach, har ertalab soat 9:00 da kunlik hisobot (tushum, bugungi yozuvlar,
+      e'tibor talab qiladigan ishlar) shu yerga keladi.
+    {% elif me_linked %}
+      ✅ Siz ulangansiz. Har kuni ertalab <b>9:00</b> da botdan kunlik hisobot olasiz.
+    {% else %}
+      Har ertalab kunlik hisobot olish uchun botni ulang:
+      <div style="margin-top:10px">
+        <a href="https://t.me/{{ tg_bot }}?start={{ me_code }}" target="_blank"
+           class="btn btn-gold"><i class="icon-send"></i> Telegram'ga ulash</a>
+      </div>
+      <div style="margin-top:8px;font-size:11.5px;color:var(--txt3)">
+        yoki botda <code>/start {{ me_code }}</code> deb yozing.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
 <div class="card">
   <div style="overflow-x:auto">
   <table class="tbl">

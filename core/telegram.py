@@ -17,6 +17,8 @@ import time
 import urllib.parse
 import urllib.request
 
+from database import db
+
 logger = logging.getLogger(__name__)
 
 TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN", "") or "").strip()
@@ -64,6 +66,7 @@ def _handle_update(app, upd):
             with app.app_context():
                 from database import db
                 from models.billing import Teacher
+                from models.user import User
                 t = Teacher.query.filter_by(portal_token=token).first()
                 if t:
                     t.tg_chat_id = chat_id
@@ -72,6 +75,17 @@ def _handle_update(app, upd):
                             f"👋 Salom, <b>{t.name}</b>!\nJalinga Studio botiga "
                             f"ulandingiz. Endi bron tasdig'i va dars oldidan "
                             f"eslatmalar shu yerga keladi. 🎬")
+                    return
+                # Rahbar/xodim kirish kodi bilan ulash — kunlik digest uchun
+                u = User.query.filter_by(code=token, is_active=True).first()
+                if u and u.role in ("admin", "buxgalter"):
+                    u.tg_chat_id = chat_id
+                    db.session.commit()
+                    tg_send(chat_id,
+                            f"👋 Salom, <b>{u.name}</b>!\nRahbar sifatida "
+                            f"ulandingiz. Endi har ertalab kunlik hisobot "
+                            f"(digest) va e'tibor talab qiladigan ishlar shu "
+                            f"yerga keladi. 📊")
                     return
         tg_send(chat_id, "👋 Jalinga Studio boti. Ulash uchun shaxsiy portal "
                          "havolangizdagi «Telegram'ga ulash» tugmasini bosing.")
@@ -93,6 +107,87 @@ def _poll_loop(app):
                     logger.error(f"tg update xato: {exc}")
         except Exception:
             time.sleep(5)
+
+
+def build_digest_text():
+    """Rahbar uchun ertalabki kunlik hisobot matni (app_context ichida).
+
+    E'tibor markazi (attention_items) + bugungi yozuvlar soni + shu oy tushumi.
+    Bir joyda barcha muhim raqamlar — Telegram digest ham, kelajakda boshqa
+    kanallar ham shu funksiyadan foydalanadi.
+    """
+    from sqlalchemy import func
+    from core.timeutils import now_tashkent, today_iso, current_month_iso
+    from models.studio import Booking
+    from models.billing import Payment
+    from modules.dashboard.attention import attention_items
+
+    today = today_iso()
+    month = current_month_iso()
+    n_today = Booking.query.filter(
+        Booking.date == today,
+        Booking.status.in_(("active", "done"))).count()
+    revenue = float(db.session.query(
+        func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.date.like(month + "%"), Payment.is_paid.is_(True)).scalar() or 0)
+    pending = float(db.session.query(
+        func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.date.like(month + "%"), Payment.is_paid.is_(False)).scalar() or 0)
+
+    def _som(x):
+        return f"{x:,.0f}".replace(",", " ")
+
+    lines = [
+        f"📊 <b>Kunlik hisobot</b> · {now_tashkent().strftime('%d.%m.%Y')}",
+        "",
+        f"📅 Bugun yozuvlar: <b>{n_today}</b> ta",
+        f"💵 Shu oy tushum: <b>{_som(revenue)}</b> so'm",
+    ]
+    if pending:
+        lines.append(f"⏳ Kutilmoqda: {_som(pending)} so'm")
+
+    items = attention_items()
+    lines.append("")
+    if items:
+        icon = {"danger": "🔴", "warn": "🟡", "info": "🔵"}
+        lines.append(f"<b>E'tibor talab qiladi ({len(items)}):</b>")
+        for a in items:
+            lines.append(
+                f"{icon.get(a['level'], '•')} {a['title']} — "
+                f"<b>{a['count']}</b> ({a['detail']})")
+    else:
+        lines.append("✅ E'tibor talab qiladigan ish yo'q — hammasi joyida!")
+
+    return "\n".join(lines)
+
+
+def _digest_loop(app, hour=9):
+    """Har kuni belgilangan soatda (Toshkent) rahbarlarga digest yuboradi.
+
+    Har 10 daqiqada tekshiradi; soat mos kelsa va bugun hali yuborilmagan
+    bo'lsa — tg_chat_id ulagan admin/buxgalterlarga jo'natadi. Kunni eslab
+    qoladi (takror yubormaydi).
+    """
+    from core.timeutils import now_tashkent
+    last_sent_day = ""
+    time.sleep(45)
+    while True:
+        try:
+            now = now_tashkent()
+            if now.hour == hour and now.strftime("%Y-%m-%d") != last_sent_day:
+                with app.app_context():
+                    from models.user import User
+                    text = build_digest_text()
+                    admins = User.query.filter(
+                        User.is_active.is_(True),
+                        User.tg_chat_id != "",
+                        User.role.in_(("admin", "buxgalter"))).all()
+                    for u in admins:
+                        tg_send(u.tg_chat_id, text)
+                last_sent_day = now.strftime("%Y-%m-%d")
+        except Exception as exc:
+            logger.error(f"tg digest xato: {exc}")
+        time.sleep(600)
 
 
 def _reminder_loop(app):
@@ -163,6 +258,8 @@ def start_bot(app):
                      name="jalinga-tg-poll").start()
     threading.Thread(target=_reminder_loop, args=(app,), daemon=True,
                      name="jalinga-tg-remind").start()
+    threading.Thread(target=_digest_loop, args=(app,), daemon=True,
+                     name="jalinga-tg-digest").start()
     logger.info("🤖 Telegram bot ishga tushdi (yetakchi worker)")
 
 
