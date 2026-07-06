@@ -147,13 +147,18 @@ def transactions():
     dirf = (request.args.get("dir") or "").strip()
     q = (request.args.get("q") or "").strip()
 
+    pay_ref0 = request.args.get("pay", type=int)
     # Filtr berilmagan birinchi ochilishda — oxirgi faol oy
-    if not month and not (wallet or category or dirf or q
+    if not month and not (wallet or category or dirf or q or pay_ref0
                           or request.args.get("all")):
         y = _years()[-1]
         month = f"{y}-{_latest_month(y):02d}"
 
+    pay_ref = request.args.get("pay", type=int)   # bitta to'lovga bog'langan yozuv
+
     qry = FinTransaction.query
+    if pay_ref:
+        qry = qry.filter_by(payment_id=pay_ref, source="studio")
     if month:
         qry = qry.filter(FinTransaction.date.like(month + "%"))
     if wallet:
@@ -169,6 +174,17 @@ def transactions():
                                 FinTransaction.category.ilike(like)))
     rows = qry.order_by(FinTransaction.date.desc(),
                         FinTransaction.id.desc()).limit(500).all()
+
+    # O'zaro bog'lanish: studiya to'loviga bog'langan yozuvlarга mijoz havolasi
+    studio_pids = {t.payment_id for t in rows
+                   if t.source == "studio" and t.payment_id}
+    pay_teacher = {}
+    if studio_pids:
+        for p in Payment.query.filter(Payment.id.in_(studio_pids)).all():
+            pay_teacher[p.id] = p.teacher_id
+    for t in rows:
+        tid = pay_teacher.get(t.payment_id) if t.source == "studio" else None
+        t.ref_url = f"/teachers/{tid}" if tid else None
 
     t_in = sum(t.amount for t in rows if t.direction == "in")
     t_out = sum(t.amount for t in rows if t.direction == "out")
