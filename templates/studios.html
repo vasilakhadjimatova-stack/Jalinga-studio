@@ -9,7 +9,10 @@
   <div class="ph-sub">Xonalar, soatlik narxlar va holat</div>
 </div>
 {% if current_user.is_admin %}
-<button class="btn btn-gold" onclick="sEdit()"><i class="icon-plus"></i> Yangi studiya</button>
+<div style="display:flex;gap:8px">
+  <a href="/pricing" class="btn btn-out"><i class="icon-tag"></i> Chegirmalar</a>
+  <button class="btn btn-gold" onclick="sEdit()"><i class="icon-plus"></i> Yangi studiya</button>
+</div>
 {% endif %}</div>
 
 {% if current_user.is_admin %}

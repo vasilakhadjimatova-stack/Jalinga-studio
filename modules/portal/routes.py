@@ -146,11 +146,14 @@ def book(token):
     db.session.add(b)
     db.session.flush()
     if pay_type == "hourly":
+        from models.pricing import booking_price
+        pamount, pdisc, _rn, _bs = booking_price(studio, day, start, b.hours)
         db.session.add(Payment(
             teacher_id=t.id, booking_id=b.id, kind="hourly",
-            amount=round(b.hours * (studio.hourly_rate or 0)), hours=0,
+            amount=pamount, hours=0,
             date=day, is_paid=False,
-            note=f"{studio.name} · {day} {start}–{end} (portal)",
+            note=(f"{studio.name} · {day} {start}–{end} (portal)"
+                  + (f" · −{pdisc}%" if pdisc else "")),
             created_by=f"portal:{t.name}"))
     from sqlalchemy.exc import IntegrityError
     try:
@@ -246,9 +249,12 @@ def reschedule(token, bid):
     if b.pay_type == "hourly":
         p = Payment.query.filter_by(booking_id=b.id, is_paid=False).first()
         if p:
-            p.amount = round(new_hours * (studio.hourly_rate or 0))
+            from models.pricing import booking_price
+            p.amount, _rd, _rr, _rb = booking_price(
+                studio, day, start, new_hours)
             p.date = day
-            p.note = f"{studio.name} · {day} {start}–{end} (portal ko'chirish)"
+            p.note = (f"{studio.name} · {day} {start}–{end} (portal ko'chirish)"
+                      + (f" · −{_rd}%" if _rd else ""))
     db.session.commit()
     try:
         from core.telegram import notify_teacher_booking

@@ -58,6 +58,11 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin-bottom:6px;font-we
   transition:.12s;font-variant-numeric:tabular-nums}
 .slot:hover{border-color:var(--gold-dk)}
 .slot.sel{border-color:var(--gold);background:var(--gold);color:#1a1204}
+.slot{position:relative}
+.slot .off{position:absolute;top:-7px;right:-6px;background:var(--green);color:#08130d;
+  font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:8px;letter-spacing:.2px}
+.was{color:var(--txt3);text-decoration:line-through;font-size:12.5px;margin-right:6px;font-weight:600}
+.off-note{font-size:11.5px;color:var(--green);text-align:center;margin-top:10px;font-weight:600}
 .hint{font-size:12.5px;color:var(--txt3);text-align:center;padding:14px 0}
 .summary{display:flex;justify-content:space-between;align-items:center;
   padding:14px 16px;background:var(--gold-bg);border-radius:var(--r2);
@@ -163,7 +168,15 @@ label{display:block;font-size:12.5px;color:var(--txt2);margin-bottom:6px;font-we
 </div>
 
 <script>
-var WS={{ work_start }}, WE={{ work_end }}, rate=0, dur=1, chosenStart="";
+var WS={{ work_start }}, WE={{ work_end }}, rate=0, dur=1, chosenStart="", rules=[];
+function pyWeekday(dateStr){var p=dateStr.split('-');
+  var js=new Date(+p[0],+p[1]-1,+p[2]).getDay();return (js+6)%7;} // 0=Du..6=Ya
+function discFor(hh){ // boshlanish soati uchun eng katta chegirma %
+  var date=document.getElementById('fDate').value, wd=pyWeekday(date), best=0;
+  for(var i=0;i<rules.length;i++){var r=rules[i];
+    if(r.days&&r.days.length&&r.days.indexOf(wd)<0)continue;
+    if(hh>=r.start_hour&&hh<r.end_hour&&r.discount>best)best=r.discount;}
+  return best;}
 function pickStudio(el){
   document.querySelectorAll('.st-opt').forEach(function(x){x.classList.remove('sel')});
   el.classList.add('sel');
@@ -190,19 +203,23 @@ function loadSlots(){
     .then(function(r){return r.json()})
     .then(function(d){
       if(!d.ok){box.innerHTML='<div class="hint">Bo\'sh vaqt topilmadi.</div>';return;}
-      var busy=d.busy||[];
+      var busy=d.busy||[];rules=d.rules||[];
       var now=new Date();
       var isToday=(date===new Date(now.getTime()+5*3600000).toISOString().slice(0,10));
       var nowMin=(now.getUTCHours()+5)*60+now.getUTCMinutes();
-      var html='',cnt=0;
+      var html='',cnt=0,anyOff=false;
       for(var t=WS*60;t+dur*60<=WE*60;t+=30){
         var s=t,e=t+dur*60,ok=true;
         for(var i=0;i<busy.length;i++){if(busy[i][0]<e&&busy[i][1]>s){ok=false;break;}}
         if(isToday&&s<=nowMin)ok=false;
         if(ok){var hh=('0'+Math.floor(t/60)).slice(-2)+':'+('0'+(t%60)).slice(-2);
-          html+='<button type="button" class="slot" data-t="'+hh+'" onclick="pickSlot(this)">'+hh+'</button>';cnt++;}
+          var off=discFor(Math.floor(t/60));if(off)anyOff=true;
+          html+='<button type="button" class="slot" data-t="'+hh+'" data-off="'+off+'" onclick="pickSlot(this)">'+hh+
+            (off?'<span class="off">−'+off+'%</span>':'')+'</button>';cnt++;}
       }
-      box.innerHTML=cnt?('<div class="slots">'+html+'</div>'):'<div class="hint">Bu kunда bo\'sh vaqt qolmadi. Boshqa sana tanlang.</div>';
+      box.innerHTML=cnt?('<div class="slots">'+html+'</div>'+
+        (anyOff?'<div class="off-note">💚 Yashil belgili soatlar chegirmali — bo\'sh vaqt, arzonroq!</div>':''))
+        :'<div class="hint">Bu kunда bo\'sh vaqt qolmadi. Boshqa sana tanlang.</div>';
     })
     .catch(function(){box.innerHTML='<div class="hint">Xatolik. Qayta urinib ko\'ring.</div>';});
 }
@@ -221,7 +238,12 @@ function refreshGo(){
     sum.style.display='flex';
     document.getElementById('sumTxt').textContent=
       document.getElementById('fDate').value+' · '+chosenStart+' · '+dur+' soat';
-    document.getElementById('sumPrice').textContent=rate?fmt(Math.round(rate*dur))+' so\'m':'kelishuv';
+    var pr=document.getElementById('sumPrice');
+    if(rate){
+      var off=chosenStart?discFor(parseInt(chosenStart.split(':')[0])):0;
+      var base=Math.round(rate*dur), fin=Math.round(base*(1-off/100));
+      pr.innerHTML=off?('<span class="was">'+fmt(base)+'</span>'+fmt(fin)+' so\'m'):(fmt(base)+' so\'m');
+    }else{pr.textContent='kelishuv';}
   }else{sum.style.display='none';}
 }
 </script>

@@ -18,6 +18,7 @@ from core.timeutils import today_iso
 from database import db
 from models.studio import Studio, Booking
 from models.billing import Teacher, Payment
+from models.pricing import booking_price
 
 bp = Blueprint("bookings", __name__)
 
@@ -139,7 +140,7 @@ def calendar():
             "start": b.start, "end": b.end, "hours": b.hours,
             "status": b.status, "status_label": b.status_label(),
             "status_color": b.status_color(), "pay_type": b.pay_type,
-            "amount": (round(b.hours * (st.hourly_rate or 0))
+            "amount": (booking_price(st, b.date, b.start, b.hours)[0]
                        if (st and b.pay_type == "hourly") else 0),
             "operator": b.operator or "", "note": b.note or "",
             "created_by": b.created_by or "",
@@ -233,6 +234,10 @@ def save():
     per_hours = probe.hours
     operator = (f.get("operator") or "").strip()[:120]
     note = (f.get("note") or "").strip()[:300]
+    try:
+        manual_disc = max(0, min(90, int(f.get("discount") or 0)))
+    except (ValueError, TypeError):
+        manual_disc = 0
     made, errs = [], []
     for day in dates:
         # Konflikt — bir studiyada bir vaqtda bitta yozuv
@@ -256,12 +261,16 @@ def save():
                 db.session.add(b)
                 db.session.flush()
                 if pay_type == "hourly":
-                    amount = round(per_hours * (studio.hourly_rate or 0))
+                    amount, disc, rname, _b = booking_price(
+                        studio, day, start, per_hours, manual=manual_disc)
+                    pnote = (f"{studio.name} · {day} {start}–{end} "
+                             f"({per_hours:g} soat)")
+                    if disc:
+                        pnote += f" · −{disc}%"
                     db.session.add(Payment(
                         teacher_id=teacher.id, booking_id=b.id, kind="hourly",
                         amount=amount, hours=0, date=day, is_paid=False,
-                        note=f"{studio.name} · {day} {start}–{end} "
-                             f"({per_hours:g} soat)", created_by=u.name))
+                        note=pnote, created_by=u.name))
         except IntegrityError:
             errs.append(f"{day} — endigina band bo'ldi")
             continue
@@ -397,9 +406,12 @@ def edit(bid):
             Payment.is_paid.asc(), Payment.id.desc()).first()
         if p:
             was_paid = p.is_paid
-            p.amount = round(new_hours * (studio.hourly_rate or 0))
+            from models.pricing import booking_price
+            p.amount, _d, _r, _b = booking_price(
+                studio, day, start, new_hours)
             p.date = day
-            p.note = f"{studio.name} · {day} {start}–{end} ({new_hours:g} soat)"
+            p.note = (f"{studio.name} · {day} {start}–{end} ({new_hours:g} soat)"
+                      + (f" · −{_d}%" if _d else ""))
             if was_paid:
                 pay_note = " · 💵 to'langan summa qayta hisoblandi"
                 # Moliya jurnalidagi bog'langan kirim ham yangilansin

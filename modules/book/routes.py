@@ -84,10 +84,12 @@ def slots():
             Booking.status.in_(("active", "done"))).all():
         busy.append([_min(b.start), _min(b.end)])
     busy.sort()
+    from models.pricing import active_rules_for
     return jsonify({
         "ok": True, "busy": busy,
         "work_start": Config.WORK_START, "work_end": Config.WORK_END,
-        "rate": studio.hourly_rate or 0})
+        "rate": studio.hourly_rate or 0,
+        "rules": active_rules_for(sid)})
 
 
 @bp.route("/book/submit", methods=["POST"])
@@ -159,12 +161,15 @@ def submit():
                 created_by=f"online:{name}")
     db.session.add(b)
     db.session.flush()
+    from models.pricing import booking_price
+    amount, disc, rule_name, _base = booking_price(studio, day, start, b.hours)
+    note = f"{studio.name} · {day} {start}–{end} (online bron)"
+    if disc:
+        note += f" · −{disc}% {rule_name or ''}".rstrip()
     db.session.add(Payment(
         teacher_id=t.id, booking_id=b.id, kind="hourly",
-        amount=round(b.hours * (studio.hourly_rate or 0)), hours=0,
-        date=day, is_paid=False,
-        note=f"{studio.name} · {day} {start}–{end} (online bron)",
-        created_by="online"))
+        amount=amount, hours=0, date=day, is_paid=False,
+        note=note, created_by="online"))
     from sqlalchemy.exc import IntegrityError
     try:
         db.session.commit()
