@@ -11,11 +11,29 @@ logger = logging.getLogger(__name__)
 
 def seed_all():
     try:
+        env_code = (os.environ.get("ADMIN_CODE") or "").strip()
         if User.query.count() == 0:
-            code = os.environ.get("ADMIN_CODE", "111111")
+            code = env_code or "111111"
             db.session.add(User(name="Rahbar", code=code, role="admin"))
             db.session.commit()
-            logger.info(f"👤 Admin yaratildi (kod: {'ENV' if 'ADMIN_CODE' in os.environ else code})")
+            logger.info(f"👤 Admin yaratildi (kod: {'ENV' if env_code else code})")
+        elif env_code:
+            # ADMIN_CODE o'rnatilgan — asosiy admin shu kodni ishlatsin.
+            # (Railway env kodini o'zgartirsangiz, login kodi ham yangilanadi.)
+            # Faqat bu kodni hech kim band qilmagan bo'lsa (konflikt bo'lmasin).
+            taken = User.query.filter_by(code=env_code).first()
+            if taken is None:
+                admin = User.query.filter_by(
+                    role="admin").order_by(User.id).first()
+                if admin and admin.code != env_code:
+                    admin.code = env_code
+                    admin.is_active = True
+                    db.session.commit()
+                    logger.info("👤 Asosiy admin kodi ADMIN_CODE env bilan "
+                                "yangilandi")
+            elif taken.role != "admin":
+                logger.warning("ADMIN_CODE boshqa foydalanuvchida band — "
+                               "admin kodi yangilanmadi")
         if Studio.query.count() == 0:
             db.session.add_all([
                 Studio(name="Studiya A — Interaktiv doska",
