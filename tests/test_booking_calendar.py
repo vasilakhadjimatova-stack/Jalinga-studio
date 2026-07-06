@@ -73,3 +73,48 @@ def test_multi_day_booking_creates_all(app, admin_client, post):
         for d in (d1, d2, d3):
             assert Booking.query.filter_by(
                 teacher_id=tid, date=d, start="14:00").count() == 1
+
+
+def test_per_day_times_via_slots_json(app, admin_client, post):
+    """slots_json — har kun har xil vaqtda alohida bron bo'ladi."""
+    import json
+    sid = _sid(app)
+    tid = _mk_teacher(app, "Har xil vaqt")
+    d1, d2 = _future(40), _future(41)
+    slots = json.dumps([
+        {"date": d1, "start": "10:00", "end": "12:00"},
+        {"date": d2, "start": "15:00", "end": "18:00"},
+    ])
+    post(admin_client, "/bookings/save", client_mode="existing",
+         studio_id=sid, teacher_id=tid, start="10:00", end="12:00",
+         pay_type="hourly", slots_json=slots)
+    from models.studio import Booking
+    with app.app_context():
+        b1 = Booking.query.filter_by(teacher_id=tid, date=d1).first()
+        b2 = Booking.query.filter_by(teacher_id=tid, date=d2).first()
+        assert b1 and b1.start == "10:00" and b1.end == "12:00"
+        assert b2 and b2.start == "15:00" and b2.end == "18:00"
+        assert b1.hours == 2 and b2.hours == 3
+
+
+def test_slots_json_skips_conflict_keeps_rest(app, admin_client, post):
+    """slots_json'даги band kun o'tkazib yuboriladi, qolganlari saqlanadi."""
+    import json
+    sid = _sid(app)
+    tid = _mk_teacher(app, "Qisman")
+    d1, d2 = _future(45), _future(46)
+    # d1'ni oldindan band qilamiz
+    post(admin_client, "/bookings/save", client_mode="existing",
+         studio_id=sid, teacher_id=tid, date=d1, start="10:00", end="12:00",
+         pay_type="hourly")
+    slots = json.dumps([
+        {"date": d1, "start": "10:00", "end": "12:00"},   # band — o'tadi
+        {"date": d2, "start": "10:00", "end": "12:00"},   # bo'sh — yaratiladi
+    ])
+    post(admin_client, "/bookings/save", client_mode="existing",
+         studio_id=sid, teacher_id=tid, start="10:00", end="12:00",
+         pay_type="hourly", slots_json=slots)
+    from models.studio import Booking
+    with app.app_context():
+        assert Booking.query.filter_by(teacher_id=tid, date=d1).count() == 1
+        assert Booking.query.filter_by(teacher_id=tid, date=d2).count() == 1

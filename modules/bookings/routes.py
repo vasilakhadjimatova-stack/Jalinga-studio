@@ -9,6 +9,7 @@ Soatbay bron: yaratilganda Payment (kutilmoqda) yoziladi — Moliya sahifasida
 "to'landi" qilinadi. Bekor bo'lsa to'lov ham bekor bo'ladi.
 """
 import calendar as pycal
+import json
 from datetime import datetime
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -223,17 +224,43 @@ def save():
         studio = Studio.query.get(int(f.get("studio_id") or 0))
     except (ValueError, TypeError):
         studio = None
-    dates = []
-    for d in f.getlist("date"):
-        d = (d or "").strip()[:10]
-        if d and d not in dates:
-            dates.append(d)
-    dates.sort()
     start = (f.get("start") or "").strip()
     end = (f.get("end") or "").strip()
     pay_type = "package" if f.get("pay_type") == "package" else "hourly"
-    first = dates[0] if dates else None
-    if not (studio and dates and start and end):
+
+    # Reja: (sana, boshlanish, tugash) uchligi ro'yxati.
+    #  • Har kunga alohida vaqt → slots_json = [{date,start,end},...]
+    #  • Bo'lmasa → tanlangan barcha kunlar bitta start/end bilan
+    plan = []
+    raw = (f.get("slots_json") or "").strip()
+    if raw:
+        try:
+            for it in json.loads(raw):
+                d = str(it.get("date") or "").strip()[:10]
+                s = str(it.get("start") or "").strip()[:5]
+                e = str(it.get("end") or "").strip()[:5]
+                if d and s and e:
+                    plan.append({"date": d, "start": s, "end": e})
+        except (ValueError, TypeError, AttributeError):
+            plan = []
+    if not plan:
+        dates = []
+        for d in f.getlist("date"):
+            d = (d or "").strip()[:10]
+            if d and d not in dates:
+                dates.append(d)
+        plan = [{"date": d, "start": start, "end": end} for d in dates]
+    # Dublikat (sana+boshlanish) olib tashlash + sana/vaqt bo'yicha tartib
+    seen, uniq = set(), []
+    for it in plan:
+        k = (it["date"], it["start"])
+        if k not in seen and it["start"] and it["end"]:
+            seen.add(k)
+            uniq.append(it)
+    plan = sorted(uniq, key=lambda x: (x["date"], x["start"]))
+
+    first = plan[0]["date"] if plan else None
+    if not (studio and plan):
         flash("⛔ Studiya, sana va vaqt to'ldirilishi shart", "error")
         return redirect(url_for("bookings.calendar", date=first))
 
@@ -243,20 +270,7 @@ def save():
         flash(f"⛔ {cerr}", "error")
         return redirect(url_for("bookings.calendar", date=first))
 
-    probe = Booking(studio_id=studio.id, teacher_id=teacher.id,
-                    date=first, start=start, end=end)
-    if probe.hours <= 0:
-        flash("⛔ Tugash vaqti boshlanishdan keyin bo'lishi kerak", "error")
-        return redirect(url_for("bookings.calendar", date=first))
-
-    # Ish vaqti chegarasi (hamma kun uchun bir xil vaqt)
-    if not Booking.within_work_hours(start, end):
-        flash(f"⛔ Studiya ish vaqti: {Config.WORK_START:02d}:00–"
-              f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.", "error")
-        return redirect(url_for("bookings.calendar", date=first))
-
     from sqlalchemy.exc import IntegrityError
-    per_hours = probe.hours
     operator = (f.get("operator") or "").strip()[:120]
     note = (f.get("note") or "").strip()[:300]
     try:
@@ -264,16 +278,27 @@ def save():
     except (ValueError, TypeError):
         manual_disc = 0
     made, errs = [], []
-    for day in dates:
+    for it in plan:
+        day, s_, e_ = it["date"], it["start"], it["end"]
+        probe = Booking(studio_id=studio.id, teacher_id=teacher.id,
+                        date=day, start=s_, end=e_)
+        hrs = probe.hours
+        if hrs <= 0:
+            errs.append(f"{day} {s_}–{e_} — vaqt xato")
+            continue
+        if not Booking.within_work_hours(s_, e_):
+            errs.append(f"{day} {s_}–{e_} — ish vaqtidan tashqari "
+                        f"({Config.WORK_START:02d}:00–{Config.WORK_END:02d}:00)")
+            continue
         # Konflikt — bir studiyada bir vaqtda bitta yozuv
-        c = Booking.conflict(studio.id, day, start, end)
+        c = Booking.conflict(studio.id, day, s_, e_)
         if c:
-            errs.append(f"{day} — band ({c.start}–{c.end})")
+            errs.append(f"{day} {s_}–{e_} — band ({c.start}–{c.end})")
             continue
         # Paket: balans (flush qilingan yangi bronlar ham hisobga kiradi)
         if pay_type == "package":
             bal = teacher.balance_hours()
-            if bal < per_hours:
+            if bal < hrs:
                 errs.append(f"{day} — balans yetmadi ({bal:g} soat qoldi)")
                 continue
         # Savepoint: shu kun poyga tufayli DB'да rad etilsa (unikal slot
@@ -281,15 +306,15 @@ def save():
         try:
             with db.session.begin_nested():
                 b = Booking(studio_id=studio.id, teacher_id=teacher.id,
-                            date=day, start=start, end=end, pay_type=pay_type,
+                            date=day, start=s_, end=e_, pay_type=pay_type,
                             operator=operator, note=note, created_by=u.name)
                 db.session.add(b)
                 db.session.flush()
                 if pay_type == "hourly":
                     amount, disc, rname, _b = booking_price(
-                        studio, day, start, per_hours, manual=manual_disc)
-                    pnote = (f"{studio.name} · {day} {start}–{end} "
-                             f"({per_hours:g} soat)")
+                        studio, day, s_, hrs, manual=manual_disc)
+                    pnote = (f"{studio.name} · {day} {s_}–{e_} "
+                             f"({hrs:g} soat)")
                     if disc:
                         pnote += f" · −{disc}%"
                     db.session.add(Payment(
@@ -297,7 +322,7 @@ def save():
                         amount=amount, hours=0, date=day, is_paid=False,
                         note=pnote, created_by=u.name))
         except IntegrityError:
-            errs.append(f"{day} — endigina band bo'ldi")
+            errs.append(f"{day} {s_}–{e_} — endigina band bo'ldi")
             continue
         made.append(b)
     db.session.commit()
@@ -313,12 +338,19 @@ def save():
         days_txt = ", ".join(b.date for b in made[:5])
         if len(made) > 5:
             days_txt += f" +{len(made) - 5}"
-        extra = (f" · balansdan {per_hours * len(made):g} soat"
-                 if pay_type == "package" else
-                 f" · to'lov {round(per_hours * (studio.hourly_rate or 0)) * len(made):,.0f} so'm (kutilmoqda)")
+        total_hours_made = sum(b.hours for b in made)
+        if pay_type == "package":
+            extra = f" · balansdan {total_hours_made:g} soat"
+        else:
+            total_amt = sum(
+                booking_price(studio, b.date, b.start, b.hours,
+                              manual=manual_disc)[0] for b in made)
+            extra = f" · to'lov {total_amt:,.0f} so'm (kutilmoqda)".replace(
+                ",", " ")
         newc = " · 🆕 yangi mijoz qo'shildi" if was_new_client else ""
-        flash(f"✅ {teacher.name} — {studio.name} {start}–{end}: "
-              f"{len(made)} kun bron qilindi ({days_txt}){extra}{newc}", "success")
+        flash(f"✅ {teacher.name} — {studio.name}: "
+              f"{len(made)} kun bron qilindi ({days_txt}){extra}{newc}",
+              "success")
     elif was_new_client:
         # Bron bo'lmadi-yu, lekin mijoz yaratildi — foydali qoladi
         flash(f"🆕 Yangi mijoz qo'shildi: {teacher.name} "
