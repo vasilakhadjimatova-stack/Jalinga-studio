@@ -51,10 +51,18 @@
         </div></td>
         <td>{{ role_labels.get(u.role, u.role) }}</td>
         <td><span class="tag tag-{{ 'green' if u.is_active else 'gray' }}">{{ 'Faol' if u.is_active else "O'chiq" }}</span></td>
-        <td class="r">
+        <td class="r" style="white-space:nowrap">
           <button class="btn btn-sm btn-out"
             data-u='{{ {"id":u.id,"name":u.name,"role":u.role,"is_active":u.is_active}|tojson }}'
             onclick="tEdit(JSON.parse(this.dataset.u))"><i class="icon-pencil"></i> Tahrirlash</button>
+          {% if u.id != current_user.id %}
+          <form method="POST" action="/team/{{ u.id }}/delete" style="display:inline"
+                onsubmit="return confirm('{{ u.name }} butunlay o\'chirilsinmi? Bu amal qaytarilmaydi.')">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-out" style="color:var(--red)"
+                    title="O'chirish"><i class="icon-trash-2"></i></button>
+          </form>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}

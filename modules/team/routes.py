@@ -216,3 +216,30 @@ def save():
     db.session.commit()
     flash(f"✅ {u.name} yangilandi", "success")
     return redirect(url_for("team.index"))
+
+
+@bp.route("/team/<int:uid>/delete", methods=["POST"])
+@admin_required
+def delete(uid):
+    """Xodimni butunlay o'chirish (faqat rahbar).
+
+    Himoyalar: o'zini o'chirib bo'lmaydi; oxirgi faol adminни o'chirib
+    bo'lmaydi. Bron/audit yozuvlari xodim ISMI (matn) bilan bog'langani uchun
+    o'chirish yetim yozuv qoldirmaydi.
+    """
+    me = current_user()
+    u = User.query.get_or_404(uid)
+    if u.id == me.id:
+        flash("⛔ O'zingizni o'chira olmaysiz", "error")
+        return redirect(url_for("team.index"))
+    if u.role == "admin" and User.query.filter_by(
+            role="admin", is_active=True).filter(User.id != u.id).count() == 0:
+        flash("⛔ Tizimда kamida bitta faol rahbar qolishi shart — "
+              "o'chirilmadi", "error")
+        return redirect(url_for("team.index"))
+    name = u.name
+    record("delete", "user", f"{name} ({u.role})")
+    db.session.delete(u)
+    db.session.commit()
+    flash(f"🗑 {name} o'chirildi", "success")
+    return redirect(url_for("team.index"))
