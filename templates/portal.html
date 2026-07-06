@@ -34,7 +34,7 @@
       {% for b in upcoming %}
       <div class="feed-item">
         <div style="flex:1;min-width:0">
-          <b>{{ b.date }} · {{ b.start }}–{{ b.end }}</b>
+          <b>{{ b.date|dmy }} · {{ b.start }}–{{ b.end }}</b>
           <div style="font-size:11.5px;color:var(--txt3)">{{ b.studio_name }} ·
             {{ '📦 paket' if b.pay_type=='package' else '💵 soatbay' }}</div>
         </div>
@@ -109,7 +109,7 @@
     <div style="padding:0">
       {% for b in history %}
       <div class="feed-item" style="font-size:12.5px">
-        <span style="color:var(--txt3)">{{ b.date }}</span>
+        <span style="color:var(--txt3)">{{ b.date|dmy }}</span>
         <span style="flex:1">{{ b.start }}–{{ b.end }} · {{ b.studio_name }}</span>
         <span class="tag tag-{{ b.status_color }}">{{ b.status_label }}</span>
       </div>

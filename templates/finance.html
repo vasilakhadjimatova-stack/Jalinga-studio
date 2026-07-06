@@ -138,7 +138,7 @@
       <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
         {{ t.category }}</div>
       <div style="font-size:11px;color:var(--txt3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-        {{ t.date }} · {{ t.wallet }}{% if t.purpose %} · {{ t.purpose }}{% endif %}</div>
+        {{ t.date|dmy }} · {{ t.wallet }}{% if t.purpose %} · {{ t.purpose }}{% endif %}</div>
     </div>
     <div style="font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;
       color:{{ 'var(--green)' if t.direction=='in' else 'var(--red)' }}">
