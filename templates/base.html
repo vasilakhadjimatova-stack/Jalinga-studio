@@ -261,17 +261,23 @@ html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
 @keyframes slideIn{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
 
 /* ── MODAL ── */
-/* align-items:flex-start + overlay overflow → uzun modal butun bo'lib
-   scroll bo'ladi; modal'да margin:auto qisqasini markazlashtiradi. Shu bilan
-   pastdagi tugmaga (masalan «Bron qilish») har doim yetib boriladi (mobil). */
+/* Uzun modal (masalan «Bron») butun bo'lib scroll bo'ladi. Modal YUQORIDAN
+   tekislanadi (flex-start) — margin:auto markazlashtirish uzun kontentда
+   yuqorini kesib, «Bron qilish»gacha scrollni to'sardi. Xavfsiz-zona (iOS
+   notch/status-bar va pastki home-indikator) padding bilan hisobga olinadi,
+   shu bilan ham yuqori (mijoz tanlash), ham past (tugma) doim yetiladi. */
 .modal-ov{position:fixed;inset:0;background:rgba(5,7,10,.62);z-index:500;display:none;
-  align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;
+  align-items:flex-start;justify-content:center;overflow-y:auto;
+  padding:max(18px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
   -webkit-overflow-scrolling:touch;
   backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
 .modal-ov.open{display:flex}
 .modal{background:var(--surface);border:1px solid var(--line);border-radius:20px;max-width:470px;
-  width:100%;padding:24px;margin:auto;box-shadow:var(--sh3);
+  width:100%;padding:24px;margin:0 auto;box-shadow:var(--sh3);
   animation:fadeUp .3s var(--ease)}
+/* Qisqa modallar biroz pastroq boshlanib chiroyliroq ko'rinsin (baland
+   bo'lganда bu avtomatik yo'qoladi va yuqoridan boshlanadi). */
+@media (min-height:640px){.modal{margin-top:max(24px,6vh)}}
 .modal-title{font-weight:800;font-size:16.5px;display:flex;align-items:center;gap:9px;margin-bottom:4px}
 .modal-title i{color:var(--brand)}
 
