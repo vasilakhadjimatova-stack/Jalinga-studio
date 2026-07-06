@@ -75,3 +75,10 @@ def test_segment_filter(app, admin_client):
     r = admin_client.get("/teachers?seg=new")
     assert r.status_code == 200
     assert "Segment Yangi".encode() in r.data
+
+
+def test_invalid_segment_param_no_crash(admin_client):
+    """Noto'g'ri ?seg= parametri sahifani buzmasin (500 emas, filtrsiz 200)."""
+    for seg in ("vip", "XXX", "<script>", "risk", ""):
+        r = admin_client.get(f"/teachers?seg={seg}")
+        assert r.status_code == 200, f"seg={seg} → {r.status_code}"

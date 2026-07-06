@@ -75,6 +75,8 @@ def index():
     q = (request.args.get("q") or "").strip()
     show = (request.args.get("show") or "active").strip()   # active|all|archive
     seg = (request.args.get("seg") or "").strip()           # segment filtri
+    if seg not in CRM_SEGMENTS:                              # noto'g'ri param → filtrsiz
+        seg = ""
     sort = (request.args.get("sort") or "recent").strip()   # recent|ltv|balance|name
     query = Teacher.query
     if show == "active":
