@@ -2,29 +2,62 @@
 {% block title %}{{ t.name }}{% endblock %}
 {% block page_title %}{{ t.name }}{% endblock %}
 {% block page_crumb %}Mijoz kartasi · {{ t.subject or '—' }}{% endblock %}
+{% block extra_css %}
+<style>
+.tl-item{display:flex;gap:11px;padding:12px 20px;border-bottom:1px solid var(--line)}
+.tl-item:last-child{border-bottom:0}
+.tl-ico{width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:flex;align-items:center;
+  justify-content:center;font-size:14px;background:var(--surface2)}
+.tl-body{flex:1;min-width:0}
+.tl-meta{font-size:10.5px;color:var(--txt3);margin-top:2px}
+.tl-item.due{background:rgba(251,191,36,.06)}
+.tl-item.overdue{background:rgba(251,113,133,.08)}
+.tl-item.done .tl-txt{opacity:.55;text-decoration:line-through}
+.seg-pill{font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px}
+</style>
+{% endblock %}
 {% block content %}
 <div class="ph"><div style="display:flex;align-items:center;gap:14px">
   <div class="sb-av" style="width:52px;height:52px;font-size:21px;border-radius:16px">{{ t.name[0]|upper }}</div>
   <div>
-    <div class="ph-title">{{ t.name }}</div>
-    <div class="ph-sub">{{ t.subject or '—' }}{% if t.phone %} · {{ t.phone }}{% endif %}{% if t.telegram %} · <span style="color:var(--blue)">@{{ t.telegram }}</span>{% endif %}</div>
+    <div class="ph-title" style="display:flex;align-items:center;gap:10px">{{ t.name }}
+      <span class="seg-pill tag-{{ segment_label[1] }}">{{ segment_label[0] }}</span></div>
+    <div class="ph-sub">{{ t.subject or '—' }}
+      {% if t.phone %} · {{ t.phone }}{% endif %}
+      {% if t.telegram %} · <span style="color:var(--blue)">@{{ t.telegram }}</span>{% endif %}
+      {% if t.source %} · <span style="color:var(--txt3)">manba: {{ t.source }}</span>{% endif %}
+      {% for tag in t.tags %} · <span style="color:var(--brand)">#{{ tag }}</span>{% endfor %}
+    </div>
   </div>
 </div>
-<a href="/teachers" class="btn btn-out"><i class="icon-arrow-left"></i> Mijozlar</a></div>
+<div style="display:flex;gap:8px">
+  {% if t.phone %}<a class="btn btn-out" href="tel:{{ t.phone }}"><i class="icon-phone"></i> Qo'ng'iroq</a>{% endif %}
+  {% if t.telegram %}<a class="btn btn-out" href="https://t.me/{{ t.telegram }}" target="_blank"><i class="icon-send"></i> Telegram</a>{% endif %}
+  <a href="/teachers" class="btn btn-ghost"><i class="icon-arrow-left"></i></a>
+</div></div>
 
+<!-- KPI -->
 <div class="grid g4" style="margin-bottom:16px">
   <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Balans</div>
     <div class="kpi-val" style="color:{% if t.balance_hours > 2 %}var(--green){% elif t.balance_hours > 0 %}var(--amber){% else %}var(--txt3){% endif %}">{{ t.balance_hours }} <span style="font-size:13px;color:var(--txt3)">soat</span></div>
   </div><div class="kpi-ico gold"><i class="icon-package"></i></div></div></div>
   <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">Sotib olingan</div>
-    <div class="kpi-val">{{ purchased|round(1) }}</div>
-  </div><div class="kpi-ico green"><i class="icon-shopping-cart"></i></div></div></div>
+    <div class="kpi-label">Umumiy qiymat (LTV)</div>
+    <div class="kpi-val" style="font-size:21px;color:var(--green)">{{ ltv|som }}</div>
+  </div><div class="kpi-ico green"><i class="icon-gem"></i></div></div></div>
   <div class="kpi"><div class="kpi-top"><div>
-    <div class="kpi-label">Ishlatilgan</div>
-    <div class="kpi-val">{{ used|round(1) }}</div>
+    <div class="kpi-label">Tashriflar</div>
+    <div class="kpi-val">{{ sessions }}</div>
+    <div style="font-size:10.5px;color:var(--txt3)">{{ used|round(1) }} soat ishlatilgan</div>
   </div><div class="kpi-ico blue"><i class="icon-clapperboard"></i></div></div></div>
+  <div class="kpi"><div class="kpi-top"><div>
+    <div class="kpi-label">Oxirgi tashrif</div>
+    <div class="kpi-val" style="font-size:17px">{% if last_visit %}{{ last_visit }}{% else %}—{% endif %}</div>
+    <div style="font-size:10.5px;color:var(--txt3)">
+      {% if days_since is not none %}{{ days_since }} kun oldin{% endif %}
+      {% if next_visit %} · 📅 keyingi {{ next_visit }}{% endif %}</div>
+  </div><div class="kpi-ico {{ 'green' if next_visit else 'amber' }}"><i class="icon-history"></i></div></div></div>
 </div>
 
 <!-- Shaxsiy portal havolasi -->
@@ -44,6 +77,45 @@
     <div style="width:100%;font-size:11.5px;color:var(--txt3)">
       Mijozga yuboring — u shu havola orqali balansini ko'radi, o'zi bron qiladi
       va Telegram eslatmalarga ulanadi. Havola = kalit, begonaga bermang.</div>
+  </div>
+</div>
+
+<!-- O'zaro aloqa tarixi (CRM timeline) -->
+<div class="card" id="notes">
+  <div class="card-hd"><div class="card-title"><i class="icon-message-square-text"></i> O'zaro aloqa tarixi</div></div>
+  <div class="card-bd" style="border-bottom:1px solid var(--line)">
+    <form method="POST" action="/teachers/{{ t.id }}/note" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <div style="width:130px"><label>Tur</label>
+        <select class="select" name="kind" id="nk" onchange="document.getElementById('nd').style.display=this.value=='followup'?'block':'none'">
+          {% for k, lbl in note_kinds.items() %}<option value="{{ k }}">{{ lbl }}</option>{% endfor %}
+        </select></div>
+      <div style="flex:1;min-width:180px"><label>Matn</label>
+        <input class="input" name="text" placeholder="Qo'ng'iroq natijasi, kelishuv, eslatma..."></div>
+      <div id="nd" style="display:none;width:150px"><label>Follow-up sanasi</label>
+        <input class="input" type="date" name="due_date"></div>
+      <button class="btn btn-gold" type="submit"><i class="icon-plus"></i> Qo'shish</button>
+    </form>
+  </div>
+  <div style="padding:0;max-height:400px;overflow-y:auto">
+    {% for n in notes %}
+    <div class="tl-item {% if n.kind=='followup' and not n.done %}{{ 'overdue' if n.due_date and n.due_date <= today else 'due' }}{% endif %} {% if n.done %}done{% endif %}">
+      <div class="tl-ico">{{ note_kinds.get(n.kind, '📝')[0] }}</div>
+      <div class="tl-body">
+        <div class="tl-txt" style="font-size:13px">{{ n.text or '—' }}
+          {% if n.kind=='followup' and n.due_date %}<span class="tag tag-{{ 'red' if n.due_date <= today and not n.done else 'amber' }}" style="margin-left:6px">⏰ {{ n.due_date }}</span>{% endif %}</div>
+        <div class="tl-meta">{{ note_kinds.get(n.kind, n.kind) }} · {{ n.author or '—' }} · {{ n.at }}</div>
+      </div>
+      <div style="display:flex;gap:2px">
+        {% if n.kind=='followup' %}
+        <form method="POST" action="/teachers/{{ t.id }}/note/{{ n.id }}/done" style="display:inline">
+          <button class="btn btn-sm btn-ghost" type="submit" title="{{ 'Qayta ochish' if n.done else 'Bajarildi' }}">{{ '↩︎' if n.done else '✓' }}</button>
+        </form>{% endif %}
+        <form method="POST" action="/teachers/{{ t.id }}/note/{{ n.id }}/delete" style="display:inline" onsubmit="return confirm('O\'chirilsinmi?')">
+          <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
+        </form>
+      </div>
+    </div>
+    {% else %}<div class="empty"><i class="icon-message-square"></i>Hali yozuv yo'q — qo'ng'iroq/eslatma qo'shing</div>{% endfor %}
   </div>
 </div>
 
@@ -89,6 +161,10 @@
           <div><label>Telegram</label><input class="input" name="telegram" value="{{ t.telegram }}"></div>
         </div>
         <label>Yo'nalish</label><input class="input" name="subject" value="{{ t.subject }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label>Manba</label><input class="input" name="source" value="{{ t.source }}" placeholder="Instagram, referral..."></div>
+          <div><label>Teglar (vergul)</label><input class="input" name="tags" value="{{ t.tags|join(', ') }}" placeholder="VIP, korporativ"></div>
+        </div>
         <label>Izoh</label><input class="input" name="note" value="{{ t.note }}">
         <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
           <input type="checkbox" name="is_active" value="1" {% if t.is_active %}checked{% endif %}
