@@ -93,6 +93,7 @@
   <div class="modal">
     <div class="modal-title" id="mt-title"><i class="icon-user-plus"></i> Xodim</div>
     <form method="POST" action="/team/save">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="id" id="mt-id">
       <label>Ism *</label><input class="input" name="name" id="mt-name" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">

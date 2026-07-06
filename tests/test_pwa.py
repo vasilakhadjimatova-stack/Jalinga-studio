@@ -66,7 +66,7 @@ def test_pwa_routes_public(client):
 def test_sw_does_not_cache_html(client):
     """CSRF bug tuzatilgan: SW HTML sahifalarni keshlamaydi (network-only)."""
     sw = client.get("/sw.js").get_data(as_text=True)
-    assert "jalinga-v3" in sw
+    assert "jalinga-v" in sw          # versiya bo'lsa bo'ldi (v3, v4, ...)
     nav = sw.split("navigate")[1].split("static")[0]
     assert "c.put(req" not in nav          # navigatsiyada keshga yozilmaydi
     assert "await fetch(req)" in nav        # to'g'ridan-to'g'ri tarmoq

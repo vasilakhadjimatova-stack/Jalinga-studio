@@ -28,6 +28,7 @@
           <td class="r" style="white-space:nowrap">
             <button class="btn btn-sm btn-ghost" onclick='wEdit({{ w.row.id }}, {{ w.row.name|tojson }}, {{ w.row.opening_balance or 0 }}, {{ w.row.currency|tojson }})'><i class="icon-pencil"></i></button>
             <form method="POST" action="/finance/wallets/{{ w.row.id }}/delete" style="display:inline" onsubmit="return confirm('Hisob o\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
             </form>
           </td>
@@ -55,6 +56,7 @@
         <div style="flex:1;min-width:0"><b style="font-size:13px">{{ c.name }}</b>
           <div style="font-size:10.5px;color:var(--txt3)">{{ activity_labels.get(c.activity, c.activity) }}</div></div>
         <form method="POST" action="/finance/categories/{{ c.id }}/delete" onsubmit="return confirm('Statya o\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
         </form>
       </div>
@@ -70,6 +72,7 @@
   <div class="modal">
     <div class="modal-title"><i class="icon-wallet"></i> <span id="wTitle">Hisob</span></div>
     <form method="POST" action="/finance/wallets/save">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="id" id="wId">
       <label>Nomi</label><input class="input" name="name" id="wName" required placeholder="masalan: РС Jalinga / карта 9933 / Наличные">
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
@@ -92,6 +95,7 @@
   <div class="modal">
     <div class="modal-title"><i class="icon-tags"></i> Yangi statya</div>
     <form method="POST" action="/finance/categories/add">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <label>Nomi</label><input class="input" name="name" required maxlength="200" placeholder="masalan: Reklama xarajati">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label>Yo'nalish</label>

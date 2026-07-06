@@ -44,6 +44,7 @@
             data-b='{{ b|tojson }}' onclick="pRe(JSON.parse(this.dataset.b))"><i class="icon-pencil"></i></button>
           <form method="POST" action="/my/{{ token }}/cancel/{{ b.id }}"
                 onsubmit="return confirm('Bron bekor qilinsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-out" type="submit"><i class="icon-x"></i></button>
           </form>
         </div>
@@ -62,6 +63,7 @@
     <div class="card-hd"><div class="card-title"><i class="icon-plus-circle"></i> Yangi bron qilish</div></div>
     <div class="card-bd">
       <form method="POST" action="/my/{{ token }}/book">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <label>Studiya</label>
         <select class="select" name="studio_id" required>
           {% for s in studios %}
@@ -129,6 +131,7 @@
     <div class="modal-title"><i class="icon-pencil"></i> Vaqtni o'zgartirish</div>
     <div id="pre-who" style="font-size:12.5px;color:var(--txt3);margin-bottom:8px"></div>
     <form method="POST" id="pre-form" action="">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
         <div><label>Sana</label><input class="input" type="date" name="date" id="pre-date" min="{{ today }}" required></div>
         <div><label>Boshlanish</label><input class="input" type="time" name="start" id="pre-start" required></div>

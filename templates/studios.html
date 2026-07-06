@@ -81,6 +81,7 @@ function copyBookUrl(){var el=document.getElementById('bookUrl');el.select();
   <div class="modal">
     <div class="modal-title" id="ms-title"><i class="icon-clapperboard"></i> Studiya</div>
     <form method="POST" action="/studios/save">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="id" id="ms-id">
       <label>Nomi</label><input class="input" name="name" id="ms-name" required>
       <label>Tavsif</label><input class="input" name="description" id="ms-desc">

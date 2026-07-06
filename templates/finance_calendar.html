@@ -122,6 +122,7 @@
       </div>
       <div style="font-weight:800;font-variant-numeric:tabular-nums;color:var(--red)">{{ r.amount|som }}</div>
       <form method="POST" action="/finance/calendar/recurring/{{ r.id }}/delete" onsubmit="return confirm('O\'chirilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
         <button class="btn btn-sm btn-ghost" type="submit"><i class="icon-trash-2"></i></button>
       </form>
     </div>
@@ -136,6 +137,7 @@
   <div class="modal">
     <div class="modal-title"><i class="icon-calendar-plus"></i> Rejali to'lov / tushum</div>
     <form method="POST" action="/finance/calendar/plan/add">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <label>Sana</label><input class="input" type="date" name="date" value="{{ year }}-{{ '%02d'|format(month) }}-01" required>
       <label>Yo'nalish</label>
       <select class="select" name="direction">
@@ -167,6 +169,7 @@
   <div class="modal">
     <div class="modal-title"><i class="icon-repeat"></i> Doimiy oylik to'lov</div>
     <form method="POST" action="/finance/calendar/recurring/add">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <label>Nom</label><input class="input" type="text" name="name" maxlength="200" required placeholder="masalan: Ofis ijarasi">
       <label>Summa (so'm)</label><input class="input" type="number" name="amount" min="1" step="0.01" required>
       <label>Oyning kuni (1–31)</label><input class="input" type="number" name="pay_day" min="1" max="31" value="1" required>
@@ -194,6 +197,7 @@
     <div class="modal-title"><i class="icon-check-circle"></i> To'lovni bajarish</div>
     <div id="payTitle" style="font-size:13px;color:var(--txt2);margin-bottom:6px"></div>
     <form method="POST" action="/finance/calendar/pay">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="kind" id="payKind">
       <input type="hidden" name="item_id" id="payItem">
       <label>Sana</label><input class="input" type="date" name="date" id="payDate" required>
