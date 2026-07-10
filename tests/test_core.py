@@ -1,5 +1,15 @@
 """Jalinga MVP yadrosi: kirish, bron konflikti, paket balansi, moliya."""
-from datetime import date
+from datetime import date, timedelta
+
+from core.timeutils import now_tashkent
+
+
+def _future(days):
+    """Boshqa test fayllari bilan to'qnashmaydigan nisbiy kelajak sanasi.
+
+    Qat'iy sana (masalan «2026-08-10») vaqt o'tishi bilan boshqa testlarning
+    now+N kunларига to'g'ri kelib flake beradi — shuning uchun nisbiy."""
+    return (now_tashkent().date() + timedelta(days=days)).strftime("%Y-%m-%d")
 
 
 def _mk_teacher(app, name="Ustoz Test", **kw):
@@ -42,7 +52,7 @@ def test_booking_conflict_blocked(app, admin_client, post):
     from models.studio import Booking
     sid = _studio_id(app)
     tid = _mk_teacher(app, "Konflikt Ustoz")
-    day = "2026-08-10"
+    day = _future(35)   # 35 — boshqa testlarда ishlatilmaydigan offset
     r1 = post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
               date=day, start="10:00", end="12:00", pay_type="hourly")
     assert r1.status_code in (302, 303)
@@ -68,7 +78,7 @@ def test_package_balance_flow(app, admin_client, post):
     tid = _mk_teacher(app, "Paket Ustoz")
     # 1) Balanssiz paket-bron → bloklanadi
     r = post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-             date="2026-08-11", start="10:00", end="12:00", pay_type="package")
+             date=_future(36), start="10:00", end="12:00", pay_type="package")
     with app.app_context():
         assert Booking.query.filter_by(teacher_id=tid).count() == 0
     # 2) 10 soatlik paket sotamiz
@@ -79,7 +89,7 @@ def test_package_balance_flow(app, admin_client, post):
         assert Teacher.query.get(tid).balance_hours() == 10
     # 3) Endi 2 soatlik paket-bron o'tadi, balans 8 ga tushadi
     r = post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-             date="2026-08-11", start="10:00", end="12:00", pay_type="package")
+             date=_future(36), start="10:00", end="12:00", pay_type="package")
     with app.app_context():
         assert Booking.query.filter_by(teacher_id=tid).count() == 1
         assert Teacher.query.get(tid).balance_hours() == 8
@@ -98,7 +108,7 @@ def test_hourly_payment_lifecycle(app, admin_client, post):
     sid = _studio_id(app)
     tid = _mk_teacher(app, "Soatbay Ustoz")
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-08-12", start="14:00", end="16:00", pay_type="hourly")
+         date=_future(37), start="14:00", end="16:00", pay_type="hourly")
     with app.app_context():
         b = Booking.query.filter_by(teacher_id=tid).first()
         p = Payment.query.filter_by(booking_id=b.id).first()

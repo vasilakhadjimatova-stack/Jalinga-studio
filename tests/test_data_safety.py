@@ -61,3 +61,23 @@ def test_audit_page_admin_only(app, client, admin_client):
     assert admin_client.get("/team/audit").status_code == 200
     r = client.get("/team/audit")
     assert r.status_code in (302, 303, 403)
+
+
+# ── APP_LOCKED — vaqtinchalik to'xtatish rejimi ──
+
+def test_app_locked_mode():
+    """APP_LOCKED=1 → hamma sahifa 503 (locked.html), /healthz ishlaydi."""
+    import os
+    os.environ["APP_LOCKED"] = "1"
+    try:
+        from app import create_app
+        a = create_app()
+        a.config.update(TESTING=True)
+        c = a.test_client()
+        for path in ("/", "/login", "/book", "/finance", "/team"):
+            r = c.get(path)
+            assert r.status_code == 503, path
+            assert "xtatilgan" in r.get_data(as_text=True), path
+        assert c.get("/healthz").status_code == 200   # monitoring ochiq
+    finally:
+        os.environ.pop("APP_LOCKED", None)

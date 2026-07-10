@@ -54,6 +54,20 @@ def create_app():
     from werkzeug.middleware.proxy_fix import ProxyFix
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
+    # Vaqtinchalik to'xtatish (kill-switch). Railway → Variables →
+    # APP_LOCKED=1 qo'yilsa BUTUN dastur «vaqtincha to'xtatilgan» sahifasini
+    # ko'rsatadi (503) — baza va ma'lumotlarga tegilmaydi. Qayta ochish uchun
+    # o'zgaruvchini o'chirib tashlang (Railway avtomatik qayta deploy qiladi).
+    if (os.environ.get("APP_LOCKED") or "").strip().lower() in ("1", "true", "yes"):
+        logging.warning("APP_LOCKED — dastur vaqtincha to'xtatilgan rejimda!")
+
+        @app.before_request
+        def _app_locked():
+            from flask import request, render_template
+            if request.path == "/healthz":   # monitoring ishlayversin
+                return None
+            return render_template("locked.html"), 503
+
     init_db(app)
 
     from modules.auth.routes import bp as auth_bp
