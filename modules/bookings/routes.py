@@ -286,10 +286,9 @@ def save():
     pay_wallet = (f.get("pay_wallet") or "").strip()[:60]
     pay_method = (f.get("pay_method") or "").strip()[:20]
     # Poyga himoyasi: shu studiya qatorini qulflab, konflikt-tekshiruv↔insert
-    # oralig'ini serializatsiya qilamiz (Postgres row-lock; SQLite baribir
-    # yozuvlarni ketma-ket qiladi) — TOCTOU ikki karra bron oldini oladi.
-    db.session.query(Studio).filter_by(
-        id=studio.id).with_for_update().first()
+    # oralig'ini serializatsiya qilamiz (Postgres row-lock; SQLite yozuv-qulf)
+    # — TOCTOU ikki karra bron oldini oladi.
+    Studio.lock_for_booking(studio.id)
     made, errs = [], []
     for it in plan:
         day, s_, e_ = it["date"], it["start"], it["end"]

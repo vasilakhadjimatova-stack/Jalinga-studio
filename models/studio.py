@@ -42,6 +42,31 @@ class Studio(db.Model):
                 "hourly_rate": self.hourly_rate or 0, "color": self.color,
                 "is_active": self.is_active, "sort": self.sort or 100}
 
+    @staticmethod
+    def lock_for_booking(studio_id):
+        """Bron yozishdan oldin studiya qatoriga yozuv-qulf oladi.
+
+        Konflikt tekshiruvi↔insert oralig'ini serializatsiya qiladi (TOCTOU
+        himoyasi — ustma-ust bronlar bir vaqtда yozilib qolmasin).
+        Postgres: qator qulfi (SELECT … FOR UPDATE). SQLite: FOR UPDATE'ni
+        e'tiborsiz qoldirgani uchun no-op UPDATE bilan tranzaksiyani yozuv
+        rejimiga (RESERVED qulf) o'tkazamiz — parallel bron ikkinchisini
+        kutdiradi (database.py'даги busy_timeout bilan). Bir xil boshlanish
+        vaqtli takror esa ux_booking_slot unikal indeksi bilan alohida
+        bloklanadi; bu qulf turli boshlanish vaqtli ustma-ustlikni yopadi."""
+        from sqlalchemy import text
+        try:
+            dialect = db.session.get_bind().dialect.name
+        except Exception:
+            dialect = ""
+        if dialect == "sqlite":
+            db.session.execute(
+                text("UPDATE studios SET sort = sort WHERE id = :sid"),
+                {"sid": studio_id})
+        else:
+            db.session.query(Studio).filter_by(
+                id=studio_id).with_for_update().first()
+
 
 class Booking(db.Model):
     __tablename__ = "bookings"

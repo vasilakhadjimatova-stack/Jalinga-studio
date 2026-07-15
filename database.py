@@ -16,9 +16,29 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         import models  # noqa: F401 — barcha modellarni ro'yxatga oladi
+        _configure_sqlite()
         db.create_all()
         _auto_migrate()
         _ensure_indexes()
+
+
+def _configure_sqlite():
+    """SQLite: parallel bron yozuv-qulfi (lock_for_booking) darhol xato
+    bermay, 5 soniya kutsin — TOCTOU serializatsiyasi silliq ishlasin.
+    Postgres'ga taalluqli emas (u qator qulfini o'zi kutdiradi)."""
+    from sqlalchemy import event
+    try:
+        engine = db.engine
+    except Exception:
+        return
+    if engine.dialect.name != "sqlite":
+        return
+
+    @event.listens_for(engine, "connect")
+    def _set_busy_timeout(dbapi_conn, _rec):
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA busy_timeout=5000")
+        cur.close()
 
 
 def _ensure_indexes():

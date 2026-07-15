@@ -28,9 +28,12 @@ MAX_DAYS_AHEAD = 60   # necha kun oldin bron qilsa bo'ladi
 # yordam bermaydi) — IP darajasida cheklaymiz. ProxyFix real IP beradi.
 _IP_HITS = {}                 # ip -> [timestamp, ...]
 _IP_WINDOW = 3600             # 1 soat
-_IP_MAX = 4                   # bir IP soatiga 4 ta online bron
+_IP_MAX = 8                   # bir IP soatiga 8 ta bron URINISHI (nafaqat muvaffaqiyat)
 _DAILY = {"day": "", "n": 0}  # global kunlik hisoblagich
-_DAILY_MAX = 120              # butun tizim uchun kuniga 120 online bron
+_DAILY_MAX = 300              # butun tizim uchun kuniga 300 bron urinishi
+# ESLATMA: hisoblagichlar process xotirasida — gunicorn ko'p-worker'да har
+# worker alohida sanaydi (haqiqiy chegara ×worker) va restartда nollanadi.
+# To'liq mustahkam cheklov uchun umumiy do'kon (Redis/DB) kerak — keyingi bosqich.
 
 
 def _spam_blocked(ip):
@@ -125,16 +128,22 @@ def slots():
 @bp.route("/book/submit", methods=["POST"])
 def submit():
     f = request.form
+    ip = request.remote_addr or "?"
     # Honeypot: bot to'ldiradigan yashirin maydon — to'lgan bo'lsa jim rad
+    # (lekin urinishни hisoblaymiz — bot IP'sini chegaraga yaqinlashtiradi).
     if (f.get("website") or "").strip():
+        _spam_note(ip)
         return redirect(url_for("book.done"))
 
     # Spam himoyasi: IP soatlik + global kunlik cheklov
-    ip = request.remote_addr or "?"
     if _spam_blocked(ip):
         flash("⛔ Juda ko'p so'rov. Iltimos keyinroq urinib ko'ring yoki "
               "studiyaga qo'ng'iroq qiling.", "error")
         return redirect(url_for("book.index"))
+    # HAR urinishни hisoblaymiz (muvaffaqiyatдан oldin) — probing/spam,
+    # honeypot chetlab o'tilса ham, cheklovга kiradi. Aks holда faqat
+    # muvaffaqiyatli bron sanalib, cheksiz urinish mumkin edi.
+    _spam_note(ip)
 
     name = (f.get("name") or "").strip()[:200]
     phone = (f.get("phone") or "").strip()[:50]
@@ -174,9 +183,8 @@ def submit():
                      f"{Config.WORK_END:02d}:00. Shu oraliqda tanlang.")
     # Poyga himoyasi: studiya qatorini qulflab konflikt-tekshiruv↔insert
     # oralig'ini serializatsiya qilamiz (ikki mijoz bir slotni bir vaqtда
-    # olsa — biri rad etiladi). Postgres row-lock; SQLite baribir serial.
-    db.session.query(Studio).filter_by(
-        id=studio.id).with_for_update().first()
+    # olsa — biri rad etiladi). Postgres row-lock; SQLite yozuv-qulf.
+    Studio.lock_for_booking(studio.id)
     if Booking.conflict(studio.id, day, start, end):
         return _back(f"⛔ {start}–{end} band bo'lib qoldi. Boshqa vaqt tanlang.")
 
@@ -219,7 +227,6 @@ def submit():
         db.session.rollback()
         return _back(f"⛔ {start}–{end} endigina band bo'ldi. Boshqa vaqt tanlang.")
 
-    _spam_note(ip)   # muvaffaqiyatli bron — IP/kunlik hisoblagichga qo'shamiz
     _notify_staff(studio, t, b)
     return redirect(url_for("book.done", s=studio.id, d=day, t=start, e=end))
 
@@ -242,16 +249,18 @@ def done():
 def _notify_staff(studio, teacher, b):
     """Yangi online bron haqida rahbar/buxgalterga Telegram xabar."""
     try:
-        from core.telegram import tg_send
+        from core.telegram import tg_send, esc
         from models.user import User
         admins = User.query.filter(
             User.is_active.is_(True), User.tg_chat_id != "",
             User.role.in_(("admin", "operator"))).all()
         if not admins:
             return
-        text = (f"🆕 <b>Online bron</b>\n👤 {teacher.name} · {teacher.phone}\n"
-                f"🎬 {studio.name}\n📅 {b.date} · {b.start}–{b.end} "
-                f"({b.hours:g} soat)")
+        # Mijoz kiritgan ism/telefon — HTML parse_mode uchun escape (inject
+        # yoki buzuq HTML tufayli xabar yo'qolmasin).
+        text = (f"🆕 <b>Online bron</b>\n👤 {esc(teacher.name)} · "
+                f"{esc(teacher.phone)}\n🎬 {esc(studio.name)}\n"
+                f"📅 {b.date} · {b.start}–{b.end} ({b.hours:g} soat)")
         for u in admins:
             tg_send(u.tg_chat_id, text)
     except Exception:

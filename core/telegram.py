@@ -9,6 +9,7 @@ Vazifalari:
 
 TELEGRAM_BOT_TOKEN env bo'lmasa — hammasi jim no-op (dastur ishlayveradi).
 """
+import html
 import json
 import logging
 import os
@@ -27,6 +28,15 @@ _API = f"https://api.telegram.org/bot{TOKEN}"
 
 def is_configured():
     return bool(TOKEN)
+
+
+def esc(s):
+    """HTML parse_mode uchun foydalanuvchi matnini xavfsizlaydi (< > &).
+
+    Online bron orqali mijoz kiritgan ism/telefon Telegram xabariga tushadi —
+    escaping'siz <a href> kabi teg inject qilinishi yoki buzuq HTML tufayli
+    xabar butunlay yuborilmay qolishi mumkin edi."""
+    return html.escape(str(s or ""))
 
 
 def tg_send(chat_id, text):
@@ -50,7 +60,7 @@ def notify_teacher_booking(b, studio, teacher, created=True):
     head = "✅ Yozuv tasdiqlandi" if created else "ℹ️ Yozuv yangilandi"
     pay = "📦 paket balansidan" if b.pay_type == "package" else "💵 soatbay"
     tg_send(teacher.tg_chat_id,
-            f"<b>{head}</b>\n🎬 {studio.name}\n"
+            f"<b>{head}</b>\n🎬 {esc(studio.name)}\n"
             f"📅 {b.date} · {b.start}–{b.end} ({b.hours:g} soat)\n{pay}")
 
 
@@ -87,7 +97,7 @@ def _handle_update(app, upd):
                     t.tg_chat_id = chat_id
                     db.session.commit()
                     tg_send(chat_id,
-                            f"👋 Salom, <b>{t.name}</b>!\nJalinga Studio botiga "
+                            f"👋 Salom, <b>{esc(t.name)}</b>!\nJalinga Studio botiga "
                             f"ulandingiz. Endi bron tasdig'i va dars oldidan "
                             f"eslatmalar shu yerga keladi. 🎬")
                     return
@@ -101,7 +111,7 @@ def _handle_update(app, upd):
                         u.tg_chat_id = chat_id
                         db.session.commit()
                         tg_send(chat_id,
-                                f"👋 Salom, <b>{u.name}</b>!\nRahbar sifatida "
+                                f"👋 Salom, <b>{esc(u.name)}</b>!\nRahbar sifatida "
                                 f"ulandingiz. Endi har ertalab kunlik hisobot "
                                 f"(digest) va e'tibor talab qiladigan ishlar "
                                 f"shu yerga keladi. 📊")
