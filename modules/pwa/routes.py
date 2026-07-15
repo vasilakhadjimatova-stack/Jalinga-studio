@@ -87,11 +87,15 @@ def healthz():
     from database import db
     try:
         db.session.execute(text("SELECT 1"))
-        return {"status": "ok",
-                "db": "sqlite" if Config.DB_IS_SQLITE else "postgres",
-                "data_at_risk": Config.DATA_AT_RISK}, 200
+        # Sabab/dvigatel/flaglar OSHKOR QILINMAYDI — bu login-siz endpoint;
+        # DB turi va xato matni (DSN/host tafsilotlarини o'z ichiga olishi
+        # mumkin) begonaga ko'rinmasin. Tafsilot faqat serverда log qilinadi.
+        return {"status": "ok"}, 200
     except Exception as exc:
-        return {"status": "error", "detail": str(exc)[:200]}, 503
+        import logging
+        logging.getLogger(__name__).warning("healthz DB tekshiruvi xato: %s",
+                                             exc)
+        return {"status": "error"}, 503
 
 
 # iOS/qurilmalar ba'zan ildizдаги ikonни avtomatik qidiradi (link teg bo'lsa

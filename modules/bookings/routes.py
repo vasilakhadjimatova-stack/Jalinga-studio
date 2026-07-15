@@ -289,9 +289,15 @@ def save():
     # oralig'ini serializatsiya qilamiz (Postgres row-lock; SQLite yozuv-qulf)
     # — TOCTOU ikki karra bron oldini oladi.
     Studio.lock_for_booking(studio.id)
+    _today = today_iso()
     made, errs = [], []
     for it in plan:
         day, s_, e_ = it["date"], it["start"], it["end"]
+        # O'tgan kunga bron qilib bo'lmaydi (typo/qo'lbola so'rovдан himoya —
+        # o'tgan sana kalendar/agenda va paket-soat hisobini buzardi).
+        if day < _today:
+            errs.append(f"{day} {s_}–{e_} — o'tgan sanaga bron qilib bo'lmaydi")
+            continue
         probe = Booking(studio_id=studio.id, teacher_id=teacher.id,
                         date=day, start=s_, end=e_)
         hrs = probe.hours
@@ -466,6 +472,9 @@ def edit(bid):
 
     # Validatsiyalar (yaratishdagi bilan bir xil qat'iylik)
     from models.studio import _to_minutes
+    if day < today_iso():
+        flash("⛔ O'tgan sanaga ko'chirib bo'lmaydi", "error")
+        return redirect(url_for("bookings.calendar", date=b.date))
     if _to_minutes(end) <= _to_minutes(start):
         flash("⛔ Tugash vaqti boshlanishdan keyin bo'lishi kerak", "error")
         return redirect(url_for("bookings.calendar", date=b.date))

@@ -37,7 +37,10 @@ def test_healthz(client):
     r = client.get("/healthz")
     assert r.status_code == 200
     d = json.loads(r.data)
-    assert d["status"] == "ok" and "db" in d
+    # Xavfsizlik: login-siz endpoint dvigatel/DSN/xato tafsilotini oshkor
+    # qilmasin — faqat status. (db/data_at_risk/detail maydonlari yo'q.)
+    assert d["status"] == "ok"
+    assert "db" not in d and "data_at_risk" not in d and "detail" not in d
 
 
 def test_audit_records_finance_action(app, admin_client, post):

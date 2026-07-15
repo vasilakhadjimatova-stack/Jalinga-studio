@@ -152,3 +152,37 @@ class Payment(db.Model):
             "date": self.date,
             "is_paid": self.is_paid, "note": self.note or "",
         }
+
+
+def package_balances():
+    """Barcha mijozlar paket balansi — BITTA aggregat + BITTA yuklama so'rovда.
+
+    Teacher.balance_hours() har mijoz uchun 2-3 aggregat so'rov yuboradi;
+    dashboard/attention uni har faol mijozда aylantirib chaqirgani uchun N+1
+    hosil bo'lardi (60 mijoz ≈ 360+ so'rov). Bu funksiya o'rniga:
+      • sotib olingan soat — bitta GROUP BY sum (faqat to'langan paketlar);
+      • ishlatilgan soat — paket bronlarini (active/done/noshow) bir marta
+        yuklab, Python'да yig'amiz (Booking.hours — hisoblanadigan property,
+        SQL'да sum qilib bo'lmaydi).
+    Natija: {teacher_id: {"purchased": x, "used": y, "balance": z}}.
+    """
+    from sqlalchemy import func
+    from models.studio import Booking
+    purchased = {}
+    for tid, hrs in db.session.query(
+            Payment.teacher_id,
+            func.coalesce(func.sum(Payment.hours), 0)).filter(
+            Payment.kind == "package",
+            Payment.is_paid.is_(True)).group_by(Payment.teacher_id).all():
+        purchased[tid] = float(hrs or 0)
+    used = {}
+    for b in Booking.query.filter(
+            Booking.pay_type == "package",
+            Booking.status.in_(("active", "done", "noshow"))).all():
+        used[b.teacher_id] = used.get(b.teacher_id, 0.0) + b.hours
+    out = {}
+    for tid in set(purchased) | set(used):
+        p = purchased.get(tid, 0.0)
+        u = used.get(tid, 0.0)
+        out[tid] = {"purchased": p, "used": u, "balance": round(p - u, 2)}
+    return out

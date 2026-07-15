@@ -48,12 +48,15 @@ def index():
     capacity = n_studios * 12 * 7
     occupancy = round(booked_hours / capacity * 100) if capacity else 0
 
-    # Balansi kam ustozlar (paket tugayapti — qayta sotuv imkoni)
+    # Balansi kam ustozlar (paket tugayapti — qayta sotuv imkoni).
+    # Balanslar bitta partiyada (N+1 yo'q — package_balances).
+    from models.billing import package_balances
+    bal_map = package_balances()
     low_balance = []
     for t in Teacher.query.filter_by(is_active=True).all():
-        bal = t.balance_hours()
-        if 0 < t.hours_purchased() and bal <= 2:
-            low_balance.append({"t": t.to_dict(), "balance": bal})
+        info = bal_map.get(t.id)
+        if info and info["purchased"] > 0 and info["balance"] <= 2:
+            low_balance.append({"t": t.to_dict(), "balance": info["balance"]})
     low_balance.sort(key=lambda x: x["balance"])
 
     studios = {s.id: s for s in Studio.query.all()}

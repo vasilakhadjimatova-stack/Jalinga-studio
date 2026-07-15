@@ -42,10 +42,14 @@ def attention_items():
             "detail": f"{s:,.0f} so'm — tasdiqlang".replace(",", " "),
             "link": "/finance/payments"})
 
-    # 🟡 Paketi tugayotgan mijozlar (≤2 soat, 0 dan katta) — qayta sotuv
+    # 🟡 Paketi tugayotgan mijozlar (≤2 soat, 0 dan katta) — qayta sotuv.
+    # Balanslar bitta partiyada (N+1 yo'q — package_balances).
+    from models.billing import package_balances
+    bal_map = package_balances()
     low = 0
     for t in Teacher.query.filter_by(is_active=True).all():
-        if t.hours_purchased() > 0 and 0 < t.balance_hours() <= 2:
+        info = bal_map.get(t.id)
+        if info and info["purchased"] > 0 and 0 < info["balance"] <= 2:
             low += 1
     if low:
         items.append({

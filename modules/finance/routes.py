@@ -426,7 +426,8 @@ def debt_add():
         debtor=(request.form.get("debtor") or "").strip()[:120],
         creditor=(request.form.get("creditor") or "").strip()[:120],
         reason=(request.form.get("reason") or "").strip()[:500],
-        amount=amount, repaid=min(_num("repaid"), amount), source="manual"))
+        amount=amount, repaid=max(0.0, min(_num("repaid"), amount)),
+        source="manual"))
     record("create", "debt", f"{amount:.0f} — {request.form.get('creditor','')}")
     db.session.commit()
     flash("✅ Qarz qo'shildi", "success")
@@ -446,7 +447,7 @@ def debt_edit(did):
     d.creditor = (request.form.get("creditor") or "").strip()[:120]
     d.reason = (request.form.get("reason") or "").strip()[:500]
     d.amount = amount
-    d.repaid = min(_num("repaid"), amount)
+    d.repaid = max(0.0, min(_num("repaid"), amount))
     record("update", "debt", f"#{d.id} → {amount:.0f} {d.creditor}")
     db.session.commit()
     flash("✅ Qarz yangilandi", "success")
@@ -852,7 +853,13 @@ def calendar_pay():
         item_id = int(request.form.get("item_id") or "0")
     except ValueError:
         item_id = 0
-    wallet = (request.form.get("wallet") or "").strip()
+    wallet = (request.form.get("wallet") or "").strip()[:60]
+    # Faqat mavjud hisob (aks holda soxta/uzun nom jurnalga tushib, umumiy
+    # pul manzarasini og'dirardi yoki Postgres'да 500 berardi) — noto'g'ri
+    # bo'lsa bo'shatamiz, quyida reja/doimiy to'lovнинг o'z hisobi yoki
+    # standart hisob ishlatiladi.
+    if wallet and not FinWallet.query.filter_by(name=wallet).first():
+        wallet = ""
     d = (request.form.get("date") or "").strip()[:10]
     if _bad_date(d):
         from datetime import date as _date
