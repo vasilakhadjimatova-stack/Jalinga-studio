@@ -1,13 +1,14 @@
 {# Vazifa batafsil — detailModal ichiga fetch bilan yuklanadi #}
-<div class="modal-title" style="justify-content:space-between">
-  <span style="display:flex;align-items:center;gap:9px;min-width:0">
-    <i class="icon-clipboard-list"></i>
-    <span style="overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span>
-  </span>
-  <button class="btn btn-ghost btn-sm" onclick="tkClose('detailModal')"><i class="icon-x"></i></button>
+<div class="tkm-hd">
+  <div class="tkm-ico"><i class="icon-clipboard-list"></i></div>
+  <div style="min-width:0">
+    <div class="tkm-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.title }}</div>
+    <div class="tkm-sub">{{ t.assigner_name }} topshirdi · {{ t.ago }}</div>
+  </div>
+  <button type="button" class="tkm-x" onclick="tkClose('detailModal')"><i class="icon-x"></i></button>
 </div>
 
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px">
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px">
   <span class="tag {{ {'new':'tag-gray','accepted':'tag-blue','in_progress':'tag-amber','done':'tag-green','cancelled':'tag-red'}.get(t.status,'tag-gray') }}">{{ t.status_label }}</span>
   <span class="tag {{ 'tag-red' if t.priority=='urgent' else ('tag-amber' if t.priority=='high' else 'tag-gray') }}">{{ t.priority_label }}</span>
   {% if t.due_date %}<span class="tag {{ 'tag-red' if t.due_state=='overdue' else ('tag-amber' if t.due_state in ('today','soon') else 'tag-gray') }}">🗓 {{ t.due_date|dmy }}</span>{% endif %}
