@@ -1,0 +1,14 @@
+{# Vazifa chat xabarlari — comment yuborilganda ham qaytadi (live yangilanish) #}
+{% for c in comments %}
+{% set mine = (c.user_id == me_id) %}
+<div style="display:flex;margin-bottom:8px;{% if mine %}justify-content:flex-end{% endif %}">
+  <div style="max-width:80%;background:{% if mine %}var(--brand-bg){% else %}var(--surface){% endif %};
+       border:1px solid var(--line);border-radius:12px;padding:8px 11px">
+    {% if not mine %}<div style="font-size:10.5px;font-weight:800;color:var(--brand);margin-bottom:2px">{{ c.user_name }}</div>{% endif %}
+    <div style="font-size:13px;color:var(--txt);white-space:pre-wrap">{{ c.body }}</div>
+    <div style="font-size:9.5px;color:var(--txt3);text-align:right;margin-top:3px">{{ c.ago }}</div>
+  </div>
+</div>
+{% else %}
+<div style="text-align:center;color:var(--txt3);font-size:12px;padding:16px 0">Hali izoh yo'q — birinchi bo'lib yozing</div>
+{% endfor %}

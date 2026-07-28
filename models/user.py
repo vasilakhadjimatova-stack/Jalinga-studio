@@ -5,6 +5,14 @@ from database import db
 
 ROLES = ["admin", "operator", "montaj", "buxgalter"]
 
+# Rol yorliqlari — butun tizim uchun yagona manba (jamoa, vazifalar, TG)
+ROLE_LABELS = {
+    "admin": "Rahbar",
+    "operator": "Operator",
+    "montaj": "Montajchi",
+    "buxgalter": "Buxgalter",
+}
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -28,6 +36,24 @@ class User(db.Model):
     @property
     def is_admin(self):
         return self.role == "admin"
+
+    @property
+    def is_boss(self):
+        """Rahbarmi? — vazifa taxtasida butun jamoani ko'radi va istalgan
+        xodimga vazifa tayinlay oladi. Studiyada rahbar = admin."""
+        return self.role == "admin"
+
+    @property
+    def role_label(self):
+        return ROLE_LABELS.get(self.role, self.role)
+
+    @staticmethod
+    def staff(active_only=True):
+        """Vazifa biriktirish uchun tanlanadigan xodimlar (ism bo'yicha)."""
+        q = User.query
+        if active_only:
+            q = q.filter(User.is_active.is_(True))
+        return q.order_by(User.role.asc(), User.name.asc()).all()
 
     @property
     def is_buxgalter(self):

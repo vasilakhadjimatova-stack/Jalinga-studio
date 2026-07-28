@@ -53,6 +53,40 @@ def tg_send(chat_id, text):
         return False
 
 
+def tg_notify_user(user_id, text):
+    """Xodimга (User) Telegram xabar — akkaunt ulangan bo'lsa. Aks holda no-op.
+    Vazifalar tizimi shu orqali push yuboradi."""
+    if not (TOKEN and user_id):
+        return False
+    try:
+        from models.user import User
+        u = User.query.get(user_id)
+        if u and u.tg_chat_id:
+            return tg_send(u.tg_chat_id, text)
+    except Exception as exc:
+        logger.warning(f"tg_notify_user xato: {exc}")
+    return False
+
+
+def tg_notify_role(role, text, exclude_id=None):
+    """Rolega mansub barcha ulangan xodimlarga Telegram xabar."""
+    if not (TOKEN and role):
+        return 0
+    n = 0
+    try:
+        from models.user import User
+        for u in User.query.filter(User.role == role,
+                                   User.is_active.is_(True),
+                                   User.tg_chat_id != "").all():
+            if exclude_id and u.id == exclude_id:
+                continue
+            if tg_send(u.tg_chat_id, text):
+                n += 1
+    except Exception as exc:
+        logger.warning(f"tg_notify_role xato: {exc}")
+    return n
+
+
 def notify_teacher_booking(b, studio, teacher, created=True):
     """Ustozga bron tasdig'i/o'zgarishi (TG ulangan bo'lsa)."""
     if not (teacher and teacher.tg_chat_id):
@@ -107,14 +141,21 @@ def _handle_update(app, upd):
                 if len(token) >= 16:
                     u = User.query.filter_by(
                         tg_token=token, is_active=True).first()
-                    if u and u.role in ("admin", "buxgalter"):
+                    if u:
                         u.tg_chat_id = chat_id
                         db.session.commit()
-                        tg_send(chat_id,
-                                f"👋 Salom, <b>{esc(u.name)}</b>!\nRahbar sifatida "
-                                f"ulandingiz. Endi har ertalab kunlik hisobot "
-                                f"(digest) va e'tibor talab qiladigan ishlar "
-                                f"shu yerga keladi. 📊")
+                        if u.role in ("admin", "buxgalter"):
+                            tg_send(chat_id,
+                                    f"👋 Salom, <b>{esc(u.name)}</b>!\nRahbar "
+                                    f"sifatida ulandingiz. Endi kunlik hisobot "
+                                    f"(digest), vazifalar va e'tibor talab "
+                                    f"qiladigan ishlar shu yerga keladi. 📊")
+                        else:
+                            tg_send(chat_id,
+                                    f"👋 Salom, <b>{esc(u.name)}</b>!\nJalinga "
+                                    f"jamoasiga ulandingiz. Endi sizga "
+                                    f"biriktirilgan vazifalar va izohlar shu "
+                                    f"yerga keladi. ✅")
                         return
         tg_send(chat_id, "👋 Jalinga Studio boti. Ulash uchun shaxsiy portal "
                          "havolangizdagi «Telegram'ga ulash» tugmasini bosing.")
@@ -213,6 +254,14 @@ def _digest_loop(app, hour=9):
                         User.role.in_(("admin", "buxgalter"))).all()
                     for u in admins:
                         tg_send(u.tg_chat_id, text)
+                    # Kunlik texnik xizmat: eski tugagan vazifa/habarnomani tozalash
+                    try:
+                        from core.comms import (prune_old_tasks,
+                                                prune_old_notifications)
+                        prune_old_tasks(60)
+                        prune_old_notifications(90)
+                    except Exception as exc:
+                        logger.warning(f"kunlik tozalash xato: {exc}")
                 last_sent_day = now.strftime("%Y-%m-%d")
         except Exception as exc:
             logger.error(f"tg digest xato: {exc}")

@@ -81,6 +81,7 @@ def create_app():
     from modules.team.routes import bp as team_bp
     from modules.pwa.routes import bp as pwa_bp
     from modules.book.routes import bp as book_bp
+    from modules.tasks.routes import bp as tasks_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dash_bp)
     app.register_blueprint(studios_bp)
@@ -92,12 +93,22 @@ def create_app():
     app.register_blueprint(team_bp)
     app.register_blueprint(pwa_bp)
     app.register_blueprint(book_bp)
+    app.register_blueprint(tasks_bp)
 
     @app.context_processor
     def inject_globals():
-        return {"current_user": current_user(), "csrf_token": csrf_token,
+        u = current_user()
+        ntf = 0
+        if u:
+            try:
+                from core.comms import unread_count
+                ntf = unread_count(u)
+            except Exception:
+                ntf = 0
+        return {"current_user": u, "csrf_token": csrf_token,
                 "company": Config.COMPANY_NAME,
-                "data_at_risk": Config.DATA_AT_RISK}
+                "data_at_risk": Config.DATA_AT_RISK,
+                "nav_unread": ntf}
 
     @app.template_filter("som")
     def som(v):

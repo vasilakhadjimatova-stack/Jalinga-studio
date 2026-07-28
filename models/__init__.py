@@ -6,3 +6,5 @@ from models.finance import (            # noqa: F401
     FinRecurring, FinPlan)
 from models.audit import AuditLog       # noqa: F401
 from models.pricing import PriceRule    # noqa: F401
+from models.communication import (      # noqa: F401
+    Notification, Task, TaskComment, TaskActivity, TaskWatcher)
