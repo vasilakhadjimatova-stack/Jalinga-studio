@@ -74,6 +74,65 @@
   .tk-empty{text-align:center;padding:30px 10px;color:var(--txt3);font-size:12px}
   .tk-empty i{display:block;font-size:26px;opacity:.4;margin-bottom:6px}
   .modal-lg{max-width:560px}
+
+  /* ═══ MODAL ICHKI DIZAYN — sarlavha / bo'limlar / footer ═══ */
+  .tkm-hd{display:flex;align-items:center;gap:13px;padding-bottom:15px;
+    border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tkm-ico{width:42px;height:42px;border-radius:13px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--brand-bg),transparent);
+    border:1px solid var(--line);display:flex;align-items:center;
+    justify-content:center;font-size:19px;color:var(--brand)}
+  .tkm-title{font-weight:800;font-size:16.5px;letter-spacing:-.2px}
+  .tkm-sub{font-size:11.5px;color:var(--txt3);margin-top:2px}
+  .tkm-x{margin-left:auto;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);
+    background:var(--surface2);color:var(--txt3);cursor:pointer;display:flex;
+    align-items:center;justify-content:center;font-size:15px;transition:.15s;flex:0 0 auto}
+  .tkm-x:hover{color:var(--red);border-color:var(--red)}
+  .tkm-sec{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.7px;color:var(--txt3);margin:18px 0 9px}
+  .tkm-sec i{font-size:13px;color:var(--brand)}
+  .tkm-sec::after{content:'';flex:1;height:1px;background:var(--line)}
+  .tkm-ft{display:flex;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+
+  /* Xodim tanlash — avatarli kartochkalar */
+  .tkm-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .tkp{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid var(--line);
+    border-radius:12px;cursor:pointer;transition:.15s;background:var(--surface2);user-select:none}
+  .tkp:hover{border-color:var(--txt3);transform:translateY(-1px)}
+  .tkp.sel{border-color:var(--brand);background:var(--brand-bg);box-shadow:var(--ring)}
+  .tkp-av{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:800;color:#fff;position:relative}
+  .tkp.sel .tkp-av::after{content:'✓';position:absolute;right:-4px;bottom:-4px;width:15px;height:15px;
+    border-radius:50%;background:var(--brand);color:#151004;font-size:9px;font-weight:900;
+    display:flex;align-items:center;justify-content:center;border:2px solid var(--surface)}
+  .tkp-n{font-weight:700;font-size:12.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tkp-r{font-size:10px;color:var(--txt3);margin-top:1px}
+  .tkm-roles{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .tkr{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:99px;
+    border:1.5px dashed var(--line);background:transparent;font-size:11.5px;font-weight:700;
+    color:var(--txt2);cursor:pointer;transition:.15s;user-select:none}
+  .tkr:hover{border-color:var(--txt3);color:var(--txt)}
+  .tkr.sel{border-style:solid;border-color:var(--brand);background:var(--brand-bg);color:var(--brand)}
+
+  /* Muddat — tezkor chiplar */
+  .tk-due-q{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .tk-dq{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface2);
+    font-size:11.5px;font-weight:700;color:var(--txt2);cursor:pointer;transition:.15s;user-select:none}
+  .tk-dq:hover{border-color:var(--txt3);color:var(--txt)}
+  .tk-dq.on{background:var(--brand);border-color:var(--brand);color:#151004}
+
+  /* Muhimlik — rangli segment */
+  .tk-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .tk-seg input{position:absolute;opacity:0;pointer-events:none}
+  .tk-seg label{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:9px 4px 8px;border:1.5px solid var(--line);border-radius:11px;cursor:pointer;
+    font-size:11px;font-weight:700;color:var(--txt2);transition:.15s;text-align:center;user-select:none}
+  .tk-seg label i{font-size:15px}
+  .tk-seg label:hover{border-color:var(--txt3)}
+  .tk-seg input:checked+label.sg-low{border-color:var(--txt3);background:var(--surface2);color:var(--txt)}
+  .tk-seg input:checked+label.sg-normal{border-color:var(--blue);background:var(--blue-bg);color:var(--blue)}
+  .tk-seg input:checked+label.sg-high{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+  .tk-seg input:checked+label.sg-urgent{border-color:var(--red);background:var(--red-bg);color:var(--red)}
 </style>
 
 <div class="ph">
@@ -172,40 +231,67 @@
 <!-- ── YANGI VAZIFA MODALI ── -->
 <div class="modal-ov" id="newModal">
   <div class="modal modal-lg">
-    <div class="modal-title"><i class="icon-clipboard-list"></i> Yangi vazifa</div>
-    <form method="post" action="/tasks/new">
-      <label>Vazifa nomi *</label>
-      <input class="input" name="title" required maxlength="200" placeholder="Masalan: Yakshanba yozuvini montaj qilish">
-      <label>Tavsif</label>
-      <textarea name="description" rows="3" placeholder="Batafsil (ixtiyoriy)"></textarea>
-      <label>Kimga topshiriladi *</label>
-      <select class="select" name="assign_to" required>
-        <option value="">— tanlang —</option>
-        <optgroup label="Xodim">
-          {% for p in people %}
-          <option value="user:{{ p.id }}">{{ p.name }} · {{ p.role_label }}</option>
-          {% endfor %}
-        </optgroup>
-        <optgroup label="Butun jamoa (rol)">
-          {% for r in roles %}
-          <option value="role:{{ r.role }}">{{ r.label }} (jamoa)</option>
-          {% endfor %}
-        </optgroup>
-      </select>
-      <div style="display:flex;gap:12px">
-        <div style="flex:1"><label>Muddat *</label>
-          <input class="input" type="date" name="due_date" required value="{{ today_iso }}"></div>
-        <div style="flex:1"><label>Muhimlik</label>
-          <select class="select" name="priority">
-            <option value="normal">O'rta</option>
-            <option value="low">Past</option>
-            <option value="high">Yuqori</option>
-            <option value="urgent">Shoshilinch</option>
-          </select></div>
+    <div class="tkm-hd">
+      <div class="tkm-ico"><i class="icon-clipboard-list"></i></div>
+      <div style="min-width:0">
+        <div class="tkm-title">Yangi vazifa</div>
+        <div class="tkm-sub">Topshiriq bering — mas'ulga darhol xabar boradi</div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:18px">
-        <button type="button" class="btn btn-ghost" onclick="tkClose('newModal')">Bekor</button>
-        <button class="btn btn-gold" style="flex:1"><i class="icon-send"></i> Yuborish</button>
+      <button type="button" class="tkm-x" onclick="tkClose('newModal')"><i class="icon-x"></i></button>
+    </div>
+    <form method="post" action="/tasks/new" id="newTaskForm">
+      <div class="tkm-sec"><i class="icon-pencil-line"></i> Nima qilinadi</div>
+      <input class="input" name="title" required maxlength="200"
+             placeholder="Masalan: Yakshanba yozuvini montaj qilish">
+      <textarea name="description" rows="2" placeholder="Batafsil tavsif (ixtiyoriy)"
+                style="margin-top:8px"></textarea>
+
+      <div class="tkm-sec"><i class="icon-user-check"></i> Kimga topshiriladi</div>
+      <input type="hidden" name="assign_to" id="assignTo" value="">
+      <div class="tkm-people">
+        {% for p in people %}
+        <div class="tkp" onclick="tkPick(this,'user:{{ p.id }}')" title="{{ p.name }}">
+          <span class="tkp-av" style="background:{{ p.color }}">{{ p.initials }}</span>
+          <span style="min-width:0">
+            <span class="tkp-n" style="display:block">{{ p.name }}</span>
+            <span class="tkp-r" style="display:block">{{ p.role_label }}</span>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="tkm-roles">
+        {% for r in roles %}
+        <span class="tkr" onclick="tkPick(this,'role:{{ r.role }}')">
+          <i class="icon-users" style="font-size:12px"></i> {{ r.label }} (jamoa)
+        </span>
+        {% endfor %}
+      </div>
+
+      <div class="tkm-sec"><i class="icon-calendar-clock"></i> Muddat</div>
+      <div class="tk-due-q">
+        <span class="tk-dq on" onclick="tkDue(this,0)">Bugun</span>
+        <span class="tk-dq" onclick="tkDue(this,1)">Ertaga</span>
+        <span class="tk-dq" onclick="tkDue(this,3)">3 kun</span>
+        <span class="tk-dq" onclick="tkDue(this,7)">1 hafta</span>
+      </div>
+      <input class="input" type="date" name="due_date" id="dueInput" required
+             value="{{ today_iso }}" onchange="tkDueManual()">
+
+      <div class="tkm-sec"><i class="icon-flag"></i> Muhimlik</div>
+      <div class="tk-seg">
+        <input type="radio" name="priority" value="low" id="pg-low">
+        <label for="pg-low" class="sg-low"><i class="icon-chevron-down"></i>Past</label>
+        <input type="radio" name="priority" value="normal" id="pg-normal" checked>
+        <label for="pg-normal" class="sg-normal"><i class="icon-minus"></i>O'rta</label>
+        <input type="radio" name="priority" value="high" id="pg-high">
+        <label for="pg-high" class="sg-high"><i class="icon-chevron-up"></i>Yuqori</label>
+        <input type="radio" name="priority" value="urgent" id="pg-urgent">
+        <label for="pg-urgent" class="sg-urgent"><i class="icon-zap"></i>Shoshilinch</label>
+      </div>
+
+      <div class="tkm-ft">
+        <button type="button" class="btn btn-out" onclick="tkClose('newModal')">Bekor</button>
+        <button class="btn btn-gold" style="flex:1;justify-content:center"><i class="icon-send"></i> Yuborish</button>
       </div>
     </form>
   </div>
@@ -214,17 +300,30 @@
 <!-- ── TAYINLASH MODALI ── -->
 <div class="modal-ov" id="assignModal">
   <div class="modal">
-    <div class="modal-title"><i class="icon-user-plus"></i> Xodimga tayinlash</div>
+    <div class="tkm-hd">
+      <div class="tkm-ico"><i class="icon-user-plus"></i></div>
+      <div style="min-width:0">
+        <div class="tkm-title">Xodimga tayinlash</div>
+        <div class="tkm-sub">Bir nechta tanlash mumkin — birinchisi asosiy mas'ul</div>
+      </div>
+      <button type="button" class="tkm-x" onclick="tkClose('assignModal')"><i class="icon-x"></i></button>
+    </div>
     <form method="post" id="assignForm">
-      <label>Mas'ul xodim</label>
-      <select class="select" name="assignee_id" required>
+      <input type="hidden" name="assignee_id" id="assignIds" value="">
+      <div class="tkm-people" id="assignPeople">
         {% for p in people %}
-        <option value="{{ p.id }}">{{ p.name }} · {{ p.role_label }}</option>
+        <div class="tkp" data-id="{{ p.id }}" onclick="tkAssignPick(this)" title="{{ p.name }}">
+          <span class="tkp-av" style="background:{{ p.color }}">{{ p.initials }}</span>
+          <span style="min-width:0">
+            <span class="tkp-n" style="display:block">{{ p.name }}</span>
+            <span class="tkp-r" style="display:block">{{ p.role_label }}</span>
+          </span>
+        </div>
         {% endfor %}
-      </select>
-      <div style="display:flex;gap:10px;margin-top:18px">
-        <button type="button" class="btn btn-ghost" onclick="tkClose('assignModal')">Bekor</button>
-        <button class="btn btn-gold" style="flex:1">Tayinlash</button>
+      </div>
+      <div class="tkm-ft">
+        <button type="button" class="btn btn-out" onclick="tkClose('assignModal')">Bekor</button>
+        <button class="btn btn-gold" style="flex:1;justify-content:center"><i class="icon-user-check"></i> Tayinlash</button>
       </div>
     </form>
   </div>
@@ -233,13 +332,20 @@
 {% if is_admin %}
 <div class="modal-ov" id="clearModal">
   <div class="modal">
-    <div class="modal-title"><i class="icon-trash-2" style="color:var(--red)"></i> Hammasini tozalash</div>
-    <p style="color:var(--txt2);font-size:13px;margin:8px 0 4px">Barcha vazifalar, izohlar va tarix
-      o'chiriladi. Bu amalni orqaga qaytarib bo'lmaydi.</p>
+    <div class="tkm-hd">
+      <div class="tkm-ico" style="color:var(--red);background:var(--red-bg)"><i class="icon-trash-2"></i></div>
+      <div style="min-width:0">
+        <div class="tkm-title">Hammasini tozalash</div>
+        <div class="tkm-sub">Orqaga qaytarib bo'lmaydi</div>
+      </div>
+      <button type="button" class="tkm-x" onclick="tkClose('clearModal')"><i class="icon-x"></i></button>
+    </div>
+    <p style="color:var(--txt2);font-size:13px;margin:0 0 4px">Barcha vazifalar, izohlar va tarix
+      butunlay o'chiriladi.</p>
     <form method="post" action="/tasks/clear-all">
-      <div style="display:flex;gap:10px;margin-top:18px">
-        <button type="button" class="btn btn-ghost" onclick="tkClose('clearModal')">Bekor</button>
-        <button class="btn" style="flex:1;background:var(--red);color:#fff">O'chirish</button>
+      <div class="tkm-ft">
+        <button type="button" class="btn btn-out" onclick="tkClose('clearModal')">Bekor</button>
+        <button class="btn" style="flex:1;justify-content:center;background:var(--red);color:#fff">O'chirish</button>
       </div>
     </form>
   </div>
@@ -271,11 +377,47 @@ function tkFilter(el,f){
   });
 }
 
-// ── Tayinlash
+// ── Yangi vazifa: kimga (bitta tanlov — xodim yoki rol)
+function tkPick(el,val){
+  document.getElementById('assignTo').value=val;
+  document.querySelectorAll('#newModal .tkp,#newModal .tkr').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+document.getElementById('newTaskForm').addEventListener('submit',function(e){
+  if(!document.getElementById('assignTo').value){
+    e.preventDefault();
+    alert('Kimga topshirilishini tanlang — xodim yoki jamoa');
+  }
+});
+
+// ── Muddat tezkor chiplari
+function tkDue(el,days){
+  const d=new Date(); d.setDate(d.getDate()+days);
+  document.getElementById('dueInput').value=d.toISOString().slice(0,10);
+  document.querySelectorAll('.tk-dq').forEach(c=>c.classList.toggle('on',c===el));
+}
+function tkDueManual(){
+  document.querySelectorAll('.tk-dq').forEach(c=>c.classList.remove('on'));
+}
+
+// ── Tayinlash (multi-tanlash: birinchisi asosiy, qolganlari hamkor)
+var _asel=[];
 function tkAssign(id){
   document.getElementById('assignForm').action='/tasks/'+id+'/assign';
+  _asel=[];
+  document.getElementById('assignIds').value='';
+  document.querySelectorAll('#assignPeople .tkp').forEach(c=>c.classList.remove('sel'));
   tkOpen('assignModal');
 }
+function tkAssignPick(el){
+  const id=el.dataset.id, i=_asel.indexOf(id);
+  if(i>=0){_asel.splice(i,1);el.classList.remove('sel');}
+  else{_asel.push(id);el.classList.add('sel');}
+  document.getElementById('assignIds').value=_asel.join(',');
+}
+document.getElementById('assignForm').addEventListener('submit',function(e){
+  if(!_asel.length){e.preventDefault();alert('Kamida bitta xodim tanlang');}
+});
 
 // ── Detail (fetch)
 function tkDetail(id){
