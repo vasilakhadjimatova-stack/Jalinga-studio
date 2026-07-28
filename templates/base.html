@@ -252,6 +252,11 @@ html[data-theme="marble"] .tbl tbody tr:hover{background:rgba(38,32,20,.03)}
 html[data-theme="marble"] .feed-item:hover{background:rgba(38,32,20,.03)}
 .feed-item:last-child{border-bottom:0}
 
+/* ── BILDIRISHNOMA BADGE ── */
+.ntf-badge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;
+  border-radius:99px;background:var(--red);color:#fff;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 4px}
+
 /* ── TOAST ── */
 .ntf{position:fixed;top:18px;right:18px;z-index:900;display:flex;flex-direction:column;gap:8px;max-width:88vw}
 .ntf div{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--green);
@@ -402,11 +407,9 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
       <div class="tb-crumb">{% block page_crumb %}Video studiya boshqaruvi{% endblock %}</div>
     </div>
     <div class="tb-right">
-      <a href="/notifications" class="tb-theme" title="Bildirishnomalar" style="position:relative;text-decoration:none">
+      <a href="/notifications" id="ntfBell" class="tb-theme" title="Bildirishnomalar" style="position:relative;text-decoration:none">
         <i class="icon-bell"></i>
-        {% if nav_unread %}<span style="position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;
-          border-radius:99px;background:var(--red);color:#fff;font-size:10px;font-weight:800;
-          display:flex;align-items:center;justify-content:center;padding:0 4px">{{ nav_unread if nav_unread < 100 else '99+' }}</span>{% endif %}
+        {% if nav_unread %}<span id="ntfBadge" class="ntf-badge">{{ nav_unread if nav_unread < 100 else '99+' }}</span>{% endif %}
       </a>
       <button class="tb-theme" onclick="jlTheme()" title="Mavzu">🌗</button>
     </div>
@@ -481,6 +484,31 @@ document.addEventListener('submit', function(e){
   // Modal ochilganда yoki fokusда bo'sh bo'lsa ham tiklaymiz
   document.addEventListener('focusin', function(e){
     if(isPhone(e.target)) prep(e.target); });
+})();
+
+/* ── Bildirishnoma badge — jonli yangilanish (har 30s + tab qaytganда) ── */
+(function(){
+  var bell = document.getElementById('ntfBell');
+  if(!bell) return;
+  function upd(){
+    fetch('/api/badge/notifications').then(function(r){return r.json();})
+      .then(function(j){
+        var b = document.getElementById('ntfBadge');
+        if(j.count > 0){
+          if(!b){
+            b = document.createElement('span');
+            b.id = 'ntfBadge'; b.className = 'ntf-badge';
+            bell.appendChild(b);
+          }
+          b.textContent = j.count < 100 ? j.count : '99+';
+        } else if(b){ b.remove(); }
+      }).catch(function(){});
+  }
+  setInterval(upd, 30000);
+  // Boshqa tab/ilovadan qaytganda darhol yangilash
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) upd();
+  });
 })();
 
 /* ── PWA: service worker + «Ilovani o'rnatish» ─────────────────────────── */
