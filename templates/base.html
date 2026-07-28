@@ -358,14 +358,17 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
   </div>
   <nav class="sb-nav">
     {% if current_user.is_buxgalter %}
-    {# Buxgalter — faqat moliya bo'limi #}
+    {# Buxgalter — moliya + vazifalar #}
     <div class="sb-sec">Moliya</div>
     <a href="/finance" class="sb-a {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i> Moliya</a>
     <a href="/analytics" class="sb-a {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i> Analitika</a>
+    <div class="sb-sec">Ish</div>
+    <a href="/tasks" class="sb-a {% if request.path.startswith('/tasks') %}active{% endif %}"><i class="icon-clipboard-list"></i> Vazifalar</a>
     {% else %}
     <div class="sb-sec">Asosiy</div>
     <a href="/" class="sb-a {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i> Boshqaruv paneli</a>
     <a href="/calendar" class="sb-a {% if request.path.startswith('/calendar') or request.path.startswith('/bookings') %}active{% endif %}"><i class="icon-calendar-days"></i> Kalendar / Bron</a>
+    <a href="/tasks" class="sb-a {% if request.path.startswith('/tasks') %}active{% endif %}"><i class="icon-clipboard-list"></i> Vazifalar</a>
     <div class="sb-sec">Mijozlar</div>
     <a href="/teachers" class="sb-a {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i> Mijozlar</a>
     <div class="sb-sec">Ishlab chiqarish</div>
@@ -399,6 +402,12 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
       <div class="tb-crumb">{% block page_crumb %}Video studiya boshqaruvi{% endblock %}</div>
     </div>
     <div class="tb-right">
+      <a href="/notifications" class="tb-theme" title="Bildirishnomalar" style="position:relative;text-decoration:none">
+        <i class="icon-bell"></i>
+        {% if nav_unread %}<span style="position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;
+          border-radius:99px;background:var(--red);color:#fff;font-size:10px;font-weight:800;
+          display:flex;align-items:center;justify-content:center;padding:0 4px">{{ nav_unread if nav_unread < 100 else '99+' }}</span>{% endif %}
+      </a>
       <button class="tb-theme" onclick="jlTheme()" title="Mavzu">🌗</button>
     </div>
   </div>
@@ -418,10 +427,12 @@ input,textarea,.select{-webkit-touch-callout:default;user-select:text;-webkit-us
 <nav class="bn">
   {% if current_user.is_buxgalter %}
   <a href="/finance" class="bn-item {% if request.path.startswith('/finance') %}active{% endif %}"><i class="icon-wallet"></i>Moliya</a>
+  <a href="/tasks" class="bn-item {% if request.path.startswith('/tasks') %}active{% endif %}"><i class="icon-clipboard-list"></i>Vazifa</a>
   <a href="/analytics" class="bn-item {% if request.path.startswith('/analytics') %}active{% endif %}"><i class="icon-trending-up"></i>Analitika</a>
   {% else %}
   <a href="/" class="bn-item {% if request.path=='/' %}active{% endif %}"><i class="icon-layout-dashboard"></i>Panel</a>
   <a href="/calendar" class="bn-item {% if request.path.startswith('/calendar') %}active{% endif %}"><i class="icon-calendar-days"></i>Kalendar</a>
+  <a href="/tasks" class="bn-item {% if request.path.startswith('/tasks') %}active{% endif %}"><i class="icon-clipboard-list"></i>Vazifa</a>
   <a href="/teachers" class="bn-item {% if request.path.startswith('/teachers') %}active{% endif %}"><i class="icon-users"></i>Mijozlar</a>
   <a href="/studios" class="bn-item {% if request.path.startswith('/studios') %}active{% endif %}"><i class="icon-clapperboard"></i>Studiya</a>
   {% if current_user and current_user.can_finance %}

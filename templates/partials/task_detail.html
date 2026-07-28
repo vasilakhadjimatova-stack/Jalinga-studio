@@ -1,0 +1,87 @@
+{# Vazifa batafsil — detailModal ichiga fetch bilan yuklanadi #}
+<div class="modal-title" style="justify-content:space-between">
+  <span style="display:flex;align-items:center;gap:9px;min-width:0">
+    <i class="icon-clipboard-list"></i>
+    <span style="overflow:hidden;text-overflow:ellipsis">{{ t.title }}</span>
+  </span>
+  <button class="btn btn-ghost btn-sm" onclick="tkClose('detailModal')"><i class="icon-x"></i></button>
+</div>
+
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px">
+  <span class="tag {{ {'new':'tag-gray','accepted':'tag-blue','in_progress':'tag-amber','done':'tag-green','cancelled':'tag-red'}.get(t.status,'tag-gray') }}">{{ t.status_label }}</span>
+  <span class="tag {{ 'tag-red' if t.priority=='urgent' else ('tag-amber' if t.priority=='high' else 'tag-gray') }}">{{ t.priority_label }}</span>
+  {% if t.due_date %}<span class="tag {{ 'tag-red' if t.due_state=='overdue' else ('tag-amber' if t.due_state in ('today','soon') else 'tag-gray') }}">🗓 {{ t.due_date|dmy }}</span>{% endif %}
+  {% if t.is_auto %}<span class="tag tag-gray">🤖 Avto</span>{% endif %}
+</div>
+
+{% if t.description %}
+<div class="card" style="margin-bottom:14px"><div class="card-bd" style="font-size:13px;color:var(--txt2);white-space:pre-wrap">{{ t.description }}</div></div>
+{% endif %}
+
+<table class="tbl" style="margin-bottom:14px">
+  <tr><td style="color:var(--txt3)">Topshirdi</td><td class="r">{{ t.assigner_name }}</td></tr>
+  <tr><td style="color:var(--txt3)">Mas'ul</td><td class="r">{{ t.assignee_name }}{% if t.co_assignee_names %} <span style="color:var(--txt3)">+ {{ t.co_assignee_names }}</span>{% endif %}</td></tr>
+  {% if t.progress %}<tr><td style="color:var(--txt3)">Bajarilishi</td><td class="r">{{ t.progress }}%</td></tr>{% endif %}
+  <tr><td style="color:var(--txt3)">Yaratilgan</td><td class="r">{{ t.created_at }}</td></tr>
+</table>
+
+{# Holat tugmalari #}
+{% if t.can_act and t.next_status %}
+<form method="post" action="/tasks/{{ t.id }}/advance" style="margin-bottom:10px">
+  <input type="hidden" name="status" value="{{ t.next_status }}">
+  <button class="btn btn-gold" style="width:100%">{{ t.next_action }}</button>
+</form>
+{% endif %}
+{% if t.can_edit %}
+<details style="margin-bottom:12px">
+  <summary style="cursor:pointer;font-size:12.5px;color:var(--txt2);padding:6px 0">✏️ Tahrirlash</summary>
+  <form method="post" action="/tasks/{{ t.id }}/edit" style="padding-top:8px">
+    <label>Nomi</label><input class="input" name="title" value="{{ t.title }}" maxlength="200">
+    <label>Tavsif</label><textarea name="description" rows="2">{{ t.description }}</textarea>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label>Muddat</label><input class="input" type="date" name="due_date" value="{{ t.due_date }}"></div>
+      <div style="flex:1"><label>Muhimlik</label>
+        <select class="select" name="priority">
+          {% for pv,pl in [('low','Past'),('normal',"O'rta"),('high','Yuqori'),('urgent','Shoshilinch')] %}
+          <option value="{{ pv }}" {% if t.priority==pv %}selected{% endif %}>{{ pl }}</option>{% endfor %}
+        </select></div>
+    </div>
+    <label>Bajarilishi: <span id="pv">{{ t.progress }}</span>%</label>
+    <input type="range" name="progress" min="0" max="100" step="5" value="{{ t.progress }}"
+           style="width:100%" oninput="document.getElementById('pv').textContent=this.value">
+    <button class="btn btn-out" style="width:100%;margin-top:10px">Saqlash</button>
+  </form>
+</details>
+{% endif %}
+
+{# Chat #}
+<div style="font-weight:800;font-size:12.5px;margin:8px 0 6px;color:var(--txt2)">💬 Muhokama</div>
+<div id="chatBox" style="max-height:230px;overflow-y:auto;background:var(--surface2);
+     border:1px solid var(--line);border-radius:var(--r2);padding:10px;margin-bottom:8px">
+  {% include "partials/task_chat.html" %}
+</div>
+<form id="chatForm" style="display:flex;gap:8px">
+  <input class="input" name="body" placeholder="Xabar yozing…" autocomplete="off" style="flex:1">
+  <button class="btn btn-gold"><i class="icon-send"></i></button>
+</form>
+
+{# Tarix #}
+{% if activities %}
+<details style="margin-top:12px">
+  <summary style="cursor:pointer;font-size:12px;color:var(--txt3);padding:6px 0">🕑 O'zgarishlar tarixi ({{ activities|length }})</summary>
+  <div style="padding-top:6px">
+    {% for a in activities %}
+    <div style="font-size:11.5px;color:var(--txt3);padding:4px 0;border-bottom:1px solid var(--line)">
+      <b style="color:var(--txt2)">{{ a.user_name }}</b> · {{ a.kind }}:
+      {{ a.old_value }} → <b>{{ a.new_value }}</b> · {{ a.ago }}
+    </div>{% endfor %}
+  </div>
+</details>
+{% endif %}
+
+{% if t.can_edit %}
+<form method="post" action="/tasks/{{ t.id }}/delete" style="margin-top:12px"
+      onsubmit="return confirm('Vazifa o‘chirilsinmi?')">
+  <button class="btn btn-ghost btn-sm" style="color:var(--red)"><i class="icon-trash-2"></i> O'chirish</button>
+</form>
+{% endif %}

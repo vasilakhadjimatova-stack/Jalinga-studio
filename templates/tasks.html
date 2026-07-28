@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Vazifalar{% endblock %}
+{% block page_title %}Vazifalar{% endblock %}
+{% block page_crumb %}Jamoa vazifalari — 4 bosqichli Kanban{% endblock %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<style>
+  .tk-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:12px;margin-bottom:18px}
+  .tk-stat{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r2);
+    padding:12px 15px}
+  .tk-stat b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;display:block}
+  .tk-stat span{font-size:10.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.5px;color:var(--txt3)}
+  .tk-stat.red b{color:var(--red)} .tk-stat.amber b{color:var(--amber)}
+  .tk-stat.gold b{color:var(--brand)} .tk-stat.green b{color:var(--green)}
+
+  .tk-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .tk-chip{display:flex;align-items:center;gap:8px;padding:7px 13px 7px 7px;
+    border-radius:999px;border:1px solid var(--line);background:var(--surface2);
+    cursor:pointer;font-size:12.5px;color:var(--txt2);transition:.15s;user-select:none}
+  .tk-chip:hover{border-color:var(--txt3);color:var(--txt)}
+  .tk-chip.on{background:var(--brand);border-color:var(--brand);color:#151004;font-weight:700}
+  .tk-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:10.5px;font-weight:800;color:#fff;flex:0 0 auto}
+  .tk-cnt{font-weight:800;opacity:.85;font-size:11.5px}
+
+  .tk-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-bottom:12px}
+  .tk-board > .card{min-width:0;display:flex;flex-direction:column;margin-bottom:0}
+  .tk-colbody{flex:1;min-height:300px;padding:12px}
+  @media (max-width:1100px){.tk-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:680px){
+    .tk-board{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -4px;padding:0 4px 12px}
+    .tk-board > .card{flex:0 0 86vw;min-width:86vw;scroll-snap-align:start}
+  }
+  .tk-col-hd{display:flex;align-items:center;gap:9px;padding:13px 16px;
+    border-bottom:2px solid;font-weight:800;font-size:13.5px}
+  .tk-col-hd i{font-size:16px}
+  .tk-col-new{background:rgba(240,168,49,.10);border-color:var(--brand);color:var(--brand)}
+  .tk-col-accepted{background:rgba(96,165,250,.10);border-color:var(--blue);color:var(--blue)}
+  .tk-col-prog{background:rgba(251,191,36,.10);border-color:var(--amber);color:var(--amber)}
+  .tk-col-done{background:rgba(124,191,160,.10);border-color:var(--green);color:var(--green)}
+  .tk-col-cnt{margin-left:auto;background:rgba(0,0,0,.28);padding:2px 11px;
+    border-radius:999px;font-size:12.5px;font-weight:800}
+
+  .tk-card{background:var(--surface2);border:1px solid var(--line);
+    border-left:4px solid var(--txt3);border-radius:12px;padding:13px 14px;
+    margin-bottom:11px;transition:.15s;cursor:grab}
+  .tk-card:hover{border-color:var(--txt3);transform:translateY(-1px);box-shadow:var(--sh2)}
+  .tk-card.p-urgent{border-left-color:var(--red)}
+  .tk-card.p-high{border-left-color:var(--amber)}
+  .tk-card.p-normal{border-left-color:var(--blue)}
+  .tk-card.p-low{border-left-color:var(--txt3)}
+  .tk-dragging{opacity:.55;cursor:grabbing}
+  .tk-ghost{opacity:.4;background:var(--brand-bg);border-style:dashed!important}
+  .tk-drop-on{background:var(--brand-bg);box-shadow:inset 0 0 0 2px var(--brand);border-radius:0 0 var(--r) var(--r)}
+  .tk-t{font-weight:700;font-size:13.5px;line-height:1.35;margin-bottom:7px;cursor:pointer}
+  .tk-t:hover{color:var(--brand)}
+  .tk-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .tk-owner{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2)}
+  .tk-due{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px}
+  .tk-due.overdue{background:var(--red-bg);color:var(--red)}
+  .tk-due.today{background:var(--amber-bg);color:var(--amber)}
+  .tk-due.soon{background:var(--blue-bg);color:var(--blue)}
+  .tk-due.ok{background:var(--surface);color:var(--txt3)}
+  .tk-await{background:var(--amber-bg);color:var(--amber);font-size:9.5px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:6px;
+    display:inline-flex;align-items:center;gap:5px;margin-bottom:8px}
+  .tk-act{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .tk-prog{height:5px;background:var(--surface);border-radius:99px;overflow:hidden;margin:9px 0 2px}
+  .tk-prog-bar{height:100%;background:var(--brand);transition:width .25s}
+  .tk-empty{text-align:center;padding:30px 10px;color:var(--txt3);font-size:12px}
+  .tk-empty i{display:block;font-size:26px;opacity:.4;margin-bottom:6px}
+  .modal-lg{max-width:560px}
+</style>
+
+<div class="ph">
+  <div>
+    <div class="gold-bar"></div>
+    <div class="ph-title">Vazifalar</div>
+    <div class="ph-sub">Topshiriq bering, holatini kuzating, jamoa bilan gaplashing</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-gold" onclick="tkOpen('newModal')"><i class="icon-plus"></i> Yangi vazifa</button>
+    {% if is_admin %}
+    <button class="btn btn-out" onclick="tkOpen('clearModal')"><i class="icon-trash-2"></i></button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="tk-stats">
+  <div class="tk-stat gold"><b>{{ counts.open_total }}</b><span>Ochiq</span></div>
+  <div class="tk-stat"><b>{{ counts.my }}</b><span>Menda</span></div>
+  <div class="tk-stat red"><b>{{ counts.overdue }}</b><span>Kechikkan</span></div>
+  <div class="tk-stat amber"><b>{{ counts.urgent }}</b><span>Shoshilinch</span></div>
+  <div class="tk-stat amber"><b>{{ counts.awaiting }}</b><span>Tayinlanmagan</span></div>
+  <div class="tk-stat green"><b>{{ counts.done_total }}</b><span>Bajarilgan</span></div>
+</div>
+
+<!-- Filtr: rollar -->
+<div class="tk-filter">
+  <div class="tk-chip on" data-filter="all" onclick="tkFilter(this,'all')">
+    <span class="tk-av" style="background:var(--brand)"><i class="icon-layers" style="font-size:13px"></i></span>
+    Hammasi
+  </div>
+  <div class="tk-chip" data-filter="mine" onclick="tkFilter(this,'mine')">
+    <span class="tk-av" style="background:#7CBFA0">M</span> Menga tegishli
+  </div>
+  {% for r in roles %}
+  <div class="tk-chip" data-filter="role:{{ r.role }}" onclick="tkFilter(this,'role:{{ r.role }}')">
+    <span class="tk-av" style="background:{{ r.color }}">{{ r.initials }}</span>
+    {{ r.label }} <span class="tk-cnt">{{ r.open }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="tk-board">
+  {% set cols = [
+    ('new','Yangi','icon-inbox','tk-col-new'),
+    ('accepted','Qabul qildim','icon-check','tk-col-accepted'),
+    ('in_progress','Jarayonda','icon-loader','tk-col-prog'),
+    ('done','Tugallandi','icon-check-circle-2','tk-col-done')] %}
+  {% for key,label,icon,cls in cols %}
+  <div class="card">
+    <div class="tk-col-hd {{ cls }}"><i class="{{ icon }}"></i> {{ label }}
+      <span class="tk-col-cnt">{{ by_status[key]|length }}</span></div>
+    <div class="tk-colbody" data-status="{{ key }}">
+      {% for t in by_status[key] %}
+      <div class="tk-card p-{{ t.priority }}" data-id="{{ t.id }}"
+           data-assignee="{{ t.assignee_key }}" data-role="{{ t.filter_role }}"
+           data-mine="{{ '1' if t.is_mine else '0' }}"
+           data-canact="{{ '1' if t.can_act else '0' }}" id="task-{{ t.id }}">
+        {% if t.awaits_assignment %}
+        <div class="tk-await"><i class="icon-user-plus" style="font-size:12px"></i> Tayinlanmagan</div>
+        {% endif %}
+        <div class="tk-t" onclick="tkDetail({{ t.id }})">{{ t.title }}</div>
+        {% if t.priority in ('high','urgent') %}
+        <span class="tag {{ 'tag-red' if t.priority=='urgent' else 'tag-amber' }}">{{ t.priority_label }}</span>
+        {% endif %}
+        {% if t.progress and t.status != 'done' %}
+        <div class="tk-prog"><div class="tk-prog-bar" style="width:{{ t.progress }}%"></div></div>
+        {% endif %}
+        <div class="tk-meta">
+          <span class="tk-owner">
+            <span class="tk-av" style="background:{{ t.owner_color }};width:20px;height:20px;font-size:9px">{{ t.owner_initials }}</span>
+            {{ t.owner }}
+          </span>
+          {% if t.due_date %}<span class="tk-due {{ t.due_state }}">🗓 {{ t.due_date|dmy }}</span>{% endif %}
+        </div>
+        <div class="tk-act">
+          {% if t.can_assign and t.awaits_assignment %}
+          <button class="btn btn-out btn-sm" onclick="tkAssign({{ t.id }})"><i class="icon-user-plus"></i> Tayinlash</button>
+          {% endif %}
+          {% if t.can_act and t.next_status %}
+          <form method="post" action="/tasks/{{ t.id }}/advance" style="display:inline">
+            <input type="hidden" name="status" value="{{ t.next_status }}">
+            <button class="btn btn-gold btn-sm">{{ t.next_action }}</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="tk-empty"><i class="icon-{{ icon.replace('icon-','') }}"></i>Bo'sh</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── YANGI VAZIFA MODALI ── -->
+<div class="modal-ov" id="newModal">
+  <div class="modal modal-lg">
+    <div class="modal-title"><i class="icon-clipboard-list"></i> Yangi vazifa</div>
+    <form method="post" action="/tasks/new">
+      <label>Vazifa nomi *</label>
+      <input class="input" name="title" required maxlength="200" placeholder="Masalan: Yakshanba yozuvini montaj qilish">
+      <label>Tavsif</label>
+      <textarea name="description" rows="3" placeholder="Batafsil (ixtiyoriy)"></textarea>
+      <label>Kimga topshiriladi *</label>
+      <select class="select" name="assign_to" required>
+        <option value="">— tanlang —</option>
+        <optgroup label="Xodim">
+          {% for p in people %}
+          <option value="user:{{ p.id }}">{{ p.name }} · {{ p.role_label }}</option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="Butun jamoa (rol)">
+          {% for r in roles %}
+          <option value="role:{{ r.role }}">{{ r.label }} (jamoa)</option>
+          {% endfor %}
+        </optgroup>
+      </select>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1"><label>Muddat *</label>
+          <input class="input" type="date" name="due_date" required value="{{ today_iso }}"></div>
+        <div style="flex:1"><label>Muhimlik</label>
+          <select class="select" name="priority">
+            <option value="normal">O'rta</option>
+            <option value="low">Past</option>
+            <option value="high">Yuqori</option>
+            <option value="urgent">Shoshilinch</option>
+          </select></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button type="button" class="btn btn-ghost" onclick="tkClose('newModal')">Bekor</button>
+        <button class="btn btn-gold" style="flex:1"><i class="icon-send"></i> Yuborish</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── TAYINLASH MODALI ── -->
+<div class="modal-ov" id="assignModal">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-user-plus"></i> Xodimga tayinlash</div>
+    <form method="post" id="assignForm">
+      <label>Mas'ul xodim</label>
+      <select class="select" name="assignee_id" required>
+        {% for p in people %}
+        <option value="{{ p.id }}">{{ p.name }} · {{ p.role_label }}</option>
+        {% endfor %}
+      </select>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button type="button" class="btn btn-ghost" onclick="tkClose('assignModal')">Bekor</button>
+        <button class="btn btn-gold" style="flex:1">Tayinlash</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if is_admin %}
+<div class="modal-ov" id="clearModal">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-trash-2" style="color:var(--red)"></i> Hammasini tozalash</div>
+    <p style="color:var(--txt2);font-size:13px;margin:8px 0 4px">Barcha vazifalar, izohlar va tarix
+      o'chiriladi. Bu amalni orqaga qaytarib bo'lmaydi.</p>
+    <form method="post" action="/tasks/clear-all">
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button type="button" class="btn btn-ghost" onclick="tkClose('clearModal')">Bekor</button>
+        <button class="btn" style="flex:1;background:var(--red);color:#fff">O'chirish</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── DETAIL MODALI ── -->
+<div class="modal-ov" id="detailModal">
+  <div class="modal modal-lg" id="detailBox" style="max-height:100%"></div>
+</div>
+
+<script>
+const ME_ID = {{ me_id }};
+function tkOpen(id){document.getElementById(id).classList.add('open');}
+function tkClose(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-ov').forEach(function(ov){
+  ov.addEventListener('click',function(e){if(e.target===ov)ov.classList.remove('open');});
+});
+
+// ── Filtr
+function tkFilter(el,f){
+  document.querySelectorAll('.tk-chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.tk-card').forEach(function(card){
+    let show=true;
+    if(f==='mine') show = card.dataset.mine==='1';
+    else if(f.startsWith('role:')) show = card.dataset.role===f.slice(5);
+    card.style.display = show ? '' : 'none';
+  });
+}
+
+// ── Tayinlash
+function tkAssign(id){
+  document.getElementById('assignForm').action='/tasks/'+id+'/assign';
+  tkOpen('assignModal');
+}
+
+// ── Detail (fetch)
+function tkDetail(id){
+  const box=document.getElementById('detailBox');
+  box.innerHTML='<div style="padding:40px;text-align:center;color:var(--txt3)">Yuklanmoqda…</div>';
+  tkOpen('detailModal');
+  fetch('/tasks/'+id+'/detail').then(r=>r.text()).then(h=>{box.innerHTML=h;tkBindChat(id);});
+}
+function tkBindChat(id){
+  const f=document.getElementById('chatForm');
+  if(!f) return;
+  const box=document.getElementById('chatBox');
+  if(box) box.scrollTop=box.scrollHeight;
+  f.addEventListener('submit',function(e){
+    e.preventDefault();
+    const inp=f.querySelector('[name=body]'); const v=inp.value.trim();
+    if(!v) return;
+    const fd=new FormData(f);
+    fetch('/tasks/'+id+'/comment',{method:'POST',body:fd,headers:{'X-Requested-With':'fetch'}})
+      .then(r=>r.text()).then(h=>{if(box){box.innerHTML=h;box.scrollTop=box.scrollHeight;}inp.value='';});
+  });
+}
+
+// ── Drag & drop (SortableJS)
+document.querySelectorAll('.tk-colbody').forEach(function(col){
+  new Sortable(col,{
+    group:'tasks',animation:150,ghostClass:'tk-ghost',dragClass:'tk-dragging',
+    onStart:function(){document.querySelectorAll('.tk-colbody').forEach(c=>c.classList.add('tk-drop-on'));},
+    onEnd:function(evt){
+      document.querySelectorAll('.tk-colbody').forEach(c=>c.classList.remove('tk-drop-on'));
+      const card=evt.item, to=evt.to.dataset.status, from=evt.from.dataset.status;
+      if(to===from) return;
+      if(card.dataset.canact!=='1'){ evt.from.appendChild(card); alert('Bu vazifa sizga tegishli emas'); return; }
+      const fd=new FormData(); fd.append('status',to);
+      fd.append('_csrf',(document.querySelector('meta[name=csrf-token]')||{}).content||'');
+      fetch('/tasks/'+card.dataset.id+'/move',{method:'POST',body:fd})
+        .then(r=>r.json()).then(j=>{ if(j.ok){ setTimeout(()=>location.reload(),250);} else { evt.from.appendChild(card); alert(j.error||'Xato'); }})
+        .catch(()=>{ evt.from.appendChild(card); });
+    }
+  });
+});
+
+// ── Hash orqali ochilgan vazifani ko'rsatish (#task-12)
+(function(){
+  const m=(location.hash||'').match(/task-(\d+)/);
+  if(m) setTimeout(()=>tkDetail(parseInt(m[1])),300);
+})();
+</script>
+{% endblock %}
