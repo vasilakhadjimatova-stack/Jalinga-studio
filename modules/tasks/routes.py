@@ -426,9 +426,12 @@ def edit(tid):
     if new_desc != (t.description or ""):
         changes.append(("description", (t.description or "")[:80], new_desc[:80]))
         t.description = new_desc
+    # Muddat MAJBURIY — tahrirda ham o'chirib bo'lmaydi (bo'sh kelsa
+    # eskisi qoladi); faqat yangi to'g'ri sana bilan almashtiriladi
     new_due = (f.get("due_date") or "").strip()
-    if new_due != (t.due_date or ""):
-        changes.append(("due_date", t.due_date or "—", new_due or "—"))
+    if new_due and re.match(r"^\d{4}-\d{2}-\d{2}$", new_due) \
+            and new_due != (t.due_date or ""):
+        changes.append(("due_date", t.due_date or "—", new_due))
         t.due_date = new_due
     new_pri = (f.get("priority") or "").strip()
     if new_pri in VALID_PRIORITY and new_pri != t.priority:
