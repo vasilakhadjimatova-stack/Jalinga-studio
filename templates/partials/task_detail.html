@@ -40,7 +40,7 @@
     <label>Nomi</label><input class="input" name="title" value="{{ t.title }}" maxlength="200">
     <label>Tavsif</label><textarea name="description" rows="2">{{ t.description }}</textarea>
     <div style="display:flex;gap:10px">
-      <div style="flex:1"><label>Muddat</label><input class="input" type="date" name="due_date" value="{{ t.due_date }}"></div>
+      <div style="flex:1"><label>Muddat *</label><input class="input" type="date" name="due_date" value="{{ t.due_date }}" required></div>
       <div style="flex:1"><label>Muhimlik</label>
         <select class="select" name="priority">
           {% for pv,pl in [('low','Past'),('normal',"O'rta"),('high','Yuqori'),('urgent','Shoshilinch')] %}

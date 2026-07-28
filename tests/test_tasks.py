@@ -51,6 +51,24 @@ def test_due_date_required(app, admin_client, post):
         assert Task.query.filter_by(title="Muddatsiz").first() is None
 
 
+def test_edit_cannot_clear_due_date(app, admin_client, post):
+    opid = _mk_operator(app)
+    post(admin_client, "/tasks/new", title="Muddat himoya",
+         assign_to=f"user:{opid}", due_date="2026-09-10")
+    with app.app_context():
+        tid = Task.query.filter_by(title="Muddat himoya").first().id
+    # Bo'sh muddat bilan tahrir — muddat o'chmasligi kerak
+    post(admin_client, f"/tasks/{tid}/edit", title="Muddat himoya",
+         due_date="", priority="normal")
+    with app.app_context():
+        assert Task.query.get(tid).due_date == "2026-09-10"
+    # To'g'ri yangi sana — almashadi
+    post(admin_client, f"/tasks/{tid}/edit", title="Muddat himoya",
+         due_date="2026-09-15", priority="normal")
+    with app.app_context():
+        assert Task.query.get(tid).due_date == "2026-09-15"
+
+
 def test_status_flow_and_assigner_notified(app, admin_client, post):
     opid = _mk_operator(app)
     post(admin_client, "/tasks/new", title="Oqim test",

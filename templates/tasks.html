@@ -267,15 +267,15 @@
         {% endfor %}
       </div>
 
-      <div class="tkm-sec"><i class="icon-calendar-clock"></i> Muddat</div>
+      <div class="tkm-sec"><i class="icon-calendar-clock"></i> Muddat <span style="color:var(--red);text-transform:none;letter-spacing:0">— majburiy</span></div>
       <div class="tk-due-q">
-        <span class="tk-dq on" onclick="tkDue(this,0)">Bugun</span>
+        <span class="tk-dq" onclick="tkDue(this,0)">Bugun</span>
         <span class="tk-dq" onclick="tkDue(this,1)">Ertaga</span>
         <span class="tk-dq" onclick="tkDue(this,3)">3 kun</span>
         <span class="tk-dq" onclick="tkDue(this,7)">1 hafta</span>
       </div>
       <input class="input" type="date" name="due_date" id="dueInput" required
-             value="{{ today_iso }}" onchange="tkDueManual()">
+             min="{{ today_iso }}" onchange="tkDueManual()">
 
       <div class="tkm-sec"><i class="icon-flag"></i> Muhimlik</div>
       <div class="tk-seg">
@@ -387,6 +387,11 @@ document.getElementById('newTaskForm').addEventListener('submit',function(e){
   if(!document.getElementById('assignTo').value){
     e.preventDefault();
     alert('Kimga topshirilishini tanlang — xodim yoki jamoa');
+    return;
+  }
+  if(!document.getElementById('dueInput').value){
+    e.preventDefault();
+    alert("⛔ Muddatni belgilang — muddatsiz vazifa tayinlanmaydi");
   }
 });
 
