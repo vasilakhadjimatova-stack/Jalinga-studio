@@ -17,6 +17,13 @@ def _mk_teacher(app, name, hours=0, phone=""):
         return t.id
 
 
+def _fd(n):
+    """Kelajakdagi sana (bugun + n kun) — qotirilgan sana vaqt o'tib «o'tgan
+    sana» bo'lib qolmasin va boshqa testlar bronlari bilan to'qnashmasin."""
+    from core.timeutils import now_tashkent
+    return (now_tashkent().date() + timedelta(days=n)).strftime("%Y-%m-%d")
+
+
 def _sid(app):
     from models.studio import Studio
     with app.app_context():
@@ -30,17 +37,17 @@ def test_work_hours_enforced(app, admin_client, post):
     sid = _sid(app)
     # 07:00 — ish vaqtidan tashqari, bloklanadi
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-01", start="07:00", end="09:00", pay_type="hourly")
+         date=_fd(401), start="07:00", end="09:00", pay_type="hourly")
     with app.app_context():
         assert Booking.query.filter_by(teacher_id=tid).count() == 0
     # 22:00 gacha — tashqari, bloklanadi
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-01", start="20:00", end="22:00", pay_type="hourly")
+         date=_fd(401), start="20:00", end="22:00", pay_type="hourly")
     with app.app_context():
         assert Booking.query.filter_by(teacher_id=tid).count() == 0
     # 09:00–11:00 — ichida, o'tadi
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-01", start="09:00", end="11:00", pay_type="hourly")
+         date=_fd(401), start="09:00", end="11:00", pay_type="hourly")
     with app.app_context():
         assert Booking.query.filter_by(teacher_id=tid).count() == 1
 
@@ -52,24 +59,24 @@ def test_booking_edit_flow(app, admin_client, post):
     tid = _mk_teacher(app, "Edit Ustoz")
     sid = _sid(app)
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-02", start="10:00", end="12:00", pay_type="hourly")
+         date=_fd(402), start="10:00", end="12:00", pay_type="hourly")
     with app.app_context():
         b = Booking.query.filter_by(teacher_id=tid).first()
         bid, rate = b.id, Studio.query.get(sid).hourly_rate
     # Boshqa bron bilan to'qnashuvga ko'chirish — bloklanadi
     tid2 = _mk_teacher(app, "Edit Ustoz 2")
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid2,
-         date="2026-10-02", start="14:00", end="16:00", pay_type="hourly")
+         date=_fd(402), start="14:00", end="16:00", pay_type="hourly")
     post(admin_client, f"/bookings/{bid}/edit", studio_id=sid,
-         date="2026-10-02", start="15:00", end="17:00")
+         date=_fd(402), start="15:00", end="17:00")
     with app.app_context():
         assert Booking.query.get(bid).start == "10:00"   # o'zgarmadi
     # Bo'sh vaqtga 3 soatga ko'chirish — o'tadi, to'lov yangilanadi
     post(admin_client, f"/bookings/{bid}/edit", studio_id=sid,
-         date="2026-10-03", start="09:00", end="12:00")
+         date=_fd(403), start="09:00", end="12:00")
     with app.app_context():
         b = Booking.query.get(bid)
-        assert b.date == "2026-10-03" and b.hours == 3
+        assert b.date == _fd(403) and b.hours == 3
         p = Payment.query.filter_by(booking_id=bid, is_paid=False).first()
         assert p.amount == round(3 * rate)               # summa yangilandi
 
@@ -80,12 +87,12 @@ def test_booking_edit_package_balance_guard(app, admin_client, post):
     tid = _mk_teacher(app, "EditPaket Ustoz", hours=2)
     sid = _sid(app)
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-04", start="10:00", end="12:00", pay_type="package")
+         date=_fd(404), start="10:00", end="12:00", pay_type="package")
     with app.app_context():
         bid = Booking.query.filter_by(teacher_id=tid).first().id
     # 2 soatlik balans bilan 4 soatga uzaytirish — yo'q
     post(admin_client, f"/bookings/{bid}/edit", studio_id=sid,
-         date="2026-10-04", start="10:00", end="14:00")
+         date=_fd(404), start="10:00", end="14:00")
     with app.app_context():
         assert Booking.query.get(bid).hours == 2
 
@@ -97,7 +104,7 @@ def test_noshow_burns_package_hours(app, admin_client, post):
     tid = _mk_teacher(app, "Noshow Ustoz", hours=10)
     sid = _sid(app)
     post(admin_client, "/bookings/save", studio_id=sid, teacher_id=tid,
-         date="2026-10-05", start="10:00", end="12:00", pay_type="package")
+         date=_fd(405), start="10:00", end="12:00", pay_type="package")
     with app.app_context():
         bid = Booking.query.filter_by(teacher_id=tid).first().id
         assert Teacher.query.get(tid).balance_hours() == 8

@@ -1,8 +1,8 @@
-"""Moliya ERP — Google Sheets («Jalinga 2026») jurnali asosida.
+"""Moliya ERP — dastur ichida yuritiladigan ДДС jurnali.
 
 Sahifalar: dashboard (hisoblar+KPI+grafiklar) · tranzaksiyalar jurnali ·
-ДДС hisoboti (yillik pul oqimi) · qarzlar (DOLG) · dividendlar ·
-studiya to'lovlari (eski jurnal). Sync: ochiq xlsx eksport orqali.
+ДДС hisoboti (yillik pul oqimi) · qarzlar · dividendlar · to'lov kalendari ·
+tahlil · studiya to'lovlari · sozlamalar (hisoblar, statyalar, oy yopish).
 """
 import logging
 import math
@@ -37,7 +37,7 @@ from models.billing import Teacher, Payment, PAY_METHODS
 from models.finance import (FinWallet, FinCategory, FinTransaction,
                             FinDebt, FinSetting, FinRecurring, FinPlan)
 from models.audit import record
-from modules.finance.sheets_sync import ACTIVITY_LABELS
+from modules.finance.defaults import ACTIVITY_LABELS
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("finance", __name__)
@@ -83,11 +83,6 @@ def _wallet_balances():
         bal = (w.opening_balance or 0) + float(sums.get(w.name) or 0)
         out.append({"name": w.name, "balance": bal, "currency": w.currency})
     return out
-
-
-def _sync_info():
-    return {"last_sync": FinSetting.get("last_sync", "—"),
-            "source": FinSetting.get("sync_source", "")}
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
@@ -150,8 +145,7 @@ def index():
         exp_series=[round(v) for v in exp[1:]],
         bal_series=bal_series, last_month=max([t.month for t in txns],
                                               default=0),
-        top_exp=top_exp, debt_out=debt_out, recent=recent,
-        sync=_sync_info())
+        top_exp=top_exp, debt_out=debt_out, recent=recent)
 
 
 # ── Tranzaksiyalar jurnali ───────────────────────────────────────────────────
@@ -213,8 +207,7 @@ def transactions():
     return render_template(
         "finance_txns.html", rows=rows, month=month, wallet=wallet,
         category=category, dirf=dirf, q=q, t_in=t_in, t_out=t_out,
-        wallets=wallets, cats=cats, activity_labels=ACTIVITY_LABELS,
-        sync=_sync_info())
+        wallets=wallets, cats=cats, activity_labels=ACTIVITY_LABELS)
 
 
 @bp.route("/finance/transactions/add", methods=["POST"])
@@ -388,8 +381,7 @@ def dds():
     year = _pick_year()
     report = build_dds(year)
     return render_template("finance_dds.html", r=report, year=year,
-                           years=_years(), month_names=MONTH_NAMES,
-                           sync=_sync_info())
+                           years=_years(), month_names=MONTH_NAMES,)
 
 
 # ── Qarzlar (DOLG) — to'liq boshqaruv ────────────────────────────────────────
@@ -401,8 +393,7 @@ def debts():
     total = sum(d.amount or 0 for d in rows)
     repaid = sum(d.repaid or 0 for d in rows)
     return render_template("finance_debts.html", rows=rows, total=total,
-                           repaid=repaid, outstanding=total - repaid,
-                           sync=_sync_info())
+                           repaid=repaid, outstanding=total - repaid,)
 
 
 def _num(field, default=0.0):
@@ -495,8 +486,7 @@ def dividends():
     for t in rows:
         by_year[t.year] += t.amount
     return render_template("finance_dividends.html", rows=rows, total=total,
-                           by_year=sorted(by_year.items()),
-                           sync=_sync_info())
+                           by_year=sorted(by_year.items()),)
 
 
 # ── Sozlamalar: hisoblar (ochilish qoldig'i) + statyalar ─────────────────────
@@ -512,7 +502,7 @@ def settings():
     cats = FinCategory.query.order_by(FinCategory.direction.desc(),
                                       FinCategory.sort).all()
     return render_template("finance_settings.html", wallets=wal, cats=cats,
-                           activity_labels=ACTIVITY_LABELS, sync=_sync_info())
+                           activity_labels=ACTIVITY_LABELS)
 
 
 @bp.route("/finance/wallets/save", methods=["POST"])
@@ -774,7 +764,7 @@ def calendar():
         min_proj=min_proj, buffer=buffer,
         at_risk=(min_proj < 0), below_buffer=(min_proj < buffer),
         prev_y=prev_y, prev_m=prev_m, next_y=next_y, next_m=next_m,
-        wallets=wallets, cats=cats, recs=recs, sync=_sync_info())
+        wallets=wallets, cats=cats, recs=recs)
 
 
 @bp.route("/finance/calendar/plan/add", methods=["POST"])
@@ -958,7 +948,7 @@ def analysis():
         "finance_analysis.html", year=year, years=_years(),
         month_names=MONTH_NAMES, exp_rows=exp_rows, exp_total=exp_total,
         inc_rows=inc_rows, inc_total=inc_total,
-        counterparties=counterparties, sync=_sync_info())
+        counterparties=counterparties)
 
 
 # ── Studiya to'lovlari (eski jurnal — paket/soatbay tasdiqlash) ─────────────

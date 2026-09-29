@@ -1,4 +1,11 @@
 """To'lovni «to'landi» qilganda hisob (hamyon) so'raladi va moliyaga bog'lanadi."""
+from datetime import timedelta
+
+from core.timeutils import now_tashkent
+
+# Bron sanalari kelajakda bo'lishi shart (o'tgan sanaga bron qilinmaydi)
+D1 = (now_tashkent().date() + timedelta(days=411)).strftime("%Y-%m-%d")
+D2 = (now_tashkent().date() + timedelta(days=412)).strftime("%Y-%m-%d")
 
 
 def _mk_pending_payment(app, amount=1500000, method="naqd"):
@@ -66,14 +73,14 @@ def test_booking_paid_now_links_finance(app, admin_client, post):
         sid = Studio.query.first().id
         tid = t.id
     post(admin_client, "/bookings/save", client_mode="existing",
-         studio_id=sid, teacher_id=tid, date="2026-08-11",
+         studio_id=sid, teacher_id=tid, date=D1,
          start="10:00", end="12:00", pay_type="hourly",
          paid_now="1", pay_wallet="Наличные", pay_method="naqd")
     from models.studio import Booking
     from models.billing import Payment
     from models.finance import FinTransaction
     with app.app_context():
-        b = Booking.query.filter_by(teacher_id=tid, date="2026-08-11").first()
+        b = Booking.query.filter_by(teacher_id=tid, date=D1).first()
         p = Payment.query.filter_by(booking_id=b.id).first()
         assert p.is_paid is True and p.wallet == "Наличные"
         tx = FinTransaction.query.filter_by(
@@ -91,12 +98,12 @@ def test_booking_without_paid_now_stays_pending(app, admin_client, post):
         sid = Studio.query.first().id
         tid = t.id
     post(admin_client, "/bookings/save", client_mode="existing",
-         studio_id=sid, teacher_id=tid, date="2026-08-12",
+         studio_id=sid, teacher_id=tid, date=D2,
          start="10:00", end="12:00", pay_type="hourly")
     from models.studio import Booking
     from models.billing import Payment
     with app.app_context():
-        b = Booking.query.filter_by(teacher_id=tid, date="2026-08-12").first()
+        b = Booking.query.filter_by(teacher_id=tid, date=D2).first()
         p = Payment.query.filter_by(booking_id=b.id).first()
         assert p.is_paid is False and p.wallet == ""
 
