@@ -3,6 +3,7 @@
 # sinovdan o'tgan minimal versiya.
 Flask>=3.1,<4
 Flask-SQLAlchemy>=3.1,<4
+SQLAlchemy>=2.0,<2.2
 gunicorn>=21,<24
 # Postgres drayveri — Railway'да DATABASE_URL Postgres'ga ulanganда kerak.
 psycopg2-binary>=2.9,<3
