@@ -11,6 +11,7 @@ _TMP = tempfile.mkdtemp(prefix="jalinga_test_")
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(_TMP, "t.db").replace("\\", "/")
 os.environ["SECRET_KEY"] = "pytest-secret"
 os.environ["ADMIN_CODE"] = "111111"
+os.environ["DISABLE_AUTOPILOT"] = "1"   # fon thread test bazasiga yozmasin
 
 import pytest  # noqa: E402
 

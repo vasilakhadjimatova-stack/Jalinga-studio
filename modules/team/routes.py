@@ -3,8 +3,7 @@
 Himoyalar: kod unikal va kamida 4 belgi; o'zini faolsizlantirib bo'lmaydi;
 OXIRGI faol admin faolsizlantirilmaydi/rolini pasaytirib bo'lmaydi.
 """
-import json
-from datetime import date, datetime
+from datetime import datetime
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, Response)
@@ -39,24 +38,13 @@ def backup():
     """Butun bazani JSON'ga eksport — off-platforma zaxira nusxa.
 
     Har deploy/baza yo'qolishiga qarshi himoya: rahbar istagan payt bir tugma
-    bilan barcha ma'lumotni (mijozlar, bronlar, to'lovlar, moliya, montaj,
-    jamoa) yuklab oladi. SQLite→Postgres ko'chirishда ham asqotadi.
+    bilan barcha ma'lumotni (mijozlar, bronlar, to'lovlar, moliya, jamoa)
+    yuklab oladi. SQLite→Postgres ko'chirishда ham asqotadi. Xuddi shu nusxa
+    har kuni avtopilot orqali rahbarning Telegram'iga ham yuboriladi.
     """
-    def _val(v):
-        if isinstance(v, (datetime, date)):
-            return v.isoformat()
-        return v
-
-    dump = {"_meta": {"app": "Jalinga Studio",
-                      "exported_at": datetime.utcnow().isoformat() + "Z",
-                      "format": 1}}
-    # Barcha ro'yxatga olingan jadvallar (models/__init__ orqali) — generic
-    for table in db.metadata.sorted_tables:
-        rows = db.session.execute(table.select()).mappings().all()
-        dump[table.name] = [{k: _val(v) for k, v in r.items()} for r in rows]
-
+    from core.backup import backup_json_bytes
+    body, _total = backup_json_bytes()
     stamp = datetime.utcnow().strftime("%Y%m%d-%H%M")
-    body = json.dumps(dump, ensure_ascii=False, indent=1)
     return Response(body, mimetype="application/json", headers={
         "Content-Disposition": f'attachment; filename="jalinga-backup-{stamp}.json"'})
 

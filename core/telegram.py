@@ -53,6 +53,36 @@ def tg_send(chat_id, text):
         return False
 
 
+def tg_send_document(chat_id, filename, data, caption="",
+                     content_type="application/octet-stream"):
+    """Fayl yuborish (sendDocument, multipart) — zaxira nusxa uchun.
+    Xatoда jim; muvaffaqiyatда True."""
+    if not TOKEN or not chat_id:
+        return False
+    import uuid
+    bnd = "----jalinga" + uuid.uuid4().hex
+
+    def fld(n, v):
+        return (f"--{bnd}\r\nContent-Disposition: form-data; "
+                f'name="{n}"\r\n\r\n{v}\r\n').encode()
+
+    body = fld("chat_id", str(chat_id))
+    if caption:
+        body += fld("caption", caption) + fld("parse_mode", "HTML")
+    body += (f"--{bnd}\r\nContent-Disposition: form-data; name=\"document\"; "
+             f'filename="{filename}"\r\nContent-Type: {content_type}\r\n\r\n'
+             ).encode() + data + f"\r\n--{bnd}--\r\n".encode()
+    try:
+        req = urllib.request.Request(f"{_API}/sendDocument", data=body,
+                                     method="POST")
+        req.add_header("Content-Type", f"multipart/form-data; boundary={bnd}")
+        urllib.request.urlopen(req, timeout=60)
+        return True
+    except Exception as exc:
+        logger.warning(f"tg_send_document xato: {exc}")
+        return False
+
+
 def tg_notify_user(user_id, text):
     """Xodimга (User) Telegram xabar — akkaunt ulangan bo'lsa. Aks holda no-op.
     Vazifalar tizimi shu orqali push yuboradi."""
@@ -254,14 +284,6 @@ def _digest_loop(app, hour=9):
                         User.role.in_(("admin", "buxgalter"))).all()
                     for u in admins:
                         tg_send(u.tg_chat_id, text)
-                    # Kunlik texnik xizmat: eski tugagan vazifa/habarnomani tozalash
-                    try:
-                        from core.comms import (prune_old_tasks,
-                                                prune_old_notifications)
-                        prune_old_tasks(60)
-                        prune_old_notifications(90)
-                    except Exception as exc:
-                        logger.warning(f"kunlik tozalash xato: {exc}")
                 last_sent_day = now.strftime("%Y-%m-%d")
         except Exception as exc:
             logger.error(f"tg digest xato: {exc}")

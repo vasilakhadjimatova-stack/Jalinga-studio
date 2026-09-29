@@ -146,6 +146,10 @@ def create_app():
     if not app.config.get("TESTING") and not os.environ.get("DISABLE_BOT"):
         from core.telegram import start_bot
         start_bot(app)
+    # Avtopilot — kunlik fon ishlari (so'rovnoma, retention, zaxira, tozalash)
+    if not app.config.get("TESTING") and not os.environ.get("DISABLE_AUTOPILOT"):
+        from core.autopilot import start_autopilot
+        start_autopilot(app)
 
     return app
 
