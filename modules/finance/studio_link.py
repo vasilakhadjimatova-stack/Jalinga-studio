@@ -58,8 +58,15 @@ def sync_payment_to_finance(payment, teacher_name=None):
     Commit QILMAYDI — chaqiruvchi zimmasida. Category yo'q bo'lsa jim
     (moliya bazasi hali seed bo'lmagan bo'lishi mumkin) — o'tkazib yuboradi.
     """
+    from core.period_lock import is_locked, shift_if_locked
     existing = FinTransaction.query.filter_by(
         payment_id=payment.id, source="studio").first()
+
+    # Yopilgan oydagi yozuv muzlatilgan — unga tegmaymiz (route'lar bunday
+    # to'lovni qaytarish/o'chirishni oldindan rad etadi; bron tahriri esa
+    # yopiq davr kassasini o'zgartirmasligi kerak).
+    if existing is not None and is_locked(existing.date):
+        return existing
 
     if not _should_book(payment):
         if existing:
@@ -75,6 +82,8 @@ def sync_payment_to_finance(payment, teacher_name=None):
     date = (payment.date or "")[:10]
     if len(date) != 10:
         return None
+    # Yopiq oy sanasi bilan tasdiqlangan to'lov — pul bugungi kunga tushadi
+    date, _shifted = shift_if_locked(date)
     # Aniq tanlangan hisob (Payment.wallet) ustun; bo'lmasa usuldan
     wallet = _resolve_wallet(payment.method, getattr(payment, "wallet", ""))
     who = (teacher_name or "").strip()
@@ -97,6 +106,14 @@ def sync_payment_to_finance(payment, teacher_name=None):
     existing.direction = cat.direction     # in
     existing.activity = cat.activity       # operating
     return existing
+
+
+def linked_tx_locked(payment_id):
+    """To'lovga bog'langan moliya yozuvi yopiq oydami (o'zgartirib bo'lmaydi)."""
+    from core.period_lock import is_locked
+    tx = FinTransaction.query.filter_by(
+        payment_id=payment_id, source="studio").first()
+    return bool(tx and is_locked(tx.date)), (tx.date if tx else "")
 
 
 def unlink_payment_finance(payment_id):
