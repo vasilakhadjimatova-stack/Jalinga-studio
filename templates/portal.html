@@ -65,6 +65,10 @@
     </div>
   </div>
 
+  <a href="{{ (request.host_url ~ 'my/' ~ token ~ '/calendar.ics')|replace('https://', 'webcal://')|replace('http://', 'webcal://') }}"
+     style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--txt3);margin:-4px 0 14px 4px">
+    <i class="icon-calendar-plus"></i> Yozuvlarimni telefon kalendariga qo'shish (1 soat oldin eslatadi)</a>
+
   <!-- Yangi bron -->
   <div class="card">
     <div class="card-hd"><div class="card-title"><i class="icon-plus-circle"></i> Yangi bron qilish</div></div>

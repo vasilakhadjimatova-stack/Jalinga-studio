@@ -13,7 +13,7 @@ import json
 from datetime import datetime
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, jsonify)
+                   flash, jsonify, Response, abort)
 
 from core.auth import login_required, current_user
 from core.timeutils import today_iso
@@ -171,8 +171,15 @@ def calendar():
                 agenda.append({**it, "date": ds})
     agenda = agenda[:15]
 
+    me = current_user()
+    if not me.feed_token:
+        me.ensure_feed_token()
+        db.session.commit()
+    feed_url = (request.host_url.rstrip("/")
+                + url_for("bookings.staff_feed", token=me.feed_token))
+
     return render_template(
-        "calendar_month.html",
+        "calendar_month.html", feed_url=feed_url,
         year=year, month=month, month_name=MONTHS_UZ[month],
         weekdays=WEEKDAYS, weeks=weeks, agenda=agenda, bk=bk,
         studios=[s.to_dict() for s in studios],
@@ -183,6 +190,61 @@ def calendar():
         wallets=[w.name for w in FinWallet.query.order_by(FinWallet.sort).all()],
         pay_methods=PAY_METHODS,
         today_iso=today.strftime("%Y-%m-%d"))
+
+
+@bp.route("/calendar/feed/<token>.ics")
+def staff_feed(token):
+    """Xodim kalendar lentasi (ICS) — barcha studiyalar bronlari.
+    Login'siz: maxfiy kalit = ruxsat (telefon kalendari cookie yubormaydi).
+    Faolsizlantirilgan xodimning lentasi darhol yopiladi."""
+    from core.ics import build_calendar, feed_window
+    from models.user import User
+    token = (token or "").strip()
+    if len(token) < 16:
+        abort(404)
+    u = User.query.filter_by(feed_token=token, is_active=True).first()
+    if not u:
+        abort(404)
+    lo, hi = feed_window()
+    smap = {s.id: s.name for s in Studio.query.all()}
+    tmap = {t.id: t for t in Teacher.query.all()}
+    events = []
+    for b in Booking.query.filter(
+            Booking.date >= lo, Booking.date <= hi,
+            Booking.status.in_(("active", "done"))).all():
+        t = tmap.get(b.teacher_id)
+        pay = "📦 paket" if b.pay_type == "package" else "💵 soatbay"
+        desc = [f"Mijoz: {t.name if t else '?'}"]
+        if t and t.phone:
+            desc.append(f"Tel: {t.phone}")
+        desc.append(f"To'lov: {pay}")
+        if b.operator:
+            desc.append(f"Operator: {b.operator}")
+        if b.note:
+            desc.append(f"Izoh: {b.note}")
+        events.append({
+            "uid": f"booking-{b.id}@jalinga", "date": b.date,
+            "start": b.start, "end": b.end,
+            "summary": f"{t.name if t else '?'} · {smap.get(b.studio_id, '')}",
+            "description": "\n".join(desc),
+            "location": f"Jalinga Studio — {smap.get(b.studio_id, '')}"})
+    body = build_calendar("Jalinga Studio — bronlar", events)
+    return Response(body, mimetype="text/calendar", headers={
+        "Content-Disposition": 'inline; filename="jalinga.ics"',
+        "Cache-Control": "private, max-age=300"})
+
+
+@bp.route("/calendar/feed/reset", methods=["POST"])
+@login_required
+def staff_feed_reset():
+    """Kalendar havolasini yangilash (eskisi darhol ishlamay qoladi)."""
+    u = current_user()
+    u.feed_token = ""
+    u.ensure_feed_token()
+    db.session.commit()
+    flash("🔄 Kalendar havolasi yangilandi — telefoningizda qayta ulang",
+          "success")
+    return redirect(url_for("bookings.calendar"))
 
 
 @bp.route("/calendar/month")
