@@ -1,12 +1,17 @@
 """Jalinga Studio — sozlamalar (env orqali, sirlar kodda YO'Q)."""
 import os
+import re
 
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "sqlite:///jalinga.db").replace(
-        "postgres://", "postgresql://")
+    # Postgres drayveri ANIQ ko'rsatiladi (psycopg2). SQLAlchemy 2.1'dan
+    # boshlab «postgresql://» standart holda psycopg (v3) ni qidiradi —
+    # u o'rnatilmagani uchun deploy yiqilardi. Railway «postgres://» ham
+    # berishi mumkin — ikkalasi ham normallashtiriladi.
+    SQLALCHEMY_DATABASE_URI = re.sub(
+        r"^postgres(?:ql)?://", "postgresql+psycopg2://",
+        os.environ.get("DATABASE_URL", "sqlite:///jalinga.db"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 

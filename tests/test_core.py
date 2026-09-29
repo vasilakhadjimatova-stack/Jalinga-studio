@@ -127,3 +127,16 @@ def test_pages_render(admin_client):
     for url in ("/", "/calendar", "/teachers", "/studios", "/finance"):
         r = admin_client.get(url)
         assert r.status_code == 200, url
+
+
+def test_postgres_url_uses_installed_psycopg2_driver(monkeypatch):
+    """SQLAlchemy 2.1+ «postgresql://» uchun psycopg (v3) ni tanlaydi — biz
+    faqat psycopg2 o'rnatamiz, shuning uchun drayver aniq ko'rsatilishi shart."""
+    import importlib
+    import config
+    for url in ("postgres://u:p@h/d", "postgresql://u:p@h/d"):
+        monkeypatch.setenv("DATABASE_URL", url)
+        importlib.reload(config)
+        assert config.Config.SQLALCHEMY_DATABASE_URI == "postgresql+psycopg2://u:p@h/d"
+    monkeypatch.undo()           # test bazasi manzilini qaytarib, qayta yuklash
+    importlib.reload(config)
