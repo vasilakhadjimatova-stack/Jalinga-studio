@@ -438,6 +438,14 @@ def set_status(bid):
             warn = (" · ⚠️ bu bronда to'langan to'lov bor — kerak bo'lsa "
                     "Moliyada qaytaring")
     db.session.commit()
+    # Yozuv bo'ldi → mijozdan fikr so'raymiz (CSAT/NPS; idempotent)
+    if new == "done":
+        try:
+            from core.feedback import create_survey_for_booking
+            create_survey_for_booking(b)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("so'rovnoma yaratilmadi")
     extra = ""
     if new == "noshow" and b.pay_type == "package":
         extra = f" — {b.hours:g} soat balansdan kuydi (24 soat qoidasi)"

@@ -82,6 +82,7 @@ def create_app():
     from modules.pwa.routes import bp as pwa_bp
     from modules.book.routes import bp as book_bp
     from modules.tasks.routes import bp as tasks_bp
+    from modules.feedback.routes import bp as feedback_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dash_bp)
     app.register_blueprint(studios_bp)
@@ -94,6 +95,7 @@ def create_app():
     app.register_blueprint(pwa_bp)
     app.register_blueprint(book_bp)
     app.register_blueprint(tasks_bp)
+    app.register_blueprint(feedback_bp)
 
     @app.context_processor
     def inject_globals():

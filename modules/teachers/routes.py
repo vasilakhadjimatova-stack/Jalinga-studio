@@ -243,8 +243,11 @@ def detail(tid):
     notes = ClientNote.query.filter_by(teacher_id=tid).order_by(
         ClientNote.done.asc(), ClientNote.id.desc()).limit(100).all()
 
+    from core.feedback import teacher_rating
+    rating, rating_n = teacher_rating(t.id)
+
     return render_template(
-        "teacher_detail.html", t=t.to_dict(),
+        "teacher_detail.html", t=t.to_dict(), rating=rating, rating_n=rating_n,
         purchased=t.hours_purchased(), used=t.hours_used(),
         ltv=met.get("ltv", 0), sessions=met.get("sessions", 0),
         last_visit=met.get("last", ""), next_visit=met.get("next", ""),

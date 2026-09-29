@@ -27,6 +27,13 @@
   <div style="font-size:11.5px;color:var(--green);margin-bottom:14px;padding-left:4px">✅ Telegram ulangan — eslatmalar botga keladi</div>
   {% endif %}
 
+  {% if pending_survey %}
+  <a href="/survey/{{ pending_survey.token }}"
+     style="display:flex;align-items:center;gap:10px;background:rgba(240,168,49,.12);border:1px solid var(--brand);
+     border-radius:14px;padding:13px 16px;color:var(--brand);font-weight:700;font-size:13px;margin-bottom:14px">
+    ⭐ Oxirgi yozuvingizni baholang — 1 daqiqa, fikringiz biz uchun muhim</a>
+  {% endif %}
+
   <!-- Kelgusi yozuvlar -->
   <div class="card">
     <div class="card-hd"><div class="card-title"><i class="icon-calendar-clock"></i> Kelgusi yozuvlarim</div></div>

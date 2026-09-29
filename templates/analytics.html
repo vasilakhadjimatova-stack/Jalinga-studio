@@ -255,6 +255,49 @@
     </div>
   </div>
 </div>
+
+<!-- Mijoz fikri (CSAT + NPS) -->
+<div class="card" style="margin-top:16px" id="feedback">
+  <div class="card-hd"><div class="card-title"><i class="icon-message-square-heart"></i> Mijoz fikri — {{ fb.days }} kun</div>
+    <span class="tag tag-gray" title="Yuborilgan so'rovnomalardan javob berilgani">javob: {{ fb.done }}/{{ fb.sent }} ({{ fb.rate }}%)</span></div>
+  {% if fb.done %}
+  <div class="card-bd">
+    <div class="segrow" style="margin-bottom:14px">
+      <div class="segc"><b style="color:var(--brand)">{{ fb.avg if fb.avg is not none else '—' }}</b><span>O'rtacha ⭐ /5</span></div>
+      <div class="segc" title="NPS = tarafdorlar% − tanqidchilar% (−100…+100)">
+        <b style="color:{% if fb.nps is none %}var(--txt3){% elif fb.nps >= 30 %}var(--green){% elif fb.nps >= 0 %}var(--amber){% else %}var(--red){% endif %}">{{ fb.nps if fb.nps is not none else '—' }}</b><span>NPS</span></div>
+      <div class="segc"><b style="color:var(--green)">{{ fb.promoters }}</b><span>Tarafdor (9–10)</span></div>
+      <div class="segc"><b style="color:{{ 'var(--red)' if fb.detractors else 'var(--txt)' }}">{{ fb.detractors }}</b><span>Tanqidchi (0–6)</span></div>
+    </div>
+    <div class="grid g2" style="gap:18px">
+      <div>
+        {% for d in fb.dims %}
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:9px">
+          <span>{{ d.emoji }} {{ d.label }}</span>
+          <b style="color:{{ 'var(--red)' if d.avg < 3.5 else ('var(--amber)' if d.avg < 4.3 else 'var(--green)') }}">{{ d.avg }}</b></div>
+        <div class="shbar"><i style="width:{{ (d.avg / 5 * 100)|round }}%"></i></div>
+        {% endfor %}
+      </div>
+      <div style="max-height:260px;overflow-y:auto">
+        {% for c in fb.comments %}
+        <div style="border-bottom:1px solid var(--line);padding:9px 0;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <b>{{ c.who }}</b>
+            <span style="color:var(--txt3);white-space:nowrap">⭐ {{ c.overall }}{% if c.recommend is not none %} · NPS {{ c.recommend }}{% endif %}</span></div>
+          {% if c.text %}<div style="color:var(--txt2);margin-top:3px">«{{ c.text }}»</div>{% endif %}
+          {% for lbl, txt in c.issues %}<div style="color:var(--red);margin-top:3px">⚠ {{ lbl }}: {{ txt }}</div>{% endfor %}
+        </div>
+        {% else %}
+        <div class="empty" style="padding:20px"><i class="icon-message-square"></i>Hali izoh yo'q</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty"><i class="icon-message-square-heart"></i>Hali baho yo'q. Bron «Yozildi ✓» bo'lganda mijozga
+    so'rovnoma avtomatik yuboriladi (Telegram yoki kabinet orqali).</div>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}

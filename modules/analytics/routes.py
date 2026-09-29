@@ -395,6 +395,21 @@ def index():
         add("clock", "info",
             f"Bronlar o'rtacha {lead_avg} kun oldin qilinadi — jadval "
             f"«bugunga» bog'liq. Oldindan bron aksiyasini o'ylang.")
+    # Mijoz fikri (CSAT/NPS) — xizmat sifati signallari
+    from core.feedback import survey_stats
+    fb = survey_stats(90)
+    if fb["done"] >= 3 and fb["weakest"] and fb["weakest"]["avg"] < 4:
+        add("message-square-warning", "warn",
+            f"Mijozlar eng past baholagan jihat: «{fb['weakest']['label']}» "
+            f"({fb['weakest']['avg']}/5) — shu yerni yaxshilang.", "#feedback")
+    if fb["nps"] is not None and fb["done"] >= 5:
+        if fb["nps"] >= 50:
+            add("heart", "ok", f"NPS {fb['nps']} — mijozlar sizni faol tavsiya "
+                f"qiladi. Tavsiya (referral) bonusini ishga tushiring.",
+                "#feedback")
+        elif fb["nps"] < 0:
+            add("heart-crack", "warn", f"NPS {fb['nps']} — tanqidchilar "
+                f"tarafdorlardan ko'p. Izohlarni o'qing.", "#feedback")
     if not insights:
         add("sparkles", "ok", "Hammasi me'yorida — kritik signal yo'q.")
 
@@ -407,6 +422,6 @@ def index():
         week_ahead=week_ahead, seg=seg,
         churn=churn, churn_days=CHURN_DAYS,
         top=top, top3_share=top3_share,
-        lead_avg=lead_avg, insights=insights,
+        lead_avg=lead_avg, insights=insights, fb=fb,
         capacity=capacity, days_full=days_uz_full,
         month_label=f"{MONTH_UZ[t0.month]} {t0.year}")

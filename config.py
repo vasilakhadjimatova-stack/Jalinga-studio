@@ -22,6 +22,12 @@ class Config:
     DB_IS_SQLITE = SQLALCHEMY_DATABASE_URI.startswith("sqlite")
     DATA_AT_RISK = IS_PRODUCTION and DB_IS_SQLITE
 
+    # Tashqi (absolyut) manzil — Telegram xabarlaridagi havolalar uchun.
+    # APP_URL berilmasa Railway'ning ochiq domeni avtomatik olinadi.
+    APP_URL = (os.environ.get("APP_URL") or (
+        "https://" + os.environ["RAILWAY_PUBLIC_DOMAIN"]
+        if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")).rstrip("/")
+
     COMPANY_NAME = "Jalinga Studio"
     # Ish vaqti (kalendar to'ri)
     WORK_START = 9    # 09:00

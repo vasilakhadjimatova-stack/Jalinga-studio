@@ -71,8 +71,10 @@ def home(token):
         busy.setdefault(b.studio_id, []).append(f"{b.start}–{b.end}")
 
     from core.telegram import is_configured, bot_username
+    from core.feedback import pending_for_teacher
     return render_template(
         "portal.html", t=t.to_dict(), token=token,
+        pending_survey=pending_for_teacher(t.id),
         upcoming=upcoming, history=history[:20],
         studios=[s.to_dict() for s in studios], busy=busy, day=day,
         today=today, cancel_hours=CANCEL_HOURS,
