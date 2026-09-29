@@ -25,6 +25,8 @@ class User(db.Model):
     # aks holda bot /start bilan login kodini brute-force qilish mumkin edi).
     tg_chat_id = db.Column(db.String(24), default="")
     tg_token   = db.Column(db.String(48), default="", index=True)
+    # Kalendar obunasi (ICS) — telefon kalendari uchun maxfiy lenta kaliti
+    feed_token = db.Column(db.String(48), default="", index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def ensure_tg_token(self):
@@ -32,6 +34,12 @@ class User(db.Model):
         if not self.tg_token:
             self.tg_token = secrets.token_urlsafe(18)   # ~24 belgi
         return self.tg_token
+
+    def ensure_feed_token(self):
+        """ICS lenta kaliti (yo'q bo'lsa yaratadi; commit chaqiruvchida)."""
+        if not self.feed_token:
+            self.feed_token = secrets.token_urlsafe(24)[:48]
+        return self.feed_token
 
     @property
     def is_admin(self):

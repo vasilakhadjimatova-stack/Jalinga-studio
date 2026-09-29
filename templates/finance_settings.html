@@ -11,6 +11,34 @@
   <div class="ph-sub">Hisoblar, ochilish qoldiqlari va ДДС statyalarini boshqaring</div>
 </div></div>
 
+<!-- Oy yopish (davr qulfi) -->
+<div class="card" id="period">
+  <div class="card-hd"><div class="card-title"><i class="icon-lock"></i> Oy yopish (davr qulfi)</div>
+    {% if closed %}<span class="tag tag-green">🔒 {{ closed }} gacha yopiq</span>
+    {% else %}<span class="tag tag-gray">Hech bir oy yopilmagan</span>{% endif %}</div>
+  <div class="card-bd" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+    <div style="flex:1;min-width:220px;font-size:12px;color:var(--txt3);line-height:1.55">
+      Oy hisoboti tayyor bo'lgach yoping — shu oy va undan oldingi davr tranzaksiyalari
+      endi <b>qo'shilmaydi, tahrirlanmaydi, o'chirilmaydi</b>. Kechikkan to'lov tasdiqlansa,
+      pul <b>bugungi</b> sanaga yoziladi — yopiq hisobot o'zgarmaydi.
+    </div>
+    <form method="POST" action="/finance/period/close" style="display:flex;gap:8px;align-items:flex-end"
+          onsubmit="return confirm('Tanlangan oygacha moliya yopilsinmi?')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div><label style="margin-top:0">Shu oygacha yopish</label>
+        <input class="input" type="month" name="month" value="{{ suggest_close }}" max="{{ suggest_close }}" required></div>
+      <button class="btn btn-gold" type="submit"><i class="icon-lock"></i> Yopish</button>
+    </form>
+    {% if closed and current_user.is_admin %}
+    <form method="POST" action="/finance/period/reopen"
+          onsubmit="return confirm('{{ closed }} oyi qayta ochilsinmi? (audit-logga yoziladi)')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-out" type="submit"><i class="icon-lock-open"></i> {{ closed }} ni qayta ochish</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
 <div class="grid g2">
   <!-- Hisoblar -->
   <div class="card" style="margin:0">

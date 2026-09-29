@@ -22,22 +22,17 @@ class Config:
     DB_IS_SQLITE = SQLALCHEMY_DATABASE_URI.startswith("sqlite")
     DATA_AT_RISK = IS_PRODUCTION and DB_IS_SQLITE
 
+    # Tashqi (absolyut) manzil — Telegram xabarlaridagi havolalar uchun.
+    # APP_URL berilmasa Railway'ning ochiq domeni avtomatik olinadi.
+    APP_URL = (os.environ.get("APP_URL") or (
+        "https://" + os.environ["RAILWAY_PUBLIC_DOMAIN"]
+        if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")).rstrip("/")
+
     COMPANY_NAME = "Jalinga Studio"
     # Ish vaqti (kalendar to'ri)
     WORK_START = 9    # 09:00
     WORK_END = 21     # 21:00
 
-    # ── Moliya ERP — Google Sheets «Jalinga 2026» ───────────────────────────
-    # Jadval havola orqali ochiq bo'lishi kerak (anyone with link, Viewer) —
-    # sync autentifikatsiyasiz xlsx eksport URL'idan o'qiydi.
-    FINANCE_SPREADSHEET_ID = os.environ.get(
-        "FINANCE_SPREADSHEET_ID",
-        "1IRRQDOjHI0iJEUqov0Aq1XaD8mLzwlwe0j3A4xgPjTk")
-    # $ kassani so'm ekvivalentiga keltirish kursi (ochilish qoldig'i uchun)
-    USD_RATE = float(os.environ.get("USD_RATE", "12000"))
-    # Avto-sync intervali (daqiqa). 0 → o'chiq (faqat qo'lda «Sync» tugmasi).
-    # Railway'да masalan 120 (2 soat) qo'yish tavsiya etiladi.
-    FINANCE_SYNC_INTERVAL = int(os.environ.get("FINANCE_SYNC_INTERVAL", "0"))
     # To'lov kalendari — minimal kassa zaxirasi (xavfsizlik buferi, so'm).
     # Kunlik bashorat qoldig'i bufer'dan past bo'lsa → sariq, manfiy → qizil.
     # UI'да ?buffer=... bilan vaqtincha o'zgartirish mumkin.

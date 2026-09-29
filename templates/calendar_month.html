@@ -133,6 +133,9 @@ html[data-theme="marble"] #calFull:fullscreen{background:
     <a href="/calendar?year={{ prev_y }}&month={{ prev_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">‹ Oldingi</a>
     <a href="/calendar{% if sel %}?studio={{ sel.id }}{% endif %}" class="btn btn-ghost btn-sm">Bugun</a>
     <a href="/calendar?year={{ next_y }}&month={{ next_m }}{% if sel %}&studio={{ sel.id }}{% endif %}" class="btn btn-out btn-sm">Keyingi ›</a>
+    <button class="btn btn-out btn-sm" onclick="document.getElementById('m-feed').classList.add('open')"
+      title="Bronlarni telefon kalendarida (Google/Apple) ko'rish">
+      <i class="icon-smartphone"></i> Telefon kalendari</button>
     <button class="btn btn-out btn-sm" onclick="calFullscreen()" title="To'liq ekran (butun oyna)">
       <i class="icon-maximize"></i> To'liq ekran</button>
     <button class="btn btn-gold" onclick="mcBook('{{ today_iso }}')">
@@ -258,6 +261,33 @@ html[data-theme="marble"] #calFull:fullscreen{background:
     <div id="md-list" style="margin:8px 0 14px;display:flex;flex-direction:column;gap:6px"></div>
     <button class="btn btn-gold" id="md-add" style="width:100%;justify-content:center">
       <i class="icon-plus"></i> Shu kunga yangi bron</button>
+  </div>
+</div>
+
+<!-- Kalendar obunasi (ICS) -->
+<div class="modal-ov" id="m-feed" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title"><i class="icon-smartphone"></i> Bronlar telefon kalendarida</div>
+    <div style="font-size:12.5px;color:var(--txt2);line-height:1.6;margin:6px 0 12px">
+      Bir marta ulang — barcha studiya bronlari Google/Apple kalendaringizda o'zi
+      yangilanib turadi (mijoz, telefon, to'lov turi bilan).</div>
+    <input class="input" id="feed-url" value="{{ feed_url }}" readonly onclick="this.select()" style="font-size:11.5px">
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <a class="btn btn-gold btn-sm" href="{{ feed_url|replace('https://', 'webcal://')|replace('http://', 'webcal://') }}">
+        <i class="icon-calendar-plus"></i> iPhone / Mac'ga qo'shish</a>
+      <button class="btn btn-out btn-sm" type="button"
+        onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value).then(()=>{this.innerHTML='<i class=\'icon-check\'></i> Nusxalandi'})">
+        <i class="icon-copy"></i> Nusxalash</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--txt3);line-height:1.55;margin-top:12px">
+      <b>Google Calendar:</b> kompyuterda calendar.google.com → «Boshqa kalendarlar» ＋ →
+      «URL orqali» → havolani qo'ying.<br>
+      🔐 Havola = kalit. Begonaga bermang; tarqalib ketsa — yangilang.</div>
+    <form method="POST" action="/calendar/feed/reset" style="margin-top:12px"
+          onsubmit="return confirm('Yangi havola yaratilsinmi? Eskisi ishlamay qoladi.')">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-ghost btn-sm" type="submit"><i class="icon-refresh-cw"></i> Havolani yangilash</button>
+    </form>
   </div>
 </div>
 

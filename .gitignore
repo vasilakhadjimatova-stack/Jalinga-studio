@@ -3,6 +3,4 @@ __pycache__/
 *.db
 .env
 instance/
-
-# Real moliya ma'lumot repoда saqlanmaydi (maxfiy)
-data/finance_snapshot.json
+backups/

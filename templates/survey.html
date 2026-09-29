@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fikringiz — {{ company }}</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<meta name="theme-color" content="#0B0C11">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0B0C11;color:#F4F5F9;font-family:Inter,system-ui,sans-serif;min-height:100vh;
+  padding:28px 16px 60px;background-image:radial-gradient(1000px 500px at 50% 0%,rgba(240,168,49,.12),transparent 60%)}
+.box{max-width:520px;margin:0 auto}
+.hd{text-align:center;margin-bottom:22px}
+.hd img{width:54px;height:54px;border-radius:15px;margin-bottom:12px}
+h1{font-size:22px;font-weight:800;margin-bottom:8px}
+.sub{color:#AEB6C8;font-size:14px;line-height:1.55}
+.meta{display:inline-block;margin-top:10px;font-size:12px;color:#8A93A8;background:#15171F;
+  border:1px solid rgba(255,255,255,.08);border-radius:99px;padding:6px 12px}
+.q{background:#15171F;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 16px 14px;margin-bottom:12px}
+.q-t{font-weight:700;font-size:14.5px}
+.q-s{color:#8A93A8;font-size:12.5px;margin:3px 0 10px}
+.stars{display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:4px}
+.stars input{position:absolute;opacity:0;width:1px;height:1px}
+.stars label{font-size:30px;line-height:1;color:#343846;cursor:pointer;padding:2px;transition:color .12s,transform .12s}
+.stars label:hover,.stars label:hover~label,.stars input:checked~label{color:#F0A831}
+.stars input:focus-visible+label{outline:2px solid #F0A831;border-radius:6px}
+.stars label:active{transform:scale(.9)}
+.issue{display:none;margin-top:10px}
+.issue.on{display:block}
+textarea{width:100%;background:#0F1117;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#F4F5F9;
+  font:inherit;font-size:14px;padding:11px 12px;min-height:74px;resize:vertical}
+textarea:focus{outline:none;border-color:#F0A831}
+.nps{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+.nps input{position:absolute;opacity:0;width:1px;height:1px}
+.nps label{display:grid;place-items:center;height:38px;border-radius:9px;background:#0F1117;
+  border:1px solid rgba(255,255,255,.1);font-weight:700;font-size:13px;cursor:pointer;color:#AEB6C8}
+.nps input:checked+label{background:#F0A831;color:#1a1204;border-color:#F0A831}
+.nps input:focus-visible+label{outline:2px solid #F0A831}
+.nps-l{display:flex;justify-content:space-between;font-size:11px;color:#8A93A8;margin-top:6px}
+.err{background:rgba(251,113,133,.14);border:1px solid rgba(251,113,133,.4);color:#FDA4AF;
+  border-radius:12px;padding:11px 14px;font-size:13.5px;margin-bottom:14px}
+.btn{display:block;width:100%;padding:15px;border:0;border-radius:13px;cursor:pointer;margin-top:6px;
+  background:linear-gradient(180deg,#F0A831,#D98A1B);color:#1a1204;font:inherit;font-weight:800;font-size:15.5px}
+.note{text-align:center;color:#6B7385;font-size:11.5px;margin-top:14px}
+@media(max-width:380px){.nps{grid-template-columns:repeat(6,1fr)}}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="hd">
+    <img src="/static/icons/icon-192.png" alt="" onerror="this.style.display='none'">
+    <h1>{% if name %}{{ name }}, fikringiz{% else %}Fikringiz{% endif %} biz uchun muhim</h1>
+    <div class="sub">Yozuv qanday o'tganini baholang — 1 daqiqa vaqt oladi.</div>
+    {% if b %}<div class="meta">🎬 {{ studio }} · {{ b.date|dmy }} · {{ b.start }}–{{ b.end }}</div>{% endif %}
+  </div>
+
+  {% if err %}<div class="err">{{ err }}</div>{% endif %}
+
+  <form method="POST" autocomplete="off">
+    {% for key, label, emoji, question in questions %}
+    <div class="q">
+      <div class="q-t">{{ emoji }} {{ label }}{% if key == 'overall' %} <span style="color:#F0A831">*</span>{% endif %}</div>
+      <div class="q-s">{{ question }}</div>
+      <div class="stars" data-key="{{ key }}">
+        {% for v in [5,4,3,2,1] %}
+        <input type="radio" id="{{ key }}{{ v }}" name="{{ key }}" value="{{ v }}"
+               {% if form.get(key) == v|string %}checked{% endif %}{% if key == 'overall' %} required{% endif %}>
+        <label for="{{ key }}{{ v }}" title="{{ v }}/5" aria-label="{{ label }}: {{ v }}/5">★</label>
+        {% endfor %}
+      </div>
+      <div class="issue" id="iss-{{ key }}">
+        <textarea name="issue_{{ key }}" maxlength="500"
+          placeholder="Nima kamchilik bo'ldi? Yozing — albatta tuzatamiz">{{ form.get('issue_' ~ key, '') }}</textarea>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="q">
+      <div class="q-t">💬 Bizni do'stlaringizga tavsiya qilasizmi?</div>
+      <div class="q-s">0 — hech qachon, 10 — albatta</div>
+      <div class="nps">
+        {% for v in range(0, 11) %}
+        <input type="radio" id="rec{{ v }}" name="recommend" value="{{ v }}"
+               {% if form.get('recommend') == v|string %}checked{% endif %}>
+        <label for="rec{{ v }}">{{ v }}</label>
+        {% endfor %}
+      </div>
+      <div class="nps-l"><span>Yo'q</span><span>Albatta</span></div>
+    </div>
+
+    <div class="q">
+      <div class="q-t">✍️ Qo'shimcha fikr (ixtiyoriy)</div>
+      <div class="q-s">Nima yoqdi, nimani yaxshilashimiz kerak?</div>
+      <textarea name="comment" maxlength="2000">{{ form.get('comment', '') }}</textarea>
+    </div>
+
+    <button class="btn" type="submit">Yuborish</button>
+  </form>
+  <div class="note">Javoblaringiz faqat studiya rahbariyatiga ko'rinadi.</div>
+</div>
+<script>
+// Past baho (1–2) tanlansa — «nima kamchilik?» maydoni ochiladi
+document.querySelectorAll('.stars').forEach(function(box){
+  var iss = document.getElementById('iss-' + box.dataset.key);
+  function upd(){
+    var c = box.querySelector('input:checked');
+    iss.classList.toggle('on', !!c && +c.value < {{ low }});
+  }
+  box.addEventListener('change', upd); upd();
+});
+</script>
+</body>
+</html>

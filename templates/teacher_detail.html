@@ -49,7 +49,7 @@
   <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Tashriflar</div>
     <div class="kpi-val">{{ sessions }}</div>
-    <div style="font-size:10.5px;color:var(--txt3)">{{ used|round(1) }} soat ishlatilgan</div>
+    <div style="font-size:10.5px;color:var(--txt3)">{{ used|round(1) }} soat ishlatilgan{% if rating %} · <span style="color:var(--brand)" title="Mijoz baholari o'rtachasi ({{ rating_n }} ta)">⭐ {{ rating }}</span>{% endif %}</div>
   </div><div class="kpi-ico blue"><i class="icon-clapperboard"></i></div></div></div>
   <div class="kpi"><div class="kpi-top"><div>
     <div class="kpi-label">Oxirgi tashrif</div>

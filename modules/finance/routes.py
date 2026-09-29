@@ -1,8 +1,8 @@
-"""Moliya ERP — Google Sheets («Jalinga 2026») jurnali asosida.
+"""Moliya ERP — dastur ichida yuritiladigan ДДС jurnali.
 
 Sahifalar: dashboard (hisoblar+KPI+grafiklar) · tranzaksiyalar jurnali ·
-ДДС hisoboti (yillik pul oqimi) · qarzlar (DOLG) · dividendlar ·
-studiya to'lovlari (eski jurnal). Sync: ochiq xlsx eksport orqali.
+ДДС hisoboti (yillik pul oqimi) · qarzlar · dividendlar · to'lov kalendari ·
+tahlil · studiya to'lovlari · sozlamalar (hisoblar, statyalar, oy yopish).
 """
 import logging
 import math
@@ -37,7 +37,9 @@ from models.billing import Teacher, Payment, PAY_METHODS
 from models.finance import (FinWallet, FinCategory, FinTransaction,
                             FinDebt, FinSetting, FinRecurring, FinPlan)
 from models.audit import record
-from modules.finance.sheets_sync import ACTIVITY_LABELS
+from core.period_lock import (is_locked, locked_msg, shift_if_locked,
+                              closed_through)
+from modules.finance.defaults import ACTIVITY_LABELS
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("finance", __name__)
@@ -83,11 +85,6 @@ def _wallet_balances():
         bal = (w.opening_balance or 0) + float(sums.get(w.name) or 0)
         out.append({"name": w.name, "balance": bal, "currency": w.currency})
     return out
-
-
-def _sync_info():
-    return {"last_sync": FinSetting.get("last_sync", "—"),
-            "source": FinSetting.get("sync_source", "")}
 
 
 # ── Dashboard ────────────────────────────────────────────────────────────────
@@ -150,8 +147,7 @@ def index():
         exp_series=[round(v) for v in exp[1:]],
         bal_series=bal_series, last_month=max([t.month for t in txns],
                                               default=0),
-        top_exp=top_exp, debt_out=debt_out, recent=recent,
-        sync=_sync_info())
+        top_exp=top_exp, debt_out=debt_out, recent=recent)
 
 
 # ── Tranzaksiyalar jurnali ───────────────────────────────────────────────────
@@ -213,8 +209,7 @@ def transactions():
     return render_template(
         "finance_txns.html", rows=rows, month=month, wallet=wallet,
         category=category, dirf=dirf, q=q, t_in=t_in, t_out=t_out,
-        wallets=wallets, cats=cats, activity_labels=ACTIVITY_LABELS,
-        sync=_sync_info())
+        wallets=wallets, cats=cats, activity_labels=ACTIVITY_LABELS)
 
 
 @bp.route("/finance/transactions/add", methods=["POST"])
@@ -233,6 +228,9 @@ def txn_add():
         flash("Sana, summa (>0), hamyon va statya to'g'ri kiritilishi shart",
               "error")
         return redirect(url_for("finance.transactions"))
+    if is_locked(d):
+        flash(locked_msg(d), "error")
+        return redirect(url_for("finance.transactions", month=d[:7]))
     db.session.add(FinTransaction(
         date=d, year=int(d[:4]), month=int(d[5:7]), amount=amount,
         wallet=wallet,
@@ -269,6 +267,10 @@ def txn_edit(tid):
         flash(LOCKED_MSG.get(t.source, "Bu yozuv tahrirlanmaydi"), "error")
         return redirect(url_for("finance.transactions", month=t.date[:7]))
     d = (request.form.get("date") or "").strip()[:10]
+    for _d in (t.date, d):
+        if is_locked(_d):
+            flash(locked_msg(_d), "error")
+            return redirect(url_for("finance.transactions", month=t.date[:7]))
     cat = FinCategory.query.filter_by(
         name=(request.form.get("category") or "").strip()).first()
     try:
@@ -299,6 +301,9 @@ def txn_delete(tid):
     t = FinTransaction.query.get_or_404(tid)
     if t.source not in EDITABLE_SOURCES:
         flash(LOCKED_MSG.get(t.source, "Bu yozuv o'chirilmaydi"), "error")
+        return redirect(url_for("finance.transactions", month=t.date[:7]))
+    if is_locked(t.date):
+        flash(locked_msg(t.date), "error")
         return redirect(url_for("finance.transactions", month=t.date[:7]))
     month = t.date[:7]
     record("delete", "transaction",
@@ -388,8 +393,7 @@ def dds():
     year = _pick_year()
     report = build_dds(year)
     return render_template("finance_dds.html", r=report, year=year,
-                           years=_years(), month_names=MONTH_NAMES,
-                           sync=_sync_info())
+                           years=_years(), month_names=MONTH_NAMES,)
 
 
 # ── Qarzlar (DOLG) — to'liq boshqaruv ────────────────────────────────────────
@@ -401,8 +405,7 @@ def debts():
     total = sum(d.amount or 0 for d in rows)
     repaid = sum(d.repaid or 0 for d in rows)
     return render_template("finance_debts.html", rows=rows, total=total,
-                           repaid=repaid, outstanding=total - repaid,
-                           sync=_sync_info())
+                           repaid=repaid, outstanding=total - repaid,)
 
 
 def _num(field, default=0.0):
@@ -495,8 +498,7 @@ def dividends():
     for t in rows:
         by_year[t.year] += t.amount
     return render_template("finance_dividends.html", rows=rows, total=total,
-                           by_year=sorted(by_year.items()),
-                           sync=_sync_info())
+                           by_year=sorted(by_year.items()),)
 
 
 # ── Sozlamalar: hisoblar (ochilish qoldig'i) + statyalar ─────────────────────
@@ -511,8 +513,69 @@ def settings():
            for w in wallets]
     cats = FinCategory.query.order_by(FinCategory.direction.desc(),
                                       FinCategory.sort).all()
+    # Oy yopish: taklif — o'tgan oy (odatda oy boshida yopiladi)
+    from core.timeutils import now_tashkent
+    t0 = now_tashkent().date().replace(day=1)
+    prev = f"{t0.year - 1}-12" if t0.month == 1 else \
+        f"{t0.year}-{t0.month - 1:02d}"
     return render_template("finance_settings.html", wallets=wal, cats=cats,
-                           activity_labels=ACTIVITY_LABELS, sync=_sync_info())
+                           activity_labels=ACTIVITY_LABELS,
+                           closed=closed_through(), suggest_close=prev,
+                           this_month=current_month_iso())
+
+
+# ── Oy yopish (davr qulfi) ───────────────────────────────────────────────────
+
+@bp.route("/finance/period/close", methods=["POST"])
+@finance_required
+def period_close():
+    """Tanlangan oygacha (shu oy ham) moliyani yopadi. Joriy oyni yopib
+    bo'lmaydi (u hali davom etyapti). Faqat oldinga suriladi — orqaga
+    qaytarish «qayta ochish» (faqat rahbar) orqali."""
+    from core.period_lock import KEY
+    ym = (request.form.get("month") or "").strip()[:7]
+    try:
+        datetime.strptime(ym + "-01", "%Y-%m-%d")
+    except ValueError:
+        flash("Oy noto'g'ri (YYYY-MM)", "error")
+        return redirect(url_for("finance.settings"))
+    if ym >= current_month_iso():
+        flash("Joriy (yoki kelgusi) oyni yopib bo'lmaydi — oy tugagach yoping",
+              "error")
+        return redirect(url_for("finance.settings"))
+    cur = closed_through()
+    if cur and ym <= cur:
+        flash(f"{ym} allaqachon yopiq (yopilgan: {cur}gacha)", "error")
+        return redirect(url_for("finance.settings"))
+    FinSetting.set(KEY, ym)
+    record("close", "period", f"{ym}gacha yopildi (oldin: {cur or '—'})")
+    db.session.commit()
+    flash(f"🔒 {ym} oyigacha moliya yopildi — bu davr endi o'zgarmaydi",
+          "success")
+    return redirect(url_for("finance.settings"))
+
+
+@bp.route("/finance/period/reopen", methods=["POST"])
+@finance_required
+def period_reopen():
+    """Oxirgi yopiq oyni qayta ochadi (bir oy orqaga). Faqat rahbar."""
+    from core.auth import current_user
+    from core.period_lock import KEY
+    u = current_user()
+    if not u.is_admin:
+        flash("Oyni qayta ochish faqat rahbar uchun", "error")
+        return redirect(url_for("finance.settings"))
+    cur = closed_through()
+    if not cur:
+        flash("Yopiq oy yo'q", "error")
+        return redirect(url_for("finance.settings"))
+    y, m = int(cur[:4]), int(cur[5:7])
+    prev = f"{y - 1}-12" if m == 1 else f"{y}-{m - 1:02d}"
+    FinSetting.set(KEY, prev)
+    record("reopen", "period", f"{cur} qayta ochildi")
+    db.session.commit()
+    flash(f"🔓 {cur} qayta ochildi — tuzatib, yana yoping", "success")
+    return redirect(url_for("finance.settings"))
 
 
 @bp.route("/finance/wallets/save", methods=["POST"])
@@ -774,7 +837,7 @@ def calendar():
         min_proj=min_proj, buffer=buffer,
         at_risk=(min_proj < 0), below_buffer=(min_proj < buffer),
         prev_y=prev_y, prev_m=prev_m, next_y=next_y, next_m=next_m,
-        wallets=wallets, cats=cats, recs=recs, sync=_sync_info())
+        wallets=wallets, cats=cats, recs=recs)
 
 
 @bp.route("/finance/calendar/plan/add", methods=["POST"])
@@ -864,6 +927,10 @@ def calendar_pay():
     if _bad_date(d):
         from datetime import date as _date
         d = _date.today().strftime("%Y-%m-%d")
+    d, shifted = shift_if_locked(d)
+    if shifted:
+        flash(f"🔒 Tanlangan oy yopilgan — to'lov {d} sanasi bilan "
+              f"yozildi", "success")
 
     def _cat(name, fallback_dir, fallback_act="operating"):
         c = FinCategory.query.filter_by(name=name).first()
@@ -958,7 +1025,7 @@ def analysis():
         "finance_analysis.html", year=year, years=_years(),
         month_names=MONTH_NAMES, exp_rows=exp_rows, exp_total=exp_total,
         inc_rows=inc_rows, inc_total=inc_total,
-        counterparties=counterparties, sync=_sync_info())
+        counterparties=counterparties)
 
 
 # ── Studiya to'lovlari (eski jurnal — paket/soatbay tasdiqlash) ─────────────
@@ -1021,8 +1088,13 @@ def pay(pid):
 @bp.route("/finance/<int:pid>/toggle", methods=["POST"])
 @finance_required
 def toggle(pid):
-    from modules.finance.studio_link import sync_payment_to_finance
+    from modules.finance.studio_link import (sync_payment_to_finance,
+                                             linked_tx_locked)
     p = Payment.query.get_or_404(pid)
+    locked, tx_date = linked_tx_locked(p.id)
+    if p.is_paid and locked:
+        flash(locked_msg(tx_date), "error")
+        return _safe_back(p.date[:7] if p.date else None)
     p.is_paid = not p.is_paid
     # «kutilmoqda»ga qaytganda p.wallet SAQLANADI — qayta «to'landi» qilinsa
     # o'sha hisobga tushsin (aks holda daromad boshqa hisobga ko'chib ketardi).
@@ -1041,9 +1113,14 @@ def toggle(pid):
 @bp.route("/finance/<int:pid>/delete", methods=["POST"])
 @finance_required
 def delete(pid):
-    from modules.finance.studio_link import unlink_payment_finance
+    from modules.finance.studio_link import (unlink_payment_finance,
+                                             linked_tx_locked)
     p = Payment.query.get_or_404(pid)
     month = p.date[:7] if p.date else None
+    locked, tx_date = linked_tx_locked(p.id)
+    if locked:
+        flash(locked_msg(tx_date), "error")
+        return _safe_back(month)
     unlink_payment_finance(p.id)   # bog'langan moliya yozuvини ham o'chiramiz
     record("delete", "payment", f"#{p.id} {p.amount:.0f} ({p.date})")
     db.session.delete(p)

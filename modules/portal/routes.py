@@ -8,7 +8,7 @@ studiyaga qo'ng'iroq).
 from datetime import datetime, timedelta
 
 from flask import (Blueprint, render_template, request, redirect,
-                    url_for, flash, abort)
+                    url_for, flash, abort, Response)
 
 from core.timeutils import now_tashkent, today_iso
 from database import db
@@ -71,13 +71,40 @@ def home(token):
         busy.setdefault(b.studio_id, []).append(f"{b.start}–{b.end}")
 
     from core.telegram import is_configured, bot_username
+    from core.feedback import pending_for_teacher
     return render_template(
         "portal.html", t=t.to_dict(), token=token,
+        pending_survey=pending_for_teacher(t.id),
         upcoming=upcoming, history=history[:20],
         studios=[s.to_dict() for s in studios], busy=busy, day=day,
         today=today, cancel_hours=CANCEL_HOURS,
         tg_ready=is_configured(), tg_bot=bot_username() if is_configured() else "",
         tg_linked=bool(t.tg_chat_id))
+
+
+@bp.route("/my/<token>/calendar.ics")
+def calendar_feed(token):
+    """Mijozning shaxsiy kalendar lentasi — yozuvlari telefon kalendarida,
+    1 soat oldin telefonning o'zi eslatadi (VALARM)."""
+    from core.ics import build_calendar, feed_window
+    t = _teacher_or_404(token)
+    lo, hi = feed_window()
+    smap = {s.id: s.name for s in Studio.query.all()}
+    events = [{
+        "uid": f"booking-{b.id}@jalinga", "date": b.date, "start": b.start,
+        "end": b.end,
+        "summary": f"🎬 Jalinga Studio — {smap.get(b.studio_id, '')}",
+        "description": ("Paket balansidan" if b.pay_type == "package"
+                        else "Soatbay to'lov") + " · o'zgartirish: shaxsiy kabinet",
+        "location": f"Jalinga Studio — {smap.get(b.studio_id, '')}",
+    } for b in Booking.query.filter(
+        Booking.teacher_id == t.id, Booking.date >= lo, Booking.date <= hi,
+        Booking.status.in_(("active", "done"))).all()]
+    body = build_calendar("Jalinga Studio — yozuvlarim", events,
+                          alarm_minutes=60)
+    return Response(body, mimetype="text/calendar", headers={
+        "Content-Disposition": 'inline; filename="jalinga.ics"',
+        "Cache-Control": "private, max-age=300"})
 
 
 @bp.route("/my/<token>/book", methods=["POST"])
