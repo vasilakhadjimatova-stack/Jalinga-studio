@@ -61,16 +61,20 @@ def seed_default_finance():
     # tegmaymiz (ataylab o'chirilgan statya qayta paydo bo'lmasin).
     if FinTransaction.query.first() is not None:
         return
+    added = False
     if FinCategory.query.first() is None:
         for i, (name, d, act) in enumerate(DEFAULT_CATEGORIES):
             db.session.add(FinCategory(name=name, direction=d, activity=act,
                                        sort=i))
+        added = True
     if FinWallet.query.first() is None:
         for i, (name, cur) in enumerate(DEFAULT_WALLETS):
             db.session.add(FinWallet(name=name, currency=cur, sort=i,
                                      opening_year=datetime.now().year))
-    db.session.commit()
-    logger.info("Moliya: boshlang'ich hisoblar va statyalar seed qilindi")
+        added = True
+    if added:
+        db.session.commit()
+        logger.info("Moliya: boshlang'ich hisoblar va statyalar seed qilindi")
 
 
 def seed_default_recurring():

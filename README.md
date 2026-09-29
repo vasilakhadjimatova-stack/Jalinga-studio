@@ -17,12 +17,6 @@ uchun: bron, kalendar, ustozlar bazasi, paket/soatbay to'lovlar, boshliq paneli.
 - **✕ Bekor qilish siyosati** — darsdan ≥24 soat oldin (paket soatlari qaytadi)
 - **✈️ Telegram bot** — `/start <token>` bilan ulanish, bron tasdig'i, dars oldidan ~2 soat qolganda eslatma
 
-## 3-bosqich (tayyor)
-- **✂️ Montaj kanban** — yozildi → montajda → tekshiruvda → topshirildi; yozuv «done» bo'lgach karta avto-yaraladi
-- **⏳ SLA nazorati** — default 3 kun; kechikkanlar qizil, tepada
-- **👥 Jamoa ish yuki** — montajchiga biriktirish + ochiq kartalar soni
-- **🎉 Topshirilganda** ustozga Telegram xabar (video havolasi bilan)
-
 ## 4-bosqich (tayyor)
 - **🔥 Bandlik heatmap** — hafta kuni × soat (30 kun); bo'sh soatlarga chegirma strategiyasi uchun
 - **📡 Churn radar** — 30+ kun yozilmagan ustozlar ro'yxati (qayta faollashtirish)
@@ -30,15 +24,14 @@ uchun: bron, kalendar, ustozlar bazasi, paket/soatbay to'lovlar, boshliq paneli.
 - **🎁 Bonus soatlar** — referral/aksiya uchun pulisiz paket (faqat rahbar)
 
 ## 5-bosqich — Moliya ERP (tayyor)
-Google Sheets «Jalinga 2026» jadvali asosida to'liq moliya boshqaruvi
-(Impulse moliya web uslubida):
+To'liq dastur ichida yuritiladigan moliya (Impulse moliya web uslubida):
 - **📊 Moliya paneli** — hisoblar qoldig'i (РС, kartalar, naqd, $), oy
   tushum/xarajat/sof oqim KPI, 12 oylik grafik, xarajat strukturasi
 - **📒 Tranzaksiyalar jurnali** — «ДДС данные» varag'i 1:1; filtr (oy,
   hisob, statya, yo'nalish, qidiruv) + qo'lda kirim/chiqim qo'shish
 - **📈 Pul oqimi (ДДС)** — yillik hisobot oyma-oy: operatsion /
   investitsion / moliyaviy bo'limlar, ochilish-yopilish qoldiqlari
-  (Sheets'dagi ДДС_2026 bilan tiyingacha mos — testda qotirilgan)
+  (invariantlar testda qotirilgan)
 - **📅 To'lov kalendari** — oylik to'r + kunlik kassa bashorati:
   doimiy oylik to'lovlar (ijara, obunalar) + rejali bir martalik
   to'lov/tushumlar; qizil/sariq/yashil xavf darajalari va «likvidlik xavfi»
@@ -50,13 +43,13 @@ Google Sheets «Jalinga 2026» jadvali asosida to'liq moliya boshqaruvi
 - **📉 Yig'ma qoldiq grafigi** — panelда oy oxiri kassa qoldig'i chizig'i
 - **🤝 Qarzlar** — DOLG varag'i: kimga, qancha, qaytish foizi
 - **👑 Dividendlar** — ta'sischi to'lovlari tarixi
-- **⚙️ Dastur-native** — moliya to'liq dastur ichida yuritiladi (Google
-  Sheets bog'liqligi yo'q). Sozlamalar sahifasida hisoblar (ochilish
-  qoldig'i) va ДДС statyalarini boshqarasiz; tranzaksiyalarni qo'sh/tahrir/
-  o'chirasiz; qarzlarni to'liq yuritasiz (qo'shish/qaytarish/o'chirish).
-  Jadvaldan olingan tarix (yanvar–iyun) endi to'liq tahrirlanadi.
-  `data/finance_snapshot.json` faqat birinchi ishga tushishда boshlang'ich
-  ma'lumot uchun (keyin ishlatilmaydi).
+- **⚙️ Dastur-native** — Sozlamalarda hisoblar (ochilish qoldig'i) va ДДС
+  statyalari boshqariladi; tranzaksiyalar qo'sh/tahrir/o'chir; qarzlar to'liq.
+  Bo'sh bazada boshlang'ich hisob/statyalar avtomatik yaratiladi.
+- **🔒 Oy yopish (davr qulfi)** — hisobot topshirilgan oy muzlatiladi: yopiq
+  oy tranzaksiyalari qo'shilmaydi/tahrirlanmaydi/o'chirilmaydi; kechikkan
+  to'lov tasdiqlansa pul bugungi sanaga yoziladi. Qayta ochish faqat rahbar
+  (audit-log).
 - **🔗 Studiya to'lovi → moliya** — mijoz to'lovi «To'landi» deb
   tasdiqlanганda moliya jurnalida avtomatik «Поступление от клиента (запись)»
   kirim paydo bo'ladi (bekor/o'chirilса — yo'qoladi). Studiya operatsiyalari
@@ -85,6 +78,22 @@ emas, App Store/Play Market ham):
 - **Manzil**: `/manifest.webmanifest`, `/sw.js`, `/offline` — HTTPS
   (Railway) ostida installability talablariga to'liq javob beradi.
 
+## 7-bosqich — Impulse ERP'dan ko'chirilgan tizimlar (tayyor)
+- **⭐ Mijoz fikri (CSAT + NPS)** — bron «Yozildi ✓» bo'lganda maxfiy havolali
+  so'rovnoma (Telegram ulangan mijozga botdan, kabinetda banner). 5 o'lcham
+  (umumiy, texnika, operator, qulaylik, narx-sifat) + NPS 0–10; bitta mijozga
+  21 kunda bitta. Norozi mijoz → rahbarga shoshilinch vazifa (service
+  recovery); tarafdor → tavsiya qilish taklifi. Analitikada NPS kartasi.
+- **🤖 Avtopilot** (har kuni `AUTOPILOT_HOUR`, default 07:00 Toshkent):
+  - **💾 Off-site zaxira** — butun baza gzip JSON bo'lib Telegram ulagan
+    rahbarlarga yuboriladi (`BACKUP_TELEGRAM=0` — o'chirish);
+  - **🔁 Retention** — paketi tugayotgan, 30+ kun kelmagan va follow-up
+    muddati kelgan mijozlar operatorga aniq vazifa bo'lib tushadi;
+  - so'rovnomalarni tutib qolish, eski vazifa/bildirishnomalarni tozalash.
+- **📲 Kalendar obunasi (ICS)** — mijoz (`/my/<token>/calendar.ics`, 1 soat
+  oldin eslatma bilan) va xodim (Kalendar → «Telefon kalendari») bronlarni
+  Google/Apple kalendarida ko'radi.
+
 ## Keyingi (ixtiyoriy)
 - Onlayn to'lov (Payme/Click) — merchant hisob ochilgach ulanadi
 
@@ -101,8 +110,9 @@ ADMIN_CODE=123456 python app.py        # http://localhost:5060
 | `DATABASE_URL` | Postgres/SQLite (default: `sqlite:///jalinga.db`) |
 | `ADMIN_CODE` | Birinchi admin kirish kodi (default: 111111 — o'zgartiring!) |
 | `TELEGRAM_BOT_TOKEN` | Bot tokeni (@BotFather) — bo'lmasa bot jim o'chiq |
-| `FINANCE_SPREADSHEET_ID` | Google Sheets ID (default: Jalinga 2026 jadvali) |
-| `USD_RATE` | $ kassa uchun so'm kursi (default: 12000) |
+| `APP_URL` | Tashqi manzil (Telegram havolalari uchun; Railway'да avtomatik) |
+| `AUTOPILOT_HOUR` | Kunlik avtopilot soati, Toshkent (default: 7) |
+| `BACKUP_TELEGRAM` | `0` — kunlik Telegram zaxirasini o'chirish |
 | `CASH_SAFETY_BUFFER` | To'lov kalendari minimal kassa zaxirasi (default: 20 mln) |
 
 ## Test
@@ -143,7 +153,7 @@ Himoyalar:
   yoziladi — Jamoa → «Audit-log» (faqat rahbar).
 - **Fon ishlar**: Telegram bot faqat bitta gunicorn workerда yuradi
   (fayl-qulf yetakchisi) — takroriy poller yo'q.
-- **Maxfiylik**: real moliya ma'lumot repoда saqlanmaydi (snapshot gitignore).
+- **Maxfiylik**: real moliya ma'lumot repoда saqlanmaydi 
 
 ## Deploy (Railway)
 `railway.json` + `Procfile` tayyor — repo'ni ulasangiz avto-deploy bo'ladi.
